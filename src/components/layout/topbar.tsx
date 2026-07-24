@@ -18,27 +18,27 @@ export function Topbar({ items }: { items: NavItem[] }) {
   const title = active?.label ?? "Sahayam";
 
   return (
-    <header className="sticky top-0 z-30 bg-canvas/80 dark:bg-canvas-dark/80 backdrop-blur border-b border-surface-border dark:border-surface-border-dark">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-canvas-dark/90 backdrop-blur-md border-b border-surface-border dark:border-surface-border-dark">
       <div className="flex items-center justify-between px-4 md:px-8 h-16">
         <div className="flex items-center gap-3">
           <button
-            className="md:hidden h-9 w-9 flex items-center justify-center rounded-xl text-muted hover:bg-surface dark:hover:bg-white/5"
+            className="md:hidden h-9 w-9 flex items-center justify-center rounded-lg text-ink-slate hover:bg-surface-pebble dark:hover:bg-white/5"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-semibold">{title}</h1>
+          <h1 className="text-xl font-bold text-ink dark:text-white tracking-tight">{title}</h1>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <ThemeToggle />
           <Link
             href={notificationsHref}
-            className="relative h-9 w-9 rounded-xl flex items-center justify-center text-muted hover:text-ink dark:hover:text-white hover:bg-surface dark:hover:bg-white/5"
+            className="relative h-9 w-9 rounded-lg flex items-center justify-center text-ink-slate hover:text-ink dark:hover:text-white hover:bg-surface-pebble dark:hover:bg-white/5 transition-colors"
           >
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4.5 w-4.5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-danger" />
+              <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-signal ring-2 ring-white dark:ring-canvas-dark" />
             )}
           </Link>
         </div>
@@ -46,14 +46,15 @@ export function Topbar({ items }: { items: NavItem[] }) {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-canvas dark:bg-canvas-dark p-4">
-            <div className="flex justify-end mb-4">
-              <button onClick={() => setMobileOpen(false)} aria-label="Close menu">
+          <div className="absolute inset-0 bg-ink-navy/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div className="absolute left-0 top-0 h-full w-72 bg-white dark:bg-canvas-dark p-6 shadow-elevated">
+            <div className="flex items-center justify-between mb-6">
+              <span className="font-bold text-lg text-ink dark:text-white">Menu</span>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close menu" className="p-1 rounded-lg text-ink-slate">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               {items.map((item) => {
                 const active = pathname?.startsWith(item.href);
                 const Icon = item.icon;
@@ -63,8 +64,8 @@ export function Topbar({ items }: { items: NavItem[] }) {
                     href={item.href}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium",
-                      active ? "bg-surface dark:bg-white/10" : "text-muted"
+                      "flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition-colors",
+                      active ? "bg-signal-soft text-signal" : "text-ink-slate hover:bg-surface-pebble"
                     )}
                   >
                     <Icon className="h-4 w-4" />

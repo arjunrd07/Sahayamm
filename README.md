@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Sahayam — Intra-Organization Lending Platform
 
 Employees/members of an organization can request loans from their org's
@@ -162,3 +163,7 @@ supabase/
   DocuSeal's documented events; verify field names against your
   account's actual webhook payloads before relying on it in
   production.
+=======
+# Sahayamm
+Platfrom of Intra-Organization Lending 
+>>>>>>> 8da9bbe14d3ccce78699ebae2b53015157df7b80

@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createRawClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+
 export function createClient() {
   const cookieStore = cookies();
 
@@ -28,12 +30,9 @@ export function createClient() {
 
 /**
  * Service-role client. NEVER expose to the browser. Use only in Route
- * Handlers / Server Actions that need to bypass RLS deliberately
- * (e.g. an admin-verified operation, or writing a notification on
- * another user's behalf after checking authorization in application code).
+ * Handlers / Server Actions that need to bypass RLS deliberately.
  */
 export function createServiceRoleClient() {
-  const { createClient: createRawClient } = require("@supabase/supabase-js");
   return createRawClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,

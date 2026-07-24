@@ -2,50 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-ink-navy: #0b3558;
+  --color-signal-blue: #006bff;
+  --color-slate-gray: #476788;
+  --color-mist-gray: #a6bbd1;
+  --color-cloud: #f8f9fb;
+  --color-paper: #ffffff;
+  --color-pebble: #f0f3f8;
+  --color-hairline: #d4e0ed;
+  --color-carbon: #0a0a0a;
+  --color-coral-magenta: #e55cff;
+  --color-sky-cyan: #0099ff;
+  --color-deep-cobalt: #004eba;
+
+  --shadow-sm: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 4px 10px 0px, rgba(71, 103, 136, 0.05) 0px 10px 20px 0px;
+  --shadow-sm-2: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 8px 15px 0px, rgba(71, 103, 136, 0.08) 0px 30px 50px 0px;
+  --shadow-sm-3: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 8px 15px 0px, rgba(71, 103, 136, 0.06) 0px 15px 30px 0px;
+}
+
 @layer base {
   html {
-    @apply antialiased;
+    @apply antialiased font-sans;
+    color: var(--color-ink-navy);
   }
   body {
     @apply bg-canvas text-ink dark:bg-canvas-dark dark:text-white transition-colors duration-150;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-ink dark:text-white font-bold tracking-tight;
   }
   * {
     @apply border-surface-border dark:border-surface-border-dark;
   }
   ::selection {
-    @apply bg-accent-soft text-accent;
+    @apply bg-signal-soft text-signal;
   }
 }
 
 @layer components {
+  /* Calendly Elevated Card: 24px radius, hairline border, soft blue shadow */
   .card {
-    @apply bg-white dark:bg-surface-dark border border-surface-border dark:border-surface-border-dark rounded-2xl shadow-card;
+    @apply bg-white dark:bg-surface-dark border border-surface-border dark:border-surface-border-dark rounded-3xl shadow-card transition-all;
   }
+  .card-product {
+    @apply bg-white dark:bg-surface-dark border border-surface-border dark:border-surface-border-dark rounded-2xl shadow-elevated;
+  }
+
+  /* Calendly Buttons: 8px border-radius, exact padding and typography */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium px-4 py-2.5 transition-colors disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-base font-semibold px-5 py-2.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-primary {
-    @apply btn bg-ink text-white hover:bg-ink/90 dark:bg-white dark:text-ink dark:hover:bg-white/90;
+    @apply btn bg-signal text-white hover:bg-signal-hover shadow-button active:scale-[0.99];
+  }
+  .btn-dark {
+    @apply btn bg-ink text-white hover:bg-ink/90 active:scale-[0.99];
   }
   .btn-secondary {
-    @apply btn bg-surface dark:bg-white/5 text-ink dark:text-white border border-surface-border dark:border-surface-border-dark hover:bg-surface-border/40;
+    @apply btn bg-surface-pebble dark:bg-white/5 text-ink dark:text-white border border-surface-border dark:border-surface-border-dark hover:bg-surface-border/40;
   }
   .btn-accent {
-    @apply btn bg-accent text-white hover:bg-accent-hover;
+    @apply btn bg-signal text-white hover:bg-signal-hover;
   }
   .btn-danger {
     @apply btn bg-danger text-white hover:bg-danger/90;
   }
   .btn-ghost {
-    @apply btn text-ink dark:text-white hover:bg-surface dark:hover:bg-white/5;
+    @apply btn text-ink dark:text-white hover:bg-surface-pebble dark:hover:bg-white/5;
   }
+
+  /* Form Inputs & Labels */
   .input {
-    @apply w-full rounded-xl border border-surface-border dark:border-surface-border-dark bg-white dark:bg-surface-dark px-3.5 py-2.5 text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent;
+    @apply w-full rounded-lg border border-surface-border dark:border-surface-border-dark bg-surface-pebble dark:bg-surface-dark px-4 py-3 text-sm text-ink dark:text-white placeholder:text-ink-mist focus:outline-none focus:ring-2 focus:ring-signal/30 focus:border-signal transition-all;
   }
   .label {
-    @apply block text-sm font-medium text-ink dark:text-white mb-1.5;
+    @apply block text-sm font-semibold text-ink dark:text-white mb-1.5;
   }
+
+  /* Pill Badges */
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-signal-soft text-signal-cobalt;
+  }
+
+  /* Decorative accent blobs behind components */
+  .blob-magenta {
+    @apply absolute -z-10 rounded-full blur-3xl opacity-30 bg-accent-magenta;
+  }
+  .blob-cyan {
+    @apply absolute -z-10 rounded-full blur-3xl opacity-30 bg-accent-cyan;
   }
 }

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
-type Variant = "primary" | "secondary" | "accent" | "danger" | "ghost";
+type Variant = "primary" | "dark" | "secondary" | "accent" | "danger" | "ghost";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -11,6 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClass: Record<Variant, string> = {
   primary: "btn-primary",
+  dark: "btn-dark",
   secondary: "btn-secondary",
   accent: "btn-accent",
   danger: "btn-danger",
