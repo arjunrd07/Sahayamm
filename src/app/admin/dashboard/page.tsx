@@ -260,12 +260,6 @@ export default async function AdminDashboardPage() {
               <p className="text-xs text-slate-300 font-medium uppercase tracking-wider">Total Capital Pool</p>
               <p className="text-2xl font-black text-white mt-0.5">{formatINR(totalOrgPool)}</p>
             </div>
-            <Link
-              href="/superadmin/dashboard"
-              className="inline-flex items-center justify-center gap-2 border border-white/20 hover:bg-white/10 text-white py-3 px-5 text-xs font-semibold rounded-full transition-all"
-            >
-              Superadmin View <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
           </div>
         </div>
       </div>

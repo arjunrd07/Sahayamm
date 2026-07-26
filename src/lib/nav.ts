@@ -40,7 +40,7 @@ export const adminNav: NavItem[] = [
 ];
 
 export const superadminNav: NavItem[] = [
-  { href: "/superadmin/dashboard", label: "Superadmin Overview", icon: LayoutDashboard },
+  { href: "/superadmin/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/superadmin/organizations", label: "Organizations", icon: FileText },
   { href: "/superadmin/users", label: "Global Users", icon: User },
   { href: "/superadmin/audit", label: "Audit & Security Logs", icon: Bell },

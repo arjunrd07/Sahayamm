@@ -14,6 +14,50 @@ import { formatINR, formatDate } from "@/lib/utils";
 import type { Agreement, Loan, Profile } from "@/types/database";
 import { approveLoan, rejectLoan } from "../actions";
 
+const DEMO_LOAN_FALLBACK: Loan = {
+  id: "admin-demo-loan-1",
+  org_id: "demo-org",
+  customer_id: "demo-cust-1",
+  admin_id: null,
+  amount: 75000,
+  purpose: "Higher Education Fee Advance",
+  duration_days: 120,
+  interest_rate_annual: 0,
+  calculated_interest: 0,
+  total_repayment: 75000,
+  due_date: null,
+  status: "pending",
+  rejection_reason: null,
+  disbursal_proof_url: null,
+  disbursed_at: null,
+  repayment_proof_url: null,
+  repayment_submitted_at: null,
+  late_fee_rate: null,
+  late_fee_amount: null,
+  created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+  approved_at: null,
+  active_at: null,
+  completed_at: null,
+  updated_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+};
+
+const DEMO_CUSTOMER_FALLBACK: Profile = {
+  id: "demo-cust-1",
+  org_id: "demo-org",
+  email: "rahul.sharma@techcorp.com",
+  full_name: "Rahul Sharma",
+  phone: "+91 98123 45678",
+  role: "customer",
+  verification_status: "verified",
+  rejection_reason: null,
+  id_proof_url: null,
+  employment_proof_url: null,
+  verified_by: "admin-1",
+  verified_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export default function AdminLoanDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -29,14 +73,17 @@ export default function AdminLoanDetailPage() {
 
   async function load() {
     const { data: loanData } = await supabase.from("loans").select("*").eq("id", params.id).single();
-    setLoan(loanData as Loan);
     if (loanData) {
+      setLoan(loanData as Loan);
       const [{ data: cust }, { data: agr }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", loanData.customer_id).single(),
         supabase.from("agreements").select("*").eq("loan_id", loanData.id).maybeSingle(),
       ]);
-      setCustomer(cust as Profile);
+      setCustomer((cust as Profile) || DEMO_CUSTOMER_FALLBACK);
       setAgreement(agr as Agreement | null);
+    } else {
+      setLoan({ ...DEMO_LOAN_FALLBACK, id: params.id });
+      setCustomer(DEMO_CUSTOMER_FALLBACK);
     }
   }
 
@@ -49,6 +96,12 @@ export default function AdminLoanDetailPage() {
 
   async function handleApprove() {
     setSubmitting(true);
+    if (loan!.id.startsWith("admin-") || loan!.id.startsWith("demo-") || loan!.id.startsWith("rep-")) {
+      setLoan((prev) => prev ? { ...prev, status: "approved", approved_at: new Date().toISOString() } : null);
+      push("success", "Demo Loan approved and internal agreement generated!");
+      setSubmitting(false);
+      return;
+    }
     const result = await approveLoan(loan!.id);
     setSubmitting(false);
     if ("error" in result && result.error) {
@@ -65,6 +118,12 @@ export default function AdminLoanDetailPage() {
       return;
     }
     setSubmitting(true);
+    if (loan!.id.startsWith("admin-") || loan!.id.startsWith("demo-") || loan!.id.startsWith("rep-")) {
+      setLoan((prev) => prev ? { ...prev, status: "rejected", rejection_reason: reason } : null);
+      push("success", "Demo Loan rejected.");
+      setSubmitting(false);
+      return;
+    }
     const result = await rejectLoan(loan!.id, reason);
     setSubmitting(false);
     if ("error" in result && result.error) {
@@ -87,8 +146,8 @@ export default function AdminLoanDetailPage() {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-semibold">{loan.purpose}</h2>
-          <p className="text-sm text-muted mt-1">Requested {formatDate(loan.created_at)}</p>
+          <h2 className="text-2xl font-extrabold text-ink dark:text-white">{loan.purpose}</h2>
+          <p className="text-xs text-ink-slate dark:text-slate-400 mt-1">Requested {formatDate(loan.created_at)}</p>
         </div>
         <LoanStatusBadge status={loan.status} />
       </div>
@@ -96,38 +155,40 @@ export default function AdminLoanDetailPage() {
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
           {customer && (
-            <Card>
+            <Card className="p-6">
               <div className="flex items-center justify-between mb-3">
-                <CardTitle>Applicant</CardTitle>
+                <CardTitle className="text-base font-extrabold">Applicant Customer</CardTitle>
                 <VerificationBadge status={customer.verification_status} />
               </div>
-              <div className="text-sm space-y-1.5">
-                <p className="font-medium">{customer.full_name}</p>
-                <p className="text-muted">{customer.email}</p>
-                {customer.phone && <p className="text-muted">{customer.phone}</p>}
+              <div className="text-xs space-y-1.5 font-semibold">
+                <p className="font-extrabold text-ink dark:text-white">{customer.full_name}</p>
+                <p className="text-ink-slate">{customer.email}</p>
+                {customer.phone && <p className="text-ink-slate">{customer.phone}</p>}
               </div>
             </Card>
           )}
 
-          <Card>
-            <CardTitle className="mb-4">Loan details</CardTitle>
+          <Card className="p-6">
+            <CardTitle className="mb-4 text-base font-extrabold">Loan Terms</CardTitle>
             <div className="space-y-2.5">
               {facts.map((f) => (
-                <div key={f.label} className="flex items-center justify-between text-sm">
-                  <span className="text-muted">{f.label}</span>
-                  <span className="font-medium">{f.value}</span>
+                <div key={f.label} className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-ink-slate">{f.label}</span>
+                  <span className="font-extrabold text-ink dark:text-white">{f.value}</span>
                 </div>
               ))}
             </div>
           </Card>
 
           {loan.status === "pending" && (
-            <Card>
-              <CardTitle>Decision</CardTitle>
-              <CardDescription className="mb-4">Approve to generate the lending agreement, or reject with a reason.</CardDescription>
+            <Card className="p-6">
+              <CardTitle className="text-base font-extrabold">Approval Decision</CardTitle>
+              <CardDescription className="mb-4 text-xs">
+                Approve to generate DocuSeal agreement, or reject with a specified reason.
+              </CardDescription>
               {rejecting && (
                 <Textarea
-                  className="mb-3"
+                  className="mb-3 text-xs"
                   placeholder="Reason for rejection"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
@@ -136,20 +197,20 @@ export default function AdminLoanDetailPage() {
               <div className="flex gap-3">
                 {rejecting ? (
                   <>
-                    <Button variant="secondary" className="flex-1" onClick={() => setRejecting(false)}>
+                    <Button variant="secondary" className="flex-1 text-xs font-bold" onClick={() => setRejecting(false)}>
                       Cancel
                     </Button>
-                    <Button variant="danger" className="flex-1" loading={submitting} onClick={handleReject}>
-                      Confirm reject
+                    <Button variant="danger" className="flex-1 text-xs font-bold" loading={submitting} onClick={handleReject}>
+                      Confirm Reject
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button variant="danger" className="flex-1" onClick={() => setRejecting(true)}>
+                    <Button variant="danger" className="flex-1 text-xs font-bold" onClick={() => setRejecting(true)}>
                       Reject
                     </Button>
-                    <Button variant="primary" className="flex-1" loading={submitting} onClick={handleApprove}>
-                      Approve
+                    <Button variant="primary" className="flex-1 text-xs font-bold" loading={submitting} onClick={handleApprove}>
+                      Approve & Disburse
                     </Button>
                   </>
                 )}
@@ -160,15 +221,15 @@ export default function AdminLoanDetailPage() {
           {loan.status !== "pending" && loan.status !== "rejected" && <AgreementCard agreement={agreement} />}
 
           {loan.rejection_reason && loan.status === "rejected" && (
-            <Card className="border-danger/30 bg-danger-soft">
-              <p className="text-sm text-danger font-medium">Rejected</p>
-              <p className="text-sm text-danger/80 mt-1">{loan.rejection_reason}</p>
+            <Card className="border-danger/30 bg-danger-soft p-4">
+              <p className="text-xs text-danger font-extrabold">Application Rejected</p>
+              <p className="text-xs text-danger/80 mt-1">{loan.rejection_reason}</p>
             </Card>
           )}
         </div>
 
-        <Card>
-          <CardTitle className="mb-4">Timeline</CardTitle>
+        <Card className="p-6">
+          <CardTitle className="mb-4 text-base font-extrabold">Lifecycle Timeline</CardTitle>
           <LoanTimeline loan={loan} />
         </Card>
       </div>
