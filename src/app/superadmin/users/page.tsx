@@ -1,61 +1,85 @@
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, ShieldCheck, UserCheck, Search, Filter } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { Search, Filter, ShieldAlert, ShieldCheck } from "lucide-react";
+import { formatDate } from "@/lib/utils";
+import type { Profile } from "@/types/database";
+import { toggleUserAccess } from "./actions";
 
 export default function SuperadminUsersPage() {
-  const users = [
-    {
-      id: "usr-1",
-      name: "Super Admin (Org Lead)",
-      email: "admin@sahayam.org",
-      org: "Sahayam Demo Organization",
-      role: "superadmin",
-      verification: "verified",
-      joined: "2026-03-10",
-    },
-    {
-      id: "usr-2",
-      name: "Sarah Jenkins",
-      email: "sarah.j@company.com",
-      org: "TechCorp Solutions Pvt Ltd",
-      role: "admin",
-      verification: "verified",
-      joined: "2026-07-01",
-    },
-    {
-      id: "usr-3",
-      name: "David Chen",
-      email: "david.c@company.com",
-      org: "Sahayam Demo Organization",
-      role: "borrower",
-      verification: "pending",
-      joined: "2026-07-24",
-    },
-    {
-      id: "usr-4",
-      name: "Ananya Sharma",
-      email: "ananya@apexglobal.com",
-      org: "Apex Global Services",
-      role: "borrower",
-      verification: "verified",
-      joined: "2026-06-15",
-    },
-    {
-      id: "usr-5",
-      name: "Vikram Singh",
-      email: "vikram@innovate.io",
-      org: "Innovate AI Labs",
-      role: "admin",
-      verification: "verified",
-      joined: "2026-05-20",
-    },
-  ];
+  const [users, setUsers] = useState<(Profile & { organization_name?: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { push } = useToast();
+  const supabase = createClient();
+
+  async function loadUsers() {
+    setLoading(true);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("*, organizations(name)")
+      .order("created_at", { ascending: false });
+
+    if (profiles) {
+      const formatted = profiles.map((p: any) => ({
+        ...p,
+        organization_name: p.organizations?.name || "Global / N/A",
+      }));
+      setUsers(formatted);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleToggleAccess(user: Profile) {
+    setUpdatingId(user.id);
+    const result = await toggleUserAccess(user.id, user.verification_status);
+    setUpdatingId(null);
+
+    if ("error" in result && result.error) {
+      push("error", result.error);
+      return;
+    }
+
+    const actionText = user.verification_status === "rejected" ? "Access restored" : "Access revoked";
+    push("success", `${actionText} for ${user.full_name || user.email}`);
+    loadUsers();
+  }
+
+  const filtered = users.filter((u) => {
+    const matchesSearch =
+      (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.organization_name || "").toLowerCase().includes(search.toLowerCase());
+
+    const matchesRole =
+      roleFilter === "all"
+        ? true
+        : roleFilter === "lender"
+        ? u.role === "lender" || (u.role as string) === "admin"
+        : roleFilter === "borrower"
+        ? u.role === "borrower" || (u.role as string) === "customer"
+        : u.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-ink dark:text-white">Global User Directory</h2>
-          <p className="text-sm text-ink-slate">Cross-organization user profiles, roles, and verification statuses.</p>
+          <p className="text-sm text-ink-slate">Cross-organization user profiles, roles, and access revocation controls.</p>
         </div>
       </div>
 
@@ -66,16 +90,27 @@ export default function SuperadminUsersPage() {
             <input
               type="text"
               placeholder="Search user name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
             />
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-ink-slate">
+          <div className="flex items-center gap-2 text-xs font-semibold text-ink-slate flex-wrap">
             <Filter className="h-4 w-4" /> Filter Role:
-            <span className="px-2.5 py-1 rounded-md bg-signal-soft text-signal cursor-pointer">All Roles</span>
-            <span className="px-2.5 py-1 rounded-md bg-surface-pebble dark:bg-white/5 cursor-pointer">Superadmin</span>
-            <span className="px-2.5 py-1 rounded-md bg-surface-pebble dark:bg-white/5 cursor-pointer">Admin</span>
-            <span className="px-2.5 py-1 rounded-md bg-surface-pebble dark:bg-white/5 cursor-pointer">Customer</span>
+            {["all", "lender", "borrower", "superadmin"].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRoleFilter(r)}
+                className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
+                  roleFilter === r
+                    ? "bg-signal-soft text-signal font-bold"
+                    : "bg-surface-pebble dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -85,42 +120,75 @@ export default function SuperadminUsersPage() {
               <tr className="border-b border-surface-border dark:border-surface-border-dark text-xs uppercase tracking-wider text-ink-slate">
                 <th className="pb-3 font-bold">User Name / Email</th>
                 <th className="pb-3 font-bold">Organization</th>
-                <th className="pb-3 font-bold">System Role</th>
-                <th className="pb-3 font-bold">Verification</th>
+                <th className="pb-3 font-bold">Role</th>
+                <th className="pb-3 font-bold">Verification Status</th>
                 <th className="pb-3 font-bold">Joined</th>
+                <th className="pb-3 font-bold text-right">Access Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-border dark:divide-surface-border-dark">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-surface-pebble dark:hover:bg-white/5 transition-colors">
-                  <td className="py-3.5 font-semibold text-ink dark:text-white">
-                    <div>{u.name}</div>
-                    <div className="text-xs font-normal text-ink-slate">{u.email}</div>
-                  </td>
-                  <td className="py-3.5 text-ink-slate">{u.org}</td>
-                  <td className="py-3.5">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      u.role === "superadmin"
-                        ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                        : u.role === "admin"
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                        : "bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300"
-                    }`}>
-                      {u.role}
-                    </span>
-                  </td>
-                  <td className="py-3.5">
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                      u.verification === "verified"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                        : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    }`}>
-                      {u.verification}
-                    </span>
-                  </td>
-                  <td className="py-3.5 text-xs text-ink-slate">{u.joined}</td>
-                </tr>
-              ))}
+              {filtered.map((u) => {
+                const isRevoked = u.verification_status === "rejected";
+                const displayRole = (u.role as string) === "admin" ? "lender" : (u.role as string) === "customer" ? "borrower" : u.role;
+
+
+                return (
+                  <tr key={u.id} className="hover:bg-surface-pebble dark:hover:bg-white/5 transition-colors">
+                    <td className="py-3.5 font-semibold text-ink dark:text-white">
+                      <div>{u.full_name || "—"}</div>
+                      <div className="text-xs font-normal text-ink-slate">{u.email}</div>
+                    </td>
+                    <td className="py-3.5 text-ink-slate">{u.organization_name}</td>
+                    <td className="py-3.5">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${
+                          displayRole === "superadmin"
+                            ? "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                            : displayRole === "lender"
+                            ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                        }`}
+                      >
+                        {displayRole}
+                      </span>
+                    </td>
+                    <td className="py-3.5">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          isRevoked
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+                            : u.verification_status === "verified"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                        }`}
+                      >
+                        {isRevoked ? "Revoked Access" : u.verification_status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-xs text-ink-slate">{formatDate(u.created_at)}</td>
+                    <td className="py-3.5 text-right">
+                      {u.role !== "superadmin" && (
+                        <Button
+                          variant={isRevoked ? "primary" : "danger"}
+                          className="text-xs py-1 px-2.5"
+                          loading={updatingId === u.id}
+                          onClick={() => handleToggleAccess(u)}
+                        >
+                          {isRevoked ? (
+                            <>
+                              <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Restore Access
+                            </>
+                          ) : (
+                            <>
+                              <ShieldAlert className="w-3.5 h-3.5 mr-1" /> Revoke Access
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -128,3 +196,4 @@ export default function SuperadminUsersPage() {
     </div>
   );
 }
+

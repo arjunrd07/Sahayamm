@@ -45,17 +45,20 @@ export default function AdminLoanDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
+  const [approving, setApproving] = useState(false);
+  const [disbursalProofUrl, setDisbursalProofUrl] = useState("");
+
   if (!loan) return null;
 
   async function handleApprove() {
     setSubmitting(true);
-    const result = await approveLoan(loan!.id);
+    const result = await approveLoan(loan!.id, disbursalProofUrl.trim() || undefined);
     setSubmitting(false);
     if ("error" in result && result.error) {
       push("error", result.error);
       return;
     }
-    push("success", "Loan approved and agreement generated.");
+    push("success", "Loan approved & activated with payment proof.");
     load();
   }
 
@@ -75,12 +78,21 @@ export default function AdminLoanDetailPage() {
     load();
   }
 
+  const planLabel =
+    loan.duration_days === 7
+      ? "7 Days Plan (0.4% interest)"
+      : loan.duration_days === 14
+      ? "14 Days Plan (0.8% interest)"
+      : loan.duration_days === 21
+      ? "21 Days Plan (1.6% interest)"
+      : `${loan.duration_days} days`;
+
   const facts = [
-    { label: "Amount", value: formatINR(loan.amount) },
-    { label: "Interest", value: `${formatINR(loan.calculated_interest)} (${loan.interest_rate_annual}% p.a.)` },
-    { label: "Total repayment", value: formatINR(loan.total_repayment) },
-    { label: "Duration", value: `${loan.duration_days} days` },
-    { label: "Due date", value: loan.due_date ? formatDate(loan.due_date) : "—" },
+    { label: "Amount Requested", value: formatINR(loan.amount) },
+    { label: "Selected Plan", value: planLabel },
+    { label: "Calculated Interest", value: formatINR(loan.calculated_interest) },
+    { label: "Total Repayment", value: formatINR(loan.total_repayment) },
+    { label: "Due Date", value: loan.due_date ? formatDate(loan.due_date) : "—" },
   ];
 
   return (
@@ -105,6 +117,12 @@ export default function AdminLoanDetailPage() {
                 <p className="font-medium">{customer.full_name}</p>
                 <p className="text-muted">{customer.email}</p>
                 {customer.phone && <p className="text-muted">{customer.phone}</p>}
+                {customer.pan_number && (
+                  <p className="text-xs text-muted">
+                    PAN: <span className="font-mono font-semibold">{customer.pan_number}</span> | CIBIL:{" "}
+                    <span className="font-semibold">{customer.cibil_score || "N/A"}</span>
+                  </p>
+                )}
               </div>
             </Card>
           )}
@@ -121,39 +139,83 @@ export default function AdminLoanDetailPage() {
             </div>
           </Card>
 
+          {loan.disbursal_proof_url && (
+            <Card className="border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20">
+              <CardTitle className="text-emerald-900 dark:text-emerald-300 mb-2">
+                Payment Receipt / Disbursal Proof
+              </CardTitle>
+              <p className="text-xs text-muted mb-3">Attached proof of funds transfer between lender and borrower.</p>
+              {loan.disbursal_proof_url.startsWith("http") || loan.disbursal_proof_url.startsWith("/") || loan.disbursal_proof_url.startsWith("data:") ? (
+                <img
+                  src={loan.disbursal_proof_url}
+                  alt="Payment Receipt Proof"
+                  className="rounded-lg border max-h-56 object-contain w-full bg-white p-1"
+                />
+              ) : (
+                <div className="p-3 bg-white dark:bg-black/20 rounded-lg text-xs font-mono break-all border">
+                  Proof Reference: {loan.disbursal_proof_url}
+                </div>
+              )}
+            </Card>
+          )}
+
           {loan.status === "pending" && (
             <Card>
-              <CardTitle>Decision</CardTitle>
-              <CardDescription className="mb-4">Approve to generate the lending agreement, or reject with a reason.</CardDescription>
-              {rejecting && (
-                <Textarea
-                  className="mb-3"
-                  placeholder="Reason for rejection"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              )}
-              <div className="flex gap-3">
-                {rejecting ? (
-                  <>
-                    <Button variant="secondary" className="flex-1" onClick={() => setRejecting(false)}>
+              <CardTitle>Lender Decision</CardTitle>
+              <CardDescription className="mb-4">
+                Approve request and attach payment receipt proof to activate loan, or reject.
+              </CardDescription>
+
+              {approving ? (
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-ink dark:text-white">
+                      Payment Receipt Image URL / Document Proof (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full text-xs p-2.5 rounded-lg border border-surface-border dark:border-surface-border-dark bg-white dark:bg-black/20"
+                      placeholder="Paste receipt image URL (e.g. https://... or screenshot link)"
+                      value={disbursalProofUrl}
+                      onChange={(e) => setDisbursalProofUrl(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="secondary" className="flex-1 text-xs" onClick={() => setApproving(false)}>
+                      Back
+                    </Button>
+                    <Button variant="primary" className="flex-1 text-xs" loading={submitting} onClick={handleApprove}>
+                      Confirm Approval & Activate
+                    </Button>
+                  </div>
+                </div>
+              ) : rejecting ? (
+                <div className="space-y-3 mb-4">
+                  <Textarea
+                    className="mb-1 text-xs"
+                    placeholder="Reason for rejection"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="secondary" className="flex-1 text-xs" onClick={() => setRejecting(false)}>
                       Cancel
                     </Button>
-                    <Button variant="danger" className="flex-1" loading={submitting} onClick={handleReject}>
-                      Confirm reject
+                    <Button variant="danger" className="flex-1 text-xs" loading={submitting} onClick={handleReject}>
+                      Confirm Reject
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="danger" className="flex-1" onClick={() => setRejecting(true)}>
-                      Reject
-                    </Button>
-                    <Button variant="primary" className="flex-1" loading={submitting} onClick={handleApprove}>
-                      Approve
-                    </Button>
-                  </>
-                )}
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <Button variant="danger" className="flex-1" onClick={() => setRejecting(true)}>
+                    Disapprove / Reject
+                  </Button>
+                  <Button variant="primary" className="flex-1" onClick={() => setApproving(true)}>
+                    Approve Loan
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
 

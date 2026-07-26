@@ -1,22 +1,36 @@
-import { calculateLoan } from "@/lib/loan-math";
+import { calculatePlanLoan, calculateLoan } from "@/lib/loan-math";
 import { formatINR, formatDate } from "@/lib/utils";
+
+interface LiveLoanCalculatorProps {
+  amount: number;
+  planId?: string;
+  interestRate?: number;
+  durationDays?: number;
+}
 
 export function LiveLoanCalculator({
   amount,
+  planId,
   interestRate,
   durationDays,
-}: {
-  amount: number;
-  interestRate: number;
-  durationDays: number;
-}) {
-  const calc = calculateLoan(amount, interestRate, durationDays);
+}: LiveLoanCalculatorProps) {
+  let calc;
+  let interestLabel = "";
+
+  if (planId) {
+    const planCalc = calculatePlanLoan(amount, planId);
+    calc = planCalc;
+    interestLabel = `Interest (${planCalc.plan.days} days @ ${planCalc.plan.ratePercent}%)`;
+  } else {
+    calc = calculateLoan(amount, interestRate || 0, durationDays || 0);
+    interestLabel = `Interest (${interestRate || 0}% p.a.)`;
+  }
 
   const rows = [
     { label: "Principal", value: formatINR(calc.principal) },
-    { label: `Interest (${interestRate || 0}% p.a.)`, value: formatINR(calc.interest) },
+    { label: interestLabel, value: formatINR(calc.interest) },
     { label: "Total repayment", value: formatINR(calc.totalRepayment), emphasize: true },
-    { label: "Due date", value: durationDays > 0 ? formatDate(calc.dueDate) : "—" },
+    { label: "Due date", value: (planId || (durationDays && durationDays > 0)) ? formatDate(calc.dueDate) : "—" },
   ];
 
   return (
@@ -35,3 +49,4 @@ export function LiveLoanCalculator({
     </div>
   );
 }
+
