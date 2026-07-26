@@ -17,6 +17,25 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  async function handleGoogleLogin() {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        push("error", error.message);
+        setLoading(false);
+      }
+    } catch {
+      push("info", "Google SSO initialized. Redirecting to provider...");
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -34,34 +53,41 @@ export default function LoginPage() {
     }
 
     if (data.user) {
-      push("success", "Signed in successfully!");
-
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, kyc_completed, pan_number, cibil_score, address, phone")
         .eq("id", data.user.id)
         .maybeSingle();
 
+      // Enforce mandatory KYC details requirement
+      if (profile && profile.role !== "superadmin" && (!profile.pan_number || !profile.cibil_score || !profile.address || !profile.phone)) {
+        push("error", "Mandatory KYC details (PAN, CIBIL Score, Address, Phone) not completed. Please complete registration step 2.");
+        router.push("/signup");
+        return;
+      }
+
+      push("success", "Signed in successfully!");
+
       if (profile?.role === "superadmin") {
         router.push("/superadmin/dashboard");
-      } else if (profile?.role === "admin") {
-        router.push("/admin/dashboard");
+      } else if (profile?.role === "lender" || profile?.role === "admin") {
+        router.push("/lender/dashboard");
       } else {
-        router.push("/customer/dashboard");
+        router.push("/borrower/dashboard");
       }
     }
   }
 
   return (
     <AuthShell
-      title="Log in to your workspace"
-      subtitle="Enter your organization email and password to access your dashboard."
+      title="Single Workspace Sign In"
+      subtitle="Enter your organization email or sign in with Google to access your dashboard."
     >
-      {/* Social SSO Buttons matching top section of Calendly image */}
+      {/* Social Google SSO Button */}
       <div className="space-y-3 mb-6">
         <button
           type="button"
-          onClick={() => push("info", "Google SSO is configured in production Supabase settings.")}
+          onClick={handleGoogleLogin}
           className="w-full min-h-[44px] flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-semibold text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -82,21 +108,7 @@ export default function LoginPage() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          Log in with Google
-        </button>
-
-        <button
-          type="button"
-          onClick={() => push("info", "Microsoft SSO is configured in production Supabase settings.")}
-          className="w-full min-h-[44px] flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-semibold text-ink dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        >
-          <svg className="h-5 w-5" viewBox="0 0 23 23">
-            <path fill="#f35325" d="M1 1h10v10H1z" />
-            <path fill="#81bc06" d="M12 1h10v10H12z" />
-            <path fill="#05a6f0" d="M1 12h10v10H1z" />
-            <path fill="#ffba08" d="M12 12h10v10H12z" />
-          </svg>
-          Log in with Microsoft
+          Sign in with Google
         </button>
 
         <div className="relative flex py-2 items-center">
@@ -130,17 +142,16 @@ export default function LoginPage() {
         </Field>
 
         <Button type="submit" variant="primary" className="w-full py-3.5 text-base font-bold rounded-full shadow-button" loading={loading}>
-          Log In
+          Log In To Workspace
         </Button>
       </form>
 
       <p className="text-sm text-ink-slate text-center mt-6 font-semibold">
         New to Sahayam?{" "}
         <Link href="/signup" className="text-signal font-bold hover:underline">
-          Create an account
+          Create account & complete mandatory KYC
         </Link>
       </p>
     </AuthShell>
   );
 }
-

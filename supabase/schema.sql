@@ -8,7 +8,7 @@ create extension if not exists "uuid-ossp";
 -- ---------------------------------------------------------------------
 -- ENUM TYPES
 -- ---------------------------------------------------------------------
-create type user_role as enum ('customer', 'admin', 'superadmin');
+create type user_role as enum ('borrower', 'lender', 'superadmin');
 create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
 create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
 create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
@@ -44,6 +44,10 @@ create table profiles (
   full_name text not null,
   email text not null,
   phone text,
+  pan_number text,
+  cibil_score integer check (cibil_score >= 300 and cibil_score <= 900),
+  address text,
+  kyc_completed boolean not null default false,
   role user_role not null default 'customer',
   verification_status verification_status not null default 'unverified',
   rejection_reason text,
@@ -214,7 +218,7 @@ create or replace function auth_is_admin()
 returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
-    select 1 from profiles where id = auth.uid() and role in ('admin', 'superadmin')
+    select 1 from profiles where id = auth.uid() and role in ('lender', 'admin', 'superadmin')
   );
 $$;
 
