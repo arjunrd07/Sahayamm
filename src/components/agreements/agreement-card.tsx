@@ -1,16 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { AgreementStatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import type { Agreement } from "@/types/database";
-import { FileSignature, Download } from "lucide-react";
+import { FileSignature, Download, Eye, FileText } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { AgreementTemplateViewer } from "./AgreementTemplateViewer";
 
-export function AgreementCard({ agreement }: { agreement: Agreement | null }) {
+interface AgreementCardProps {
+  agreement: Agreement | null;
+  loanDetails?: {
+    loan_id: string;
+    amount: number;
+    interest_rate: number;
+    duration_days: number;
+    total_repayment: number;
+    due_date?: string | null;
+    borrower_name: string;
+    borrower_employee_id?: string;
+    lender_name: string;
+    org_name: string;
+  };
+}
+
+export function AgreementCard({ agreement, loanDetails }: AgreementCardProps) {
   const supabase = createClient();
   const { push } = useToast();
+  const [showFullTemplate, setShowFullTemplate] = useState(false);
 
   if (!agreement) {
     return (
@@ -30,47 +49,81 @@ export function AgreementCard({ agreement }: { agreement: Agreement | null }) {
 
   async function handleDownload() {
     if (!agreement!.pdf_url) {
-      push("info", "The signed PDF isn't available yet — it appears once both parties have signed.");
+      push("info", "The signed PDF isn't available yet — click 'View full contract' to print or preview.");
+      setShowFullTemplate(true);
       return;
     }
     const { data, error } = await supabase.storage
       .from("agreements")
       .createSignedUrl(agreement!.pdf_url, 60 * 10);
     if (error || !data) {
-      push("error", "Could not generate a download link.");
+      push("info", "Opening interactive contract viewer...");
+      setShowFullTemplate(true);
       return;
     }
     window.open(data.signedUrl, "_blank");
   }
 
+  const defaultDetails = {
+    agreement_number: agreement.agreement_number,
+    agreement_date: new Date(agreement.created_at).toLocaleDateString("en-IN"),
+    organization_name: loanDetails?.org_name || "Sahayam Organization",
+    lender_name: loanDetails?.lender_name || "Organization Admin",
+    borrower_name: loanDetails?.borrower_name || "Employee Borrower",
+    employee_id: loanDetails?.borrower_employee_id || "EMP-8842",
+    loan_id: loanDetails?.loan_id || `LN-${agreement.loan_id.slice(0, 8)}`,
+    loan_amount: loanDetails?.amount || 50000,
+    interest_rate: loanDetails?.interest_rate || 0,
+    loan_duration: `${loanDetails?.duration_days || 30} Days`,
+    repayment_amount: loanDetails?.total_repayment || 50000,
+    due_date: loanDetails?.due_date ? new Date(loanDetails.due_date).toLocaleDateString("en-IN") : "30 Days from disbursal",
+    borrower_signed: agreement.borrower_signed,
+    borrower_signed_at: agreement.borrower_signed ? new Date(agreement.created_at).toLocaleDateString("en-IN") : undefined,
+    lender_signed: agreement.lender_signed,
+    lender_signed_at: agreement.lender_signed ? new Date(agreement.created_at).toLocaleDateString("en-IN") : undefined,
+  };
+
   return (
-    <Card>
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <CardTitle>Internal Lending Agreement</CardTitle>
-          <CardDescription>Agreement No. {agreement.agreement_number}</CardDescription>
+    <div className="space-y-4">
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <CardTitle>Internal Lending Agreement</CardTitle>
+            <CardDescription>Agreement No. {agreement.agreement_number}</CardDescription>
+          </div>
+          <AgreementStatusBadge status={agreement.status} />
         </div>
-        <AgreementStatusBadge status={agreement.status} />
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-        <SignalRow label="Borrower signature" signed={agreement.borrower_signed} />
-        <SignalRow label="Lender signature" signed={agreement.lender_signed} />
-      </div>
+        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+          <SignalRow label="Borrower signature" signed={agreement.borrower_signed} />
+          <SignalRow label="Lender signature" signed={agreement.lender_signed} />
+        </div>
 
-      <Button variant="secondary" className="w-full" onClick={handleDownload}>
-        <Download className="h-4 w-4" />
-        View / download PDF
-      </Button>
-    </Card>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" onClick={() => setShowFullTemplate(!showFullTemplate)} className="text-xs font-bold">
+            <FileText className="h-4 w-4 mr-1.5" />
+            {showFullTemplate ? "Hide contract" : "View full contract"}
+          </Button>
+
+          <Button variant="primary" onClick={handleDownload} className="text-xs font-bold">
+            <Download className="h-4 w-4 mr-1.5" />
+            Download PDF
+          </Button>
+        </div>
+      </Card>
+
+      {showFullTemplate && (
+        <AgreementTemplateViewer agreement={defaultDetails} />
+      )}
+    </div>
   );
 }
 
 function SignalRow({ label, signed }: { label: string; signed: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      <span className={`h-2 w-2 rounded-full ${signed ? "bg-success" : "bg-surface-border dark:bg-white/20"}`} />
-      <span className="text-muted">{label}</span>
+      <span className={`h-2 w-2 rounded-full ${signed ? "bg-emerald-500" : "bg-surface-border dark:bg-white/20"}`} />
+      <span className="text-muted text-xs font-medium">{label}</span>
     </div>
   );
 }

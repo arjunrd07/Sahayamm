@@ -23,16 +23,16 @@ const config: Config = {
         canvas: {
           DEFAULT: "#f8f9fb", // Cloud — page canvas, footer background, secondary surface
           cloud: "#f8f9fb",
-          dark: "#071828",
+          dark: "#000000",   // Pure Pitch Black
         },
         surface: {
           DEFAULT: "#ffffff", // Paper — card surfaces, elevated panels
           paper: "#ffffff",
           pebble: "#f0f3f8",  // Pebble — badge backgrounds, input fills, subtle dividers
-          dark: "#0d243a",
+          dark: "#0a0a0a",   // Rich Obsidian Card Surface
           border: "#d4e0ed",  // Hairline — card and input borders, dividers
           hairline: "#d4e0ed",
-          "border-dark": "#1b3b59",
+          "border-dark": "#222222", // Sleek dark border
         },
         accent: {
           DEFAULT: "#006bff",

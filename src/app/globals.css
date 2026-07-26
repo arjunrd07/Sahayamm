@@ -3,27 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --color-ink-navy: #0b3558;
+  --color-ink-navy: #0b2545;
   --color-signal-blue: #006bff;
-  --color-slate-gray: #476788;
-  --color-mist-gray: #a6bbd1;
-  --color-cloud: #f8f9fb;
+  --color-signal-hover: #0056d6;
+  --color-slate-gray: #4a5568;
+  --color-mist-gray: #94a3b8;
+  --color-cloud: #f8fafc;
   --color-paper: #ffffff;
-  --color-pebble: #f0f3f8;
-  --color-hairline: #d4e0ed;
-  --color-carbon: #0a0a0a;
-  --color-coral-magenta: #e55cff;
-  --color-sky-cyan: #0099ff;
-  --color-deep-cobalt: #004eba;
+  --color-pebble: #f1f5f9;
+  --color-hairline: #e2e8f0;
+  --color-carbon: #0f172a;
 
-  --shadow-sm: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 4px 10px 0px, rgba(71, 103, 136, 0.05) 0px 10px 20px 0px;
-  --shadow-sm-2: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 8px 15px 0px, rgba(71, 103, 136, 0.08) 0px 30px 50px 0px;
-  --shadow-sm-3: rgba(71, 103, 136, 0.04) 0px 4px 5px 0px, rgba(71, 103, 136, 0.03) 0px 8px 15px 0px, rgba(71, 103, 136, 0.06) 0px 15px 30px 0px;
+  --shadow-sm: 0 1px 3px rgba(11, 37, 69, 0.05), 0 1px 2px rgba(11, 37, 69, 0.03);
+  --shadow-card: 0 4px 20px -2px rgba(11, 37, 69, 0.06), 0 2px 6px -1px rgba(11, 37, 69, 0.04);
+  --shadow-elevated: 0 12px 35px -5px rgba(0, 107, 255, 0.12), 0 4px 15px -2px rgba(11, 37, 69, 0.06);
+  --shadow-button: 0 4px 12px rgba(0, 107, 255, 0.22);
 }
 
 @layer base {
   html {
-    @apply antialiased font-sans;
+    @apply antialiased font-sans scroll-smooth;
     color: var(--color-ink-navy);
   }
   body {
@@ -31,7 +30,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply text-ink dark:text-white font-bold tracking-tight;
+    @apply font-bold tracking-tight;
   }
   * {
     @apply border-surface-border dark:border-surface-border-dark;
@@ -42,26 +41,29 @@
 }
 
 @layer components {
-  /* Calendly Elevated Card: 24px radius, hairline border, soft blue shadow */
+  /* Elevated Cards: 24px radius, hairline border, soft shadow */
   .card {
-    @apply bg-white dark:bg-surface-dark border border-surface-border dark:border-surface-border-dark rounded-3xl shadow-card transition-all;
+    @apply bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-2xl shadow-card transition-all duration-200;
   }
   .card-product {
-    @apply bg-white dark:bg-surface-dark border border-surface-border dark:border-surface-border-dark rounded-2xl shadow-elevated;
+    @apply bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-2xl shadow-elevated;
   }
 
-  /* Calendly Buttons: 8px border-radius, exact padding and typography */
+  /* Min 44px Touch Target & Accessible Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg text-base font-semibold px-5 py-2.5 transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold px-5 py-2.5 min-h-[44px] whitespace-nowrap transition-all duration-150 disabled:opacity-50 disabled:pointer-events-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 dark:focus-visible:ring-offset-canvas-dark;
   }
   .btn-primary {
-    @apply btn bg-signal text-white hover:bg-signal-hover shadow-button active:scale-[0.99];
+    @apply btn bg-signal text-white hover:bg-signal-hover shadow-button hover:shadow-lg active:scale-[0.98];
   }
   .btn-dark {
-    @apply btn bg-ink text-white hover:bg-ink/90 active:scale-[0.99];
+    @apply btn bg-ink text-white hover:bg-ink/90 active:scale-[0.98];
   }
   .btn-secondary {
-    @apply btn bg-surface-pebble dark:bg-white/5 text-ink dark:text-white border border-surface-border dark:border-surface-border-dark hover:bg-surface-border/40;
+    @apply btn bg-surface-pebble dark:bg-white/10 text-ink dark:text-white border border-slate-200 dark:border-surface-border-dark hover:bg-slate-200/60;
+  }
+  .btn-outline-blue {
+    @apply btn bg-white text-signal border-2 border-signal hover:bg-signal-soft active:scale-[0.98];
   }
   .btn-accent {
     @apply btn bg-signal text-white hover:bg-signal-hover;
@@ -70,12 +72,12 @@
     @apply btn bg-danger text-white hover:bg-danger/90;
   }
   .btn-ghost {
-    @apply btn text-ink dark:text-white hover:bg-surface-pebble dark:hover:bg-white/5;
+    @apply btn text-ink dark:text-white hover:bg-surface-pebble dark:hover:bg-white/10 rounded-full px-4 py-2.5;
   }
 
-  /* Form Inputs & Labels */
+  /* Form Inputs with Min 44px height & clear focus states */
   .input {
-    @apply w-full rounded-lg border border-surface-border dark:border-surface-border-dark bg-surface-pebble dark:bg-surface-dark px-4 py-3 text-sm text-ink dark:text-white placeholder:text-ink-mist focus:outline-none focus:ring-2 focus:ring-signal/30 focus:border-signal transition-all;
+    @apply w-full min-h-[44px] rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark px-4 py-2.5 text-sm text-ink dark:text-white placeholder:text-ink-mist focus:outline-none focus:ring-2 focus:ring-signal/30 focus:border-signal transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-signal;
   }
   .label {
     @apply block text-sm font-semibold text-ink dark:text-white mb-1.5;
@@ -83,14 +85,8 @@
 
   /* Pill Badges */
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-signal-soft text-signal-cobalt;
-  }
-
-  /* Decorative accent blobs behind components */
-  .blob-magenta {
-    @apply absolute -z-10 rounded-full blur-3xl opacity-30 bg-accent-magenta;
-  }
-  .blob-cyan {
-    @apply absolute -z-10 rounded-full blur-3xl opacity-30 bg-accent-cyan;
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-signal-soft text-signal-cobalt border border-signal/20;
   }
 }
+
+

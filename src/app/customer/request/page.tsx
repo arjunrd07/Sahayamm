@@ -47,14 +47,20 @@ export default function RequestLoanPage() {
 
   if (!canRequest) {
     return (
-      <Card className="max-w-xl">
-        <div className="flex items-center justify-between mb-2">
-          <CardTitle>You're not verified yet</CardTitle>
+      <Card className="max-w-xl p-8">
+        <div className="flex items-center justify-between mb-4">
+          <CardTitle>Verification Required</CardTitle>
           <VerificationBadge status={profile.verification_status} />
         </div>
-        <CardDescription>
-          Complete verification before requesting a loan from your organization.
+        <CardDescription className="mb-6 leading-relaxed">
+          You must complete your identity and organization employment verification before submitting a loan request.
         </CardDescription>
+        <a
+          href="/customer/verification"
+          className="btn-primary inline-flex items-center gap-2"
+        >
+          Start Verification Now
+        </a>
       </Card>
     );
   }

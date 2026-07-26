@@ -10,10 +10,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = (localStorage.getItem("sahayam-theme") as Theme) || null;
-    const preferred =
-      stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    setTheme(preferred);
+    const stored = localStorage.getItem("sahayam-theme");
+    if (stored === "dark") {
+      setTheme("dark");
+    } else {
+      setTheme("light");
+    }
   }, []);
 
   useEffect(() => {

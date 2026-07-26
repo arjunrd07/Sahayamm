@@ -13,7 +13,7 @@ export interface RequestLoanInput {
 }
 
 export async function requestLoan(input: RequestLoanInput) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -1,26 +1,19 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/theme-context";
 import { AuthProvider } from "@/context/auth-context";
 import { NotificationProvider } from "@/context/notification-context";
 import { ToastProvider } from "@/components/ui/toast";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-gilroy",
-});
-
 export const metadata: Metadata = {
-  title: "Sahayam — Internal Lending",
-  description: "Intra-organization lending, verification, and agreements — in one place.",
+  title: "Sahayam — Automated Intra-Organization Lending Platform",
+  description: "Intra-organization lending, employee credit pools, DocuSeal digital agreements, and automated HRMS verification.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={manrope.variable} suppressHydrationWarning>
-      <body className={manrope.className} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>

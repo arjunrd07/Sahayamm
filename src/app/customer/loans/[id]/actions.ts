@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  * to verify and mark the loan Completed.
  */
 export async function submitRepaymentProof(loanId: string, proofPath: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

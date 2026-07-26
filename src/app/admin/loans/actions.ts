@@ -7,7 +7,7 @@ import { formatINR } from "@/lib/utils";
 import type { Organization, Profile } from "@/types/database";
 
 async function requireAdmin() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

@@ -2,15 +2,18 @@ import { describe, it, expect } from "vitest";
 import type { UserRole } from "../types/database";
 
 export function resolveDashboardPath(role?: UserRole | null): string {
-  if (role === "superadmin" || role === "admin") {
+  if (role === "superadmin") {
+    return "/superadmin/dashboard";
+  }
+  if (role === "admin") {
     return "/admin/dashboard";
   }
   return "/customer/dashboard";
 }
 
 describe("Unified Auth Role-Based Dashboard Routing", () => {
-  it("routes superadmin role to /admin/dashboard", () => {
-    expect(resolveDashboardPath("superadmin")).toBe("/admin/dashboard");
+  it("routes superadmin role to /superadmin/dashboard", () => {
+    expect(resolveDashboardPath("superadmin")).toBe("/superadmin/dashboard");
   });
 
   it("routes admin role to /admin/dashboard", () => {

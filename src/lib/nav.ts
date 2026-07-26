@@ -38,3 +38,11 @@ export const adminNav: NavItem[] = [
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
+
+export const superadminNav: NavItem[] = [
+  { href: "/superadmin/dashboard", label: "Superadmin Overview", icon: LayoutDashboard },
+  { href: "/superadmin/organizations", label: "Organizations", icon: FileText },
+  { href: "/superadmin/users", label: "Global Users", icon: User },
+  { href: "/superadmin/audit", label: "Audit & Security Logs", icon: Bell },
+  { href: "/admin/dashboard", label: "Org Admin View", icon: Settings },
+];
