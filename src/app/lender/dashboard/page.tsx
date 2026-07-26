@@ -121,7 +121,7 @@ const DEMO_PROFILES: Profile[] = [
     full_name: "Sarah Jenkins",
     email: "sarah.j@company.com",
     phone: "+91 98765 43210",
-    role: "customer",
+    role: "borrower",
     verification_status: "pending",
     rejection_reason: null,
     id_proof_url: "verification-docs/id.pdf",
@@ -137,7 +137,7 @@ const DEMO_PROFILES: Profile[] = [
     full_name: "David Chen",
     email: "david.c@company.com",
     phone: "+91 98123 45678",
-    role: "customer",
+    role: "borrower",
     verification_status: "pending",
     rejection_reason: null,
     id_proof_url: "verification-docs/id2.pdf",
@@ -153,7 +153,7 @@ const DEMO_PROFILES: Profile[] = [
     full_name: "Meera Nair",
     email: "meera.n@company.com",
     phone: "+91 97654 32109",
-    role: "customer",
+    role: "borrower",
     verification_status: "pending",
     rejection_reason: null,
     id_proof_url: "verification-docs/id3.pdf",
@@ -221,9 +221,9 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       {!user ? (
-        <div className="p-4 rounded-2xl bg-signal-soft border border-signal/20 text-xs sm:text-sm text-signal-cobalt flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-semibold">
-          <span>Viewing Admin Dashboard (Guest Preview Mode with Demo Data)</span>
-          <Link href="/login" className="underline hover:text-signal shrink-0">Sign In as Admin</Link>
+        <div className="p-4 rounded-2xl bg-slate-900 text-white text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-semibold shadow-sm border border-slate-800">
+          <span>Viewing Lender Dashboard (Guest Preview Mode with Demo Data)</span>
+          <Link href="/login" className="underline hover:text-blue-300 shrink-0">Sign In as Lender</Link>
         </div>
       ) : isDemoData ? (
         <div className="p-4 rounded-2xl bg-signal-soft border border-signal/20 text-xs sm:text-sm text-signal-cobalt flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-semibold">

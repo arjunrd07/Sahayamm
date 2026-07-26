@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { 
-  ShieldCheck, 
-  FileText, 
-  Percent, 
-  Bell, 
-  FileSpreadsheet, 
-  ArrowRight, 
-  CheckCircle2, 
-  Building2, 
+import {
+  ShieldCheck,
+  FileText,
+  Percent,
+  Bell,
+  FileSpreadsheet,
+  ArrowRight,
+  CheckCircle2,
+  Building2,
   Lock,
   Calendar,
   Sparkles,
@@ -43,44 +43,41 @@ export default async function RootPage() {
   const dashboardUrl =
     profile?.role === "superadmin"
       ? "/superadmin/dashboard"
-      : profile?.role === "admin"
-      ? "/admin/dashboard"
-      : "/customer/dashboard";
+      : profile?.role === "lender" || profile?.role === "admin"
+      ? "/lender/dashboard"
+      : "/borrower/dashboard";
 
   return (
     <div className="min-h-screen bg-white dark:bg-canvas-dark text-ink dark:text-white flex flex-col font-sans selection:bg-signal-soft selection:text-signal">
-      {/* 0. Top Interactive Evaluator Demo Banner */}
-      <div className="bg-gradient-to-r from-black via-[#006bff] to-black text-white text-xs py-2 px-4 shadow-sm border-b border-signal/20">
+      {/* 0. Top Interactive Evaluator Demo Banner - Classic White & Blue Theme */}
+      <div className="bg-slate-900 text-white text-xs py-2 px-4 border-b border-blue-900/50 shadow-sm">
         <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-semibold">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-extrabold uppercase tracking-wide text-[11px] bg-white/20 px-2 py-0.5 rounded-full">
+            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
+            <span className="font-extrabold uppercase tracking-wide text-[11px] bg-blue-600/30 text-blue-200 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
               Demo Switcher
             </span>
-            <span>Test Sahayam roles out-of-the-box:</span>
+            <span className="text-slate-300">Test Sahayam roles out-of-the-box:</span>
           </div>
 
-          <div className="flex items-center gap-2 font-bold">
+          <div className="flex items-center gap-2 text-[11px] font-semibold">
             <Link
-              href="/customer/dashboard"
-              className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-[11px] flex items-center gap-1"
+              href="/borrower/dashboard"
+              className="px-3 py-1 bg-white text-slate-900 hover:bg-blue-50 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors border border-slate-200"
             >
-              <UserCheck className="h-3.5 w-3.5 text-cyan-300" />
-              Customer
+              <UserCheck className="h-3.5 w-3.5 text-blue-600" /> Borrower
             </Link>
             <Link
-              href="/admin/dashboard"
-              className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-[11px] flex items-center gap-1"
+              href="/lender/dashboard"
+              className="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
             >
-              <Shield className="h-3.5 w-3.5 text-amber-300" />
-              Admin
+              <Shield className="h-3.5 w-3.5 text-blue-200" /> Lender
             </Link>
             <Link
               href="/superadmin/dashboard"
-              className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-[11px] flex items-center gap-1"
+              className="px-3 py-1 bg-slate-800 text-slate-100 hover:bg-slate-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors border border-slate-700"
             >
-              <LayoutDashboard className="h-3.5 w-3.5 text-emerald-300" />
-              Superadmin
+              <LayoutDashboard className="h-3.5 w-3.5 text-emerald-400" /> Superadmin
             </Link>
           </div>
         </div>

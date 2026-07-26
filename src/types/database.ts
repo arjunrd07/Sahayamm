@@ -1,4 +1,4 @@
-export type UserRole = "customer" | "admin" | "superadmin";
+export type UserRole = "borrower" | "lender" | "superadmin";
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 export type LoanStatus = "pending" | "approved" | "rejected" | "active" | "completed" | "overdue";
 export type AgreementStatus = "draft" | "sent" | "partially_signed" | "completed";
@@ -27,6 +27,10 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
+  pan_number?: string | null;
+  cibil_score?: number | null;
+  address?: string | null;
+  kyc_completed?: boolean;
   role: UserRole;
   verification_status: VerificationStatus;
   rejection_reason: string | null;

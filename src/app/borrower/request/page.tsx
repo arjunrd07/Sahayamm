@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,26 +43,28 @@ export default function RequestLoanPage() {
       return;
     }
     push("success", "Loan request submitted.");
-    router.push("/customer/loans");
+    router.push("/borrower/loans");
   }
 
-  if (!canRequest) {
+  if (profile && profile.verification_status !== "verified") {
     return (
-      <Card className="max-w-xl p-8">
-        <div className="flex items-center justify-between mb-4">
-          <CardTitle>Verification Required</CardTitle>
-          <VerificationBadge status={profile.verification_status} />
+      <div className="max-w-xl space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold">Request a Loan</h2>
+          <p className="text-sm text-muted mt-1">Verification required before requesting internal credit.</p>
         </div>
-        <CardDescription className="mb-6 leading-relaxed">
-          You must complete your identity and organization employment verification before submitting a loan request.
-        </CardDescription>
-        <a
-          href="/customer/verification"
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          Start Verification Now
-        </a>
-      </Card>
+        <div className="card p-6 border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 text-center space-y-3">
+          <p className="text-sm text-amber-900 dark:text-amber-200">
+            Your profile is currently <strong>{profile.verification_status}</strong>. Please complete document verification to unlock loan requests.
+          </p>
+          <Link
+            href="/borrower/verification"
+            className="btn-primary inline-block text-xs py-2 px-4 rounded-lg font-semibold"
+          >
+            Go to Verification Page
+          </Link>
+        </div>
+      </div>
     );
   }
 

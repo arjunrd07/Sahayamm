@@ -41,14 +41,14 @@ export async function GET(request: NextRequest) {
       full_name: meta.full_name || user.email,
       email: user.email,
       phone: meta.phone || null,
-      role: "customer",
+      role: "borrower",
       verification_status: "unverified",
     });
 
-    return NextResponse.redirect(`${origin}/customer/verification`);
+    return NextResponse.redirect(`${origin}/borrower/verification`);
   }
 
   return NextResponse.redirect(
-    `${origin}${existingProfile.role === "admin" ? "/admin/dashboard" : "/customer/dashboard"}`
+    `${origin}${existingProfile.role === "lender" || existingProfile.role === "admin" ? "/lender/dashboard" : "/borrower/dashboard"}`
   );
 }

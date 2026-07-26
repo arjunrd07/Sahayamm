@@ -13,7 +13,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
   const { unreadCount } = useNotifications();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const notificationsHref = pathname?.startsWith("/admin") ? "/admin/notifications" : "/customer/notifications";
+  const notificationsHref = pathname?.startsWith("/lender") ? "/lender/notifications" : "/borrower/notifications";
   const active = items.find((item) => pathname?.startsWith(item.href));
   const title = active?.label ?? "Sahayam";
 
