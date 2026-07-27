@@ -26,6 +26,7 @@ import {
 import { CustomerCarousel } from "@/components/home/CustomerCarousel";
 import { FeatureSwitchback } from "@/components/home/FeatureSwitchback";
 import { HeroCalculator } from "@/components/home/HeroCalculator";
+import { PricingSection } from "@/components/home/PricingSection";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default async function RootPage() {
@@ -84,7 +85,7 @@ export default async function RootPage() {
       </div>
 
       {/* 1. Header Navigation */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/95 dark:bg-black/95 border-b border-slate-100 dark:border-surface-border-dark px-6 sm:px-12 py-4">
+      <header className="sticky top-0 z-50 bg-white dark:bg-canvas-dark border-b border-slate-200 dark:border-surface-border-dark px-6 sm:px-12 py-4">
         <div className="max-w-[1240px] mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="h-9 w-9 rounded-xl bg-signal flex items-center justify-center shadow-button transition-transform group-hover:scale-105">
@@ -317,97 +318,8 @@ export default async function RootPage() {
         </div>
       </section>
 
-      {/* 7. Pricing Cards */}
-      <section id="pricing" className="py-24 px-6 sm:px-12 bg-slate-50/80 dark:bg-surface-dark/40 border-y border-slate-100 dark:border-surface-border-dark">
-        <div className="max-w-[1240px] mx-auto text-center">
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 text-ink dark:text-white">
-            Pick the perfect plan for your team
-          </h2>
-          <p className="text-ink-slate text-lg max-w-xl mx-auto mb-10">
-            Transparent pricing designed to scale with your organization&apos;s internal credit needs.
-          </p>
-
-          {/* Pricing Toggle Pill */}
-          <div className="inline-flex items-center gap-3 p-1.5 rounded-full bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark mb-16 shadow-sm">
-            <span className="px-4 py-2 rounded-full bg-signal text-white text-xs font-bold shadow-sm">Billed yearly</span>
-            <span className="px-4 py-2 rounded-full text-xs font-bold text-ink-slate">Billed monthly</span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold">Save 16%</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-left">
-            {/* Free Card */}
-            <div className="card p-7 flex flex-col justify-between hover:border-signal transition-colors bg-white dark:bg-surface-dark">
-              <div>
-                <h3 className="font-extrabold text-xl text-ink dark:text-white">Free</h3>
-                <p className="text-xs text-ink-slate mt-1 mb-6">For personal use.</p>
-                <p className="text-3xl font-black text-ink dark:text-white mb-6">Always free</p>
-                <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Up to 10 active loans</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Verification queue</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Standard CSV exports</li>
-                </ul>
-              </div>
-              <Link href="/signup" className="btn-dark w-full text-sm font-bold text-center rounded-full py-3">
-                Get started
-              </Link>
-            </div>
-
-            {/* Standard Card */}
-            <div className="card p-7 flex flex-col justify-between hover:border-signal transition-colors bg-white dark:bg-surface-dark">
-              <div>
-                <h3 className="font-extrabold text-xl text-ink dark:text-white">Standard</h3>
-                <p className="text-xs text-ink-slate mt-1 mb-6">For professionals and small teams.</p>
-                <p className="text-4xl font-black text-ink dark:text-white mb-6">₹10 <span className="text-xs text-ink-slate font-normal">/ seat / mo</span></p>
-                <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Up to 100 active loans</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> DocuSeal e-signatures</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Email notifications</li>
-                </ul>
-              </div>
-              <Link href="/signup" className="btn-primary w-full text-sm font-bold text-center rounded-full shadow-button py-3">
-                Get started
-              </Link>
-            </div>
-
-            {/* Teams Card (Recommended) */}
-            <div className="card p-7 flex flex-col justify-between border-2 border-signal relative shadow-elevated bg-white dark:bg-surface-dark">
-              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-signal text-white px-3.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider">
-                Recommended plan
-              </span>
-              <div>
-                <h3 className="font-extrabold text-xl text-ink dark:text-white">Teams</h3>
-                <p className="text-xs text-ink-slate mt-1 mb-6">For growing businesses.</p>
-                <p className="text-4xl font-black text-ink dark:text-white mb-6">₹16 <span className="text-xs text-ink-slate font-normal">/ seat / mo</span></p>
-                <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Unlimited loan requests</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Automated reminders</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Advanced audit reporting</li>
-                </ul>
-              </div>
-              <Link href="/signup" className="btn-primary w-full text-sm font-bold text-center rounded-full shadow-button py-3">
-                Try for free
-              </Link>
-            </div>
-
-            {/* Enterprise Card */}
-            <div className="card p-7 flex flex-col justify-between hover:border-signal transition-colors bg-white dark:bg-surface-dark">
-              <div>
-                <h3 className="font-extrabold text-xl text-ink dark:text-white">Enterprise</h3>
-                <p className="text-xs text-ink-slate mt-1 mb-6">For large companies.</p>
-                <p className="text-4xl font-black text-ink dark:text-white mb-6">Starts at ₹15k <span className="text-xs text-ink-slate font-normal">/ yr</span></p>
-                <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Custom SLA & support</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Dedicated Superadmin</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal" /> Custom DB isolation</li>
-                </ul>
-              </div>
-              <Link href="/signup" className="btn-primary w-full text-sm font-bold text-center rounded-full shadow-button py-3">
-                Talk to sales
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 7. Interactive Pricing Cards */}
+      <PricingSection />
 
       {/* 8. Interactive Customer Success Carousel Section (Calendly Exact System) */}
       <CustomerCarousel />
@@ -432,7 +344,7 @@ export default async function RootPage() {
           </div>
 
           <Link href="#security" className="text-xs font-bold text-signal hover:underline">
-            Learn more →
+            Learn more
           </Link>
         </div>
       </section>
@@ -444,7 +356,7 @@ export default async function RootPage() {
             <h2 className="text-3xl sm:text-5xl font-extrabold text-ink dark:text-white tracking-tight mb-2">
               Power up your lending
             </h2>
-            <p className="text-ink-slate text-base">Get started in seconds — for free.</p>
+            <p className="text-ink-slate text-base">Get started in seconds for free.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">

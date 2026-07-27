@@ -2,12 +2,12 @@ import { cn } from "@/lib/utils";
 import type { LoanStatus, VerificationStatus, AgreementStatus } from "@/types/database";
 
 const loanStatusStyle: Record<LoanStatus, string> = {
-  pending: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  approved: "bg-signal-soft text-signal-cobalt",
-  rejected: "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-300",
-  active: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  completed: "bg-surface-pebble text-ink-slate dark:bg-white/10 dark:text-white",
-  overdue: "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
+  pending: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  approved: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50",
+  active: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
+  completed: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+  overdue: "bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-900",
 };
 
 const loanStatusLabel: Record<LoanStatus, string> = {
@@ -24,15 +24,15 @@ export function LoanStatusBadge({ status }: { status: LoanStatus }) {
 }
 
 const verificationStyle: Record<VerificationStatus, string> = {
-  unverified: "bg-surface-pebble text-ink-mist dark:bg-white/5",
-  pending: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  verified: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
-  rejected: "bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-300",
+  unverified: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700",
+  pending: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  verified: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
+  rejected: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/50",
 };
 
 const verificationLabel: Record<VerificationStatus, string> = {
-  unverified: "Not submitted",
-  pending: "Pending review",
+  unverified: "Unverified",
+  pending: "Pending Review",
   verified: "Verified",
   rejected: "Rejected",
 };
@@ -42,17 +42,17 @@ export function VerificationBadge({ status }: { status: VerificationStatus }) {
 }
 
 const agreementStyle: Record<AgreementStatus, string> = {
-  draft: "bg-surface-pebble text-ink-mist dark:bg-white/5",
-  sent: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
-  partially_signed: "bg-signal-soft text-signal-cobalt",
-  completed: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
+  draft: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/40 dark:text-slate-400 dark:border-slate-700",
+  sent: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
+  partially_signed: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
+  completed: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
 };
 
 const agreementLabel: Record<AgreementStatus, string> = {
   draft: "Draft",
-  sent: "Awaiting signatures",
-  partially_signed: "Partially signed",
-  completed: "Fully signed",
+  sent: "Awaiting Signatures",
+  partially_signed: "Partially Signed",
+  completed: "Fully Signed",
 };
 
 export function AgreementStatusBadge({ status }: { status: AgreementStatus }) {

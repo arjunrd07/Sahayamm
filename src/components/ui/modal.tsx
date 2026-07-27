@@ -29,13 +29,13 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-md card p-6 shadow-popover">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-3xl p-6 shadow-elevated z-10 animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold">{title}</h2>
+          <h2 className="text-base font-bold text-ink dark:text-white">{title}</h2>
           <button
             onClick={onClose}
-            className="text-muted hover:text-ink dark:hover:text-white rounded-lg p-1"
+            className="text-ink-slate hover:text-ink dark:hover:text-white rounded-xl p-1.5 hover:bg-surface-pebble dark:hover:bg-white/10 transition-colors"
             aria-label="Close"
           >
             <X className="h-4 w-4" />

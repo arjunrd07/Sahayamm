@@ -10,7 +10,7 @@ Input.displayName = "Input";
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
   ({ className, ...props }, ref) => (
-    <textarea ref={ref} className={cn("input min-h-[96px] resize-y", className)} {...props} />
+    <textarea ref={ref} className={cn("input min-h-[96px] resize-none", className)} {...props} />
   )
 );
 Textarea.displayName = "Textarea";

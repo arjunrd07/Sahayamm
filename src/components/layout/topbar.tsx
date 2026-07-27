@@ -107,20 +107,18 @@ export function Topbar({ items }: { items: NavItem[] }) {
   const title = active?.label ?? "Sahayam";
 
   // Map real database notifications to UI format
-  const displayNotifications: NotificationItem[] = notifications.length > 0
-    ? notifications.slice(0, 10).map((n) => {
-        const { icon, color } = getNotificationIconAndColor(n.type);
-        return {
-          id: n.id,
-          name: n.title,
-          description: n.message,
-          icon,
-          color,
-          time: formatDistanceToNow(new Date(n.created_at), { addSuffix: true }),
-          read: n.read,
-        };
-      })
-    : DEFAULT_NOTIFICATIONS;
+  const displayNotifications: NotificationItem[] = notifications.slice(0, 10).map((n) => {
+    const { icon, color } = getNotificationIconAndColor(n.type);
+    return {
+      id: n.id,
+      name: n.title,
+      description: n.message,
+      icon,
+      color,
+      time: formatDistanceToNow(new Date(n.created_at), { addSuffix: true }),
+      read: n.read,
+    };
+  });
 
   // Dismiss dropdown on outside click
   useEffect(() => {
@@ -134,17 +132,17 @@ export function Topbar({ items }: { items: NavItem[] }) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 dark:bg-canvas-dark/90 backdrop-blur-md border-b border-surface-border dark:border-surface-border-dark">
+    <header className="sticky top-0 z-30 bg-white dark:bg-surface-dark border-b border-slate-200 dark:border-surface-border-dark transition-colors duration-200">
       <div className="flex items-center justify-between px-4 md:px-8 h-16">
         <div className="flex items-center gap-3">
           <button
-            className="md:hidden h-11 w-11 flex items-center justify-center rounded-xl text-ink-slate hover:bg-surface-pebble dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+            className="md:hidden h-11 w-11 flex items-center justify-center rounded-xl text-ink-slate hover:bg-surface-pebble dark:hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-xl font-bold text-ink dark:text-white tracking-tight">{title}</h1>
+          <h1 className="text-xl font-extrabold text-ink dark:text-white tracking-tight">{title}</h1>
         </div>
 
         <div className="flex items-center gap-2 relative" ref={popoverRef}>
@@ -155,10 +153,10 @@ export function Topbar({ items }: { items: NavItem[] }) {
             type="button"
             onClick={() => setNotifOpen((prev) => !prev)}
             className={cn(
-              "relative h-11 w-11 rounded-xl flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal",
+              "relative h-11 w-11 rounded-xl flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal active:scale-95",
               notifOpen
                 ? "bg-signal-soft text-signal"
-                : "text-ink-slate hover:text-ink dark:hover:text-white hover:bg-surface-pebble dark:hover:bg-white/5"
+                : "text-ink-slate hover:text-ink dark:hover:text-white hover:bg-surface-pebble dark:hover:bg-white/10"
             )}
             aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
           >
@@ -168,10 +166,10 @@ export function Topbar({ items }: { items: NavItem[] }) {
             )}
           </button>
 
-          {/* Animated Notification Dropdown Popover */}
+          {/* Animated Glass Notification Dropdown Popover */}
           {notifOpen && (
-            <div className="absolute right-0 top-14 w-80 sm:w-96 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-elevated z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="p-4 border-b border-slate-100 dark:border-surface-border-dark flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
+            <div className="absolute right-0 top-14 w-80 sm:w-96 rounded-2xl bg-white/95 dark:bg-surface-dark/95 backdrop-blur-2xl border border-slate-200/90 dark:border-surface-border-dark shadow-elevated z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-4 border-b border-slate-100 dark:border-surface-border-dark flex items-center justify-between bg-slate-50/60 dark:bg-white/5">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-ink dark:text-white">Workspace Notifications</h3>
                   {unreadCount > 0 ? (
@@ -194,11 +192,17 @@ export function Topbar({ items }: { items: NavItem[] }) {
 
               {/* Animated List Container */}
               <div className="p-3 max-h-[380px] overflow-y-auto space-y-2">
-                <AnimatedList delay={1000}>
-                  {displayNotifications.map((item, idx) => (
-                    <NotificationCard key={item.id ?? idx} {...item} />
-                  ))}
-                </AnimatedList>
+                {displayNotifications.length > 0 ? (
+                  <AnimatedList delay={1000}>
+                    {displayNotifications.map((item, idx) => (
+                      <NotificationCard key={item.id ?? idx} {...item} />
+                    ))}
+                  </AnimatedList>
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-400 font-medium">
+                    No workspace notifications yet
+                  </div>
+                )}
               </div>
 
               <div className="p-3 border-t border-slate-100 dark:border-surface-border-dark bg-slate-50/50 dark:bg-white/5 text-center">

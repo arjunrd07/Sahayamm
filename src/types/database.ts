@@ -18,6 +18,7 @@ export interface Organization {
   id: string;
   name: string;
   code: string;
+  capital_pool_limit?: number;
   created_at: string;
 }
 

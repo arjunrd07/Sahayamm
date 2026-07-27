@@ -20,12 +20,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const supabase = createClient();
 
   async function load() {
-    if (!profile) return;
-    const { data } = await supabase
+    if (!profile?.id) return;
+    const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("user_id", profile.id)
       .order("created_at", { ascending: false })
       .limit(50);
+
+    if (error) {
+      console.error("Failed to fetch notifications:", error.message);
+    }
     setNotifications((data as AppNotification[]) || []);
   }
 
