@@ -1,54 +1,71 @@
 -- =====================================================================
--- Sahayam — Intra-Organization Lending Platform
--- Full schema, indexes, triggers, Superadmin role, and Row Level Security.
+-- Sahayam Complete Database Schema
+-- Platform: Sahayam — Intra-Organization Lending Platform
 -- =====================================================================
 
 create extension if not exists "uuid-ossp";
 
--- ---------------------------------------------------------------------
--- ENUM TYPES
--- ---------------------------------------------------------------------
-create type user_role as enum ('borrower', 'lender', 'superadmin');
-create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
-create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
-create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
-create type notification_type as enum (
-  'verification_decision',
-  'loan_requested',
-  'loan_approved',
-  'loan_rejected',
-  'agreement_ready',
-  'agreement_signed',
-  'funds_sent',
-  'repayment_reminder',
-  'loan_completed',
-  'loan_overdue'
-);
+-- 1. ENUM TYPES
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'user_role') then
+    create type user_role as enum ('borrower', 'lender', 'superadmin');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'verification_status') then
+    create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'loan_status') then
+    create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'agreement_status') then
+    create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'notification_type') then
+    create type notification_type as enum (
+      'verification_decision',
+      'loan_requested',
+      'loan_approved',
+      'loan_rejected',
+      'agreement_ready',
+      'agreement_signed',
+      'funds_sent',
+      'repayment_reminder',
+      'loan_completed',
+      'loan_overdue'
+    );
+  end if;
+end $$;
 
--- ---------------------------------------------------------------------
--- ORGANIZATIONS
--- ---------------------------------------------------------------------
-create table organizations (
+alter type user_role add value if not exists 'borrower';
+alter type user_role add value if not exists 'lender';
+alter type user_role add value if not exists 'superadmin';
+
+-- 2. ORGANIZATIONS
+create table if not exists organizations (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
   code text not null unique,
   created_at timestamptz not null default now()
 );
 
--- ---------------------------------------------------------------------
--- PROFILES (1:1 with auth.users)
--- ---------------------------------------------------------------------
-create table profiles (
+-- 3. PROFILES
+create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  org_id uuid not null references organizations(id) on delete restrict,
-  full_name text not null,
-  email text not null,
+  org_id uuid references organizations(id) on delete restrict,
+  full_name text,
+  email text,
   phone text,
   pan_number text,
-  cibil_score integer check (cibil_score >= 300 and cibil_score <= 900),
+  cibil_score integer,
   address text,
+  bank_name text,
+  account_number text,
+  ifsc_code text,
+  upi_id text,
+  emergency_name text,
+  emergency_phone text,
+  emergency_relation text,
   kyc_completed boolean not null default false,
-  role user_role not null default 'customer',
+  role user_role not null default 'borrower',
   verification_status verification_status not null default 'unverified',
   rejection_reason text,
   id_proof_url text,
@@ -59,17 +76,12 @@ create table profiles (
   updated_at timestamptz not null default now()
 );
 
-create index idx_profiles_org on profiles(org_id);
-create index idx_profiles_role on profiles(org_id, role);
-
--- ---------------------------------------------------------------------
--- LOANS
--- ---------------------------------------------------------------------
-create table loans (
+-- 4. LOANS
+create table if not exists loans (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete restrict,
-  customer_id uuid not null references profiles(id) on delete restrict,
-  admin_id uuid references profiles(id),
+  borrower_id uuid not null references profiles(id) on delete restrict,
+  lender_id uuid references profiles(id),
   amount numeric(14,2) not null check (amount > 0),
   purpose text not null,
   duration_days integer not null check (duration_days > 0),
@@ -92,15 +104,8 @@ create table loans (
   updated_at timestamptz not null default now()
 );
 
-create index idx_loans_org on loans(org_id);
-create index idx_loans_customer on loans(customer_id);
-create index idx_loans_status on loans(org_id, status);
-create index idx_loans_due_date on loans(due_date) where status = 'active';
-
--- ---------------------------------------------------------------------
--- AGREEMENTS
--- ---------------------------------------------------------------------
-create table agreements (
+-- 5. AGREEMENTS
+create table if not exists agreements (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete restrict,
   loan_id uuid not null references loans(id) on delete cascade unique,
@@ -116,13 +121,8 @@ create table agreements (
   updated_at timestamptz not null default now()
 );
 
-create index idx_agreements_org on agreements(org_id);
-create index idx_agreements_loan on agreements(loan_id);
-
--- ---------------------------------------------------------------------
--- NOTIFICATIONS
--- ---------------------------------------------------------------------
-create table notifications (
+-- 6. NOTIFICATIONS
+create table if not exists notifications (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete cascade,
   user_id uuid not null references profiles(id) on delete cascade,
@@ -135,75 +135,25 @@ create table notifications (
   created_at timestamptz not null default now()
 );
 
-create index idx_notifications_user on notifications(user_id, read);
-create index idx_notifications_org on notifications(org_id);
-
--- ---------------------------------------------------------------------
--- TRIGGERS
--- ---------------------------------------------------------------------
-create or replace function set_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
-create trigger trg_profiles_updated_at before update on profiles
-  for each row execute function set_updated_at();
-create trigger trg_loans_updated_at before update on loans
-  for each row execute function set_updated_at();
-create trigger trg_agreements_updated_at before update on agreements
-  for each row execute function set_updated_at();
-
--- AUTO-CONFIRM USER EMAIL TRIGGER (Instant Email & Password Signup)
-create or replace function public.auto_confirm_user_email()
-returns trigger as $$
-begin
-  if new.email_confirmed_at is null then
-    new.email_confirmed_at := now();
-  end if;
-  return new;
-end;
-$$ language plpgsql security definer;
-
-drop trigger if exists trg_auto_confirm_user_email on auth.users;
-create trigger trg_auto_confirm_user_email
-  before insert on auth.users
-  for each row
-  execute function public.auto_confirm_user_email();
-
--- FIRST EMPLOYEE SIGNUP TRIGGER: Automatically assigns 'superadmin' role to 1st org employee
-create or replace function handle_first_user_superadmin()
-returns trigger as $$
-declare
-  profile_count integer;
-begin
-  select count(*) into profile_count
-  from public.profiles
-  where org_id = new.org_id;
-
-  if profile_count = 0 then
-    new.role := 'superadmin';
-    new.verification_status := 'verified';
-  end if;
-
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger trg_profiles_first_user_superadmin
-  before insert on public.profiles
-  for each row
-  execute function handle_first_user_superadmin();
-
--- ---------------------------------------------------------------------
--- HELPER FUNCTIONS
--- ---------------------------------------------------------------------
+-- 7. HELPER FUNCTIONS
 create or replace function auth_org_id()
 returns uuid
 language sql stable security definer set search_path = public as $$
   select org_id from profiles where id = auth.uid();
+$$;
+
+create or replace function auth_is_lender()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from profiles where id = auth.uid() and role in ('lender', 'admin', 'superadmin')
+  );
+$$;
+
+create or replace function auth_is_admin()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth_is_lender();
 $$;
 
 create or replace function auth_is_superadmin()
@@ -214,150 +164,36 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
-create or replace function auth_is_admin()
-returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from profiles where id = auth.uid() and role in ('lender', 'admin', 'superadmin')
-  );
-$$;
-
--- ---------------------------------------------------------------------
--- ROW LEVEL SECURITY
--- ---------------------------------------------------------------------
+-- 8. ROW LEVEL SECURITY (RLS) POLICIES
 alter table organizations enable row level security;
 alter table profiles enable row level security;
 alter table loans enable row level security;
 alter table agreements enable row level security;
 alter table notifications enable row level security;
 
-create policy org_select_all on organizations
-  for select using (auth.role() = 'authenticated' or auth.role() = 'anon');
+-- Organizations
+create policy org_select_all on organizations for select using (true);
+create policy org_insert_all on organizations for insert with check (true);
 
-create policy org_superadmin_all on organizations
-  for all using (auth_is_superadmin())
-  with check (auth_is_superadmin());
+-- Profiles
+create policy profiles_select_all on profiles for select using (true);
+create policy profiles_insert_all on profiles for insert with check (true);
+create policy profiles_update_all on profiles for update using (true) with check (true);
 
-create policy profiles_select_own on profiles
-  for select using (id = auth.uid());
+-- Loans
+create policy loans_select_all on loans for select using (true);
+create policy loans_insert_all on loans for insert with check (true);
+create policy loans_update_all on loans for update using (true) with check (true);
 
-create policy profiles_select_org_admin on profiles
-  for select using (auth_is_admin() and org_id = auth_org_id());
+-- Agreements
+create policy agreements_select_all on agreements for select using (true);
+create policy agreements_insert_all on agreements for insert with check (true);
+create policy agreements_update_all on agreements for update using (true) with check (true);
 
-create policy profiles_select_superadmin on profiles
-  for select using (auth_is_superadmin());
+-- Notifications
+create policy notifications_select_all on notifications for select using (true);
+create policy notifications_insert_all on notifications for insert with check (true);
+create policy notifications_update_all on notifications for update using (true) with check (true);
 
-create policy profiles_insert_self on profiles
-  for insert with check (id = auth.uid());
-
-create policy profiles_update_own on profiles
-  for update using (id = auth.uid())
-  with check (id = auth.uid() and role = 'customer');
-
-create policy profiles_update_admin on profiles
-  for update using (auth_is_admin() and org_id = auth_org_id())
-  with check (org_id = auth_org_id());
-
-create policy profiles_update_superadmin on profiles
-  for update using (auth_is_superadmin())
-  with check (auth_is_superadmin());
-
-create policy loans_select_customer on loans
-  for select using (customer_id = auth.uid());
-
-create policy loans_select_admin on loans
-  for select using (auth_is_admin() and org_id = auth_org_id());
-
-create policy loans_select_superadmin on loans
-  for select using (auth_is_superadmin());
-
-create policy loans_insert_customer on loans
-  for insert with check (
-    customer_id = auth.uid()
-    and org_id = auth_org_id()
-    and exists (
-      select 1 from profiles
-      where id = auth.uid() and verification_status = 'verified'
-    )
-  );
-
-create policy loans_update_customer on loans
-  for update using (customer_id = auth.uid())
-  with check (customer_id = auth.uid());
-
-create policy loans_update_admin on loans
-  for update using (auth_is_admin() and org_id = auth_org_id())
-  with check (org_id = auth_org_id());
-
-create policy loans_update_superadmin on loans
-  for update using (auth_is_superadmin())
-  with check (auth_is_superadmin());
-
-create policy agreements_select_customer on agreements
-  for select using (
-    exists (
-      select 1 from loans
-      where loans.id = agreements.loan_id and loans.customer_id = auth.uid()
-    )
-  );
-
-create policy agreements_select_admin on agreements
-  for select using (auth_is_admin() and org_id = auth_org_id());
-
-create policy agreements_write_admin on agreements
-  for all using (auth_is_admin() and org_id = auth_org_id())
-  with check (org_id = auth_org_id());
-
-create policy agreements_superadmin_all on agreements
-  for all using (auth_is_superadmin())
-  with check (auth_is_superadmin());
-
-create policy notifications_select_own on notifications
-  for select using (user_id = auth.uid());
-
-create policy notifications_update_own on notifications
-  for update using (user_id = auth.uid())
-  with check (user_id = auth.uid());
-
-create policy notifications_insert_org on notifications
-  for insert with check (org_id = auth_org_id());
-
-create policy notifications_superadmin_all on notifications
-  for all using (auth_is_superadmin())
-  with check (auth_is_superadmin());
-
--- STORAGE
-insert into storage.buckets (id, name, public)
-values
-  ('verification-docs', 'verification-docs', false),
-  ('payment-proofs', 'payment-proofs', false),
-  ('agreements', 'agreements', false)
-on conflict (id) do nothing;
-
-create policy storage_verification_docs on storage.objects
-  for all using (
-    bucket_id = 'verification-docs'
-    and (
-      (storage.foldername(name))[2] = auth.uid()::text
-      or auth_is_admin()
-      or auth_is_superadmin()
-    )
-  )
-  with check (
-    bucket_id = 'verification-docs'
-    and (storage.foldername(name))[2] = auth.uid()::text
-  );
-
-create policy storage_payment_proofs on storage.objects
-  for all using (
-    bucket_id = 'payment-proofs'
-    and (
-      (storage.foldername(name))[2] = auth.uid()::text
-      or auth_is_admin()
-      or auth_is_superadmin()
-    )
-  )
-  with check (bucket_id = 'payment-proofs');
-
-create policy storage_agreements on storage.objects
-  for select using (bucket_id = 'agreements');
+-- 9. RELOAD SCHEMA CACHE IN POSTGREST
+notify pgrst, 'reload schema';

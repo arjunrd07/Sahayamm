@@ -8,7 +8,7 @@ create extension if not exists "uuid-ossp";
 -- ---------------------------------------------------------------------
 -- ENUM TYPES
 -- ---------------------------------------------------------------------
-create type user_role as enum ('customer', 'admin', 'superadmin');
+create type user_role as enum ('borrower', 'lender', 'superadmin');
 create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
 create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
 create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
@@ -44,7 +44,18 @@ create table profiles (
   full_name text not null,
   email text not null,
   phone text,
-  role user_role not null default 'customer',
+  pan_number text,
+  cibil_score integer,
+  address text,
+  bank_name text,
+  account_number text,
+  ifsc_code text,
+  upi_id text,
+  emergency_name text,
+  emergency_phone text,
+  emergency_relation text,
+  kyc_completed boolean not null default false,
+  role user_role not null default 'borrower',
   verification_status verification_status not null default 'unverified',
   rejection_reason text,
   id_proof_url text,
@@ -64,8 +75,8 @@ create index idx_profiles_role on profiles(org_id, role);
 create table loans (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete restrict,
-  customer_id uuid not null references profiles(id) on delete restrict,
-  admin_id uuid references profiles(id),
+  borrower_id uuid not null references profiles(id) on delete restrict,
+  lender_id uuid references profiles(id),
   amount numeric(14,2) not null check (amount > 0),
   purpose text not null,
   duration_days integer not null check (duration_days > 0),
@@ -89,7 +100,8 @@ create table loans (
 );
 
 create index idx_loans_org on loans(org_id);
-create index idx_loans_customer on loans(customer_id);
+create index idx_loans_borrower on loans(borrower_id);
+create index idx_loans_lender on loans(lender_id);
 create index idx_loans_status on loans(org_id, status);
 create index idx_loans_due_date on loans(due_date) where status = 'active';
 
@@ -153,7 +165,7 @@ create trigger trg_agreements_updated_at before update on agreements
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- AUTO-CONFIRM USER EMAIL TRIGGER (Password Auth without OTP/confirmation)
+-- AUTO-CONFIRM USER EMAIL TRIGGER
 -- ---------------------------------------------------------------------
 create or replace function public.auto_confirm_user_email()
 returns trigger as $$
