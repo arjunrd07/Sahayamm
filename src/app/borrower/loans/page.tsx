@@ -8,7 +8,6 @@ import { LoanStatusBadge } from "@/components/ui/status-badge";
 import { formatINR, formatDate } from "@/lib/utils";
 import type { Loan, LoanStatus } from "@/types/database";
 import Link from "next/link";
-import { PlusCircle, HandCoins } from "lucide-react";
 
 type TabValue = "all" | LoanStatus;
 
@@ -41,27 +40,8 @@ export default function CustomerLoansPage() {
   const filtered = tab === "all" ? loans : loans.filter((l) => l.status === tab);
 
   return (
-    <div className="space-y-6">
-      {/* Header with Prominent New Loan Action Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 dark:border-surface-border-dark">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-ink dark:text-white flex items-center gap-2">
-            <HandCoins className="h-6 w-6 text-signal" /> My Loans
-          </h2>
-          <p className="text-xs text-ink-slate mt-0.5">
-            Track your borrowing history, active loans, and repayment schedules.
-          </p>
-        </div>
-
-        <Link
-          href="/borrower/request"
-          className="btn-primary py-2.5 px-5 rounded-full text-xs font-bold flex items-center justify-center gap-2 shadow-button shrink-0 hover:scale-[1.02] transition-all"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>Request New Loan</span>
-        </Link>
-      </div>
-
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">My Loans</h2>
       <Tabs
         value={tab}
         onChange={setTab}
@@ -76,16 +56,7 @@ export default function CustomerLoansPage() {
       />
 
       {!loading && filtered.length === 0 ? (
-        <div className="space-y-4 text-center py-8">
-          <EmptyState title="No loans in this view" description="You have no loans listed under this status filter." />
-          <Link
-            href="/borrower/request"
-            className="btn-primary inline-flex items-center gap-2 py-2.5 px-5 rounded-full text-xs font-bold shadow-button"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>Request a Loan Now</span>
-          </Link>
-        </div>
+        <EmptyState title="No loans in this view" description="Try a different tab, or request a new loan." />
       ) : (
         <Table>
           <Thead>
@@ -100,11 +71,11 @@ export default function CustomerLoansPage() {
             {filtered.map((loan) => (
               <Tr key={loan.id}>
                 <Td>
-                  <Link href={`/borrower/loans/${loan.id}`} className="font-semibold text-ink dark:text-white hover:text-signal transition-colors">
+                  <Link href={`/customer/loans/${loan.id}`} className="font-medium hover:text-accent">
                     {loan.purpose}
                   </Link>
                 </Td>
-                <Td className="font-bold text-ink dark:text-white">{formatINR(loan.amount)}</Td>
+                <Td>{formatINR(loan.amount)}</Td>
                 <Td>{loan.due_date ? formatDate(loan.due_date) : "—"}</Td>
                 <Td>
                   <LoanStatusBadge status={loan.status} />

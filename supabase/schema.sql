@@ -47,7 +47,6 @@ create table profiles (
   pan_number text,
   cibil_score integer check (cibil_score >= 300 and cibil_score <= 900),
   address text,
-  gender text,
   kyc_completed boolean not null default false,
   role user_role not null default 'customer',
   verification_status verification_status not null default 'unverified',

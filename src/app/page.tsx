@@ -73,6 +73,12 @@ export default async function RootPage() {
             >
               <Shield className="h-3.5 w-3.5 text-blue-200" /> Lender
             </Link>
+            <Link
+              href="/superadmin/dashboard"
+              className="px-3 py-1 bg-slate-800 text-slate-100 hover:bg-slate-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors border border-slate-700"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5 text-emerald-400" /> Superadmin
+            </Link>
           </div>
         </div>
       </div>
