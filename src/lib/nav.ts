@@ -35,7 +35,6 @@ export const lenderNav: NavItem[] = [
   { href: "/lender/active", label: "Active Loans", icon: Wallet },
   { href: "/lender/completed", label: "Completed Loans", icon: CheckCircle2 },
   { href: "/lender/reports", label: "Reports", icon: BarChart3 },
-  { href: "/lender/profile", label: "Profile", icon: User },
   { href: "/lender/notifications", label: "Notifications", icon: Bell },
   { href: "/lender/settings", label: "Settings", icon: Settings },
 ];
