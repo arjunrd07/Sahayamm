@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Organization } from "@/types/database";
 import { User, Building2, CreditCard, ShieldCheck, MapPin, Phone, Mail, Award } from "lucide-react";
 
-export default function CustomerProfilePage() {
+export default function LenderProfilePage() {
   const { profile } = useAuth();
   const [org, setOrg] = useState<Organization | null>(null);
   const supabase = createClient();
@@ -40,10 +40,10 @@ export default function CustomerProfilePage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      {/* Profile Header Banner */}
-      <Card className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800 to-signal-cobalt text-white p-6 sm:p-8">
+      {/* Lender Profile Header Banner */}
+      <Card className="relative overflow-hidden bg-gradient-to-r from-[#0a192f] via-[#0d2847] to-[#071324] text-white p-6 sm:p-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 relative z-10">
-          <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-signal to-blue-400 text-white flex items-center justify-center text-2xl font-black shadow-lg shrink-0 border-2 border-white/20">
+          <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-signal to-indigo-500 text-white flex items-center justify-center text-2xl font-black shadow-lg shrink-0 border-2 border-white/20">
             {initials(profile.full_name)}
           </div>
 

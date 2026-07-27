@@ -30,6 +30,7 @@ export interface Profile {
   pan_number?: string | null;
   cibil_score?: number | null;
   address?: string | null;
+  gender?: string | null;
   kyc_completed?: boolean;
   role: UserRole;
   verification_status: VerificationStatus;
