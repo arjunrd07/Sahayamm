@@ -19,12 +19,18 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
-create or replace function auth_is_admin()
+create or replace function auth_is_lender()
 returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
-    select 1 from profiles where id = auth.uid() and role in ('admin', 'superadmin')
+    select 1 from profiles where id = auth.uid() and role in ('lender', 'admin', 'superadmin')
   );
+$$;
+
+create or replace function auth_is_admin()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth_is_lender();
 $$;
 
 -- ---------------------------------------------------------------------
@@ -55,8 +61,8 @@ create policy org_superadmin_all on organizations
 create policy profiles_select_own on profiles
   for select using (id = auth.uid());
 
-create policy profiles_select_org_admin on profiles
-  for select using (auth_is_admin() and org_id = auth_org_id());
+create policy profiles_select_org_lender on profiles
+  for select using (auth_is_lender() and org_id = auth_org_id());
 
 create policy profiles_select_superadmin on profiles
   for select using (auth_is_superadmin());
@@ -66,10 +72,10 @@ create policy profiles_insert_self on profiles
 
 create policy profiles_update_own on profiles
   for update using (id = auth.uid())
-  with check (id = auth.uid() and role = 'customer');
+  with check (id = auth.uid() and role in ('borrower', 'customer'));
 
-create policy profiles_update_admin on profiles
-  for update using (auth_is_admin() and org_id = auth_org_id())
+create policy profiles_update_lender on profiles
+  for update using (auth_is_lender() and org_id = auth_org_id())
   with check (org_id = auth_org_id());
 
 create policy profiles_update_superadmin on profiles
@@ -79,18 +85,18 @@ create policy profiles_update_superadmin on profiles
 -- ---------------------------------------------------------------------
 -- LOANS POLICIES
 -- ---------------------------------------------------------------------
-create policy loans_select_customer on loans
-  for select using (customer_id = auth.uid());
+create policy loans_select_borrower on loans
+  for select using (borrower_id = auth.uid());
 
-create policy loans_select_admin on loans
-  for select using (auth_is_admin() and org_id = auth_org_id());
+create policy loans_select_lender on loans
+  for select using (auth_is_lender() and org_id = auth_org_id());
 
 create policy loans_select_superadmin on loans
   for select using (auth_is_superadmin());
 
-create policy loans_insert_customer on loans
+create policy loans_insert_borrower on loans
   for insert with check (
-    customer_id = auth.uid()
+    borrower_id = auth.uid()
     and org_id = auth_org_id()
     and exists (
       select 1 from profiles
@@ -98,12 +104,12 @@ create policy loans_insert_customer on loans
     )
   );
 
-create policy loans_update_customer on loans
-  for update using (customer_id = auth.uid())
-  with check (customer_id = auth.uid());
+create policy loans_update_borrower on loans
+  for update using (borrower_id = auth.uid())
+  with check (borrower_id = auth.uid());
 
-create policy loans_update_admin on loans
-  for update using (auth_is_admin() and org_id = auth_org_id())
+create policy loans_update_lender on loans
+  for update using (auth_is_lender() and org_id = auth_org_id())
   with check (org_id = auth_org_id());
 
 create policy loans_update_superadmin on loans
@@ -113,19 +119,19 @@ create policy loans_update_superadmin on loans
 -- ---------------------------------------------------------------------
 -- AGREEMENTS POLICIES
 -- ---------------------------------------------------------------------
-create policy agreements_select_customer on agreements
+create policy agreements_select_borrower on agreements
   for select using (
     exists (
       select 1 from loans
-      where loans.id = agreements.loan_id and loans.customer_id = auth.uid()
+      where loans.id = agreements.loan_id and loans.borrower_id = auth.uid()
     )
   );
 
-create policy agreements_select_admin on agreements
-  for select using (auth_is_admin() and org_id = auth_org_id());
+create policy agreements_select_lender on agreements
+  for select using (auth_is_lender() and org_id = auth_org_id());
 
-create policy agreements_write_admin on agreements
-  for all using (auth_is_admin() and org_id = auth_org_id())
+create policy agreements_write_lender on agreements
+  for all using (auth_is_lender() and org_id = auth_org_id())
   with check (org_id = auth_org_id());
 
 create policy agreements_superadmin_all on agreements
@@ -164,7 +170,7 @@ create policy storage_verification_docs on storage.objects
     bucket_id = 'verification-docs'
     and (
       (storage.foldername(name))[2] = auth.uid()::text
-      or auth_is_admin()
+      or auth_is_lender()
       or auth_is_superadmin()
     )
   )
@@ -178,7 +184,7 @@ create policy storage_payment_proofs on storage.objects
     bucket_id = 'payment-proofs'
     and (
       (storage.foldername(name))[2] = auth.uid()::text
-      or auth_is_admin()
+      or auth_is_lender()
       or auth_is_superadmin()
     )
   )

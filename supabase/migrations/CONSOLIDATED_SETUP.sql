@@ -9,7 +9,7 @@ create extension if not exists "uuid-ossp";
 -- 1. ENUM TYPES
 do $$ begin
   if not exists (select 1 from pg_type where typname = 'user_role') then
-    create type user_role as enum ('borrower', 'lender', 'customer', 'admin', 'superadmin');
+    create type user_role as enum ('borrower', 'lender', 'superadmin');
   end if;
   if not exists (select 1 from pg_type where typname = 'verification_status') then
     create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
@@ -38,8 +38,6 @@ end $$;
 
 alter type user_role add value if not exists 'borrower';
 alter type user_role add value if not exists 'lender';
-alter type user_role add value if not exists 'customer';
-alter type user_role add value if not exists 'admin';
 alter type user_role add value if not exists 'superadmin';
 
 -- 2. ORGANIZATIONS
@@ -60,6 +58,13 @@ create table if not exists profiles (
   pan_number text,
   cibil_score integer,
   address text,
+  bank_name text,
+  account_number text,
+  ifsc_code text,
+  upi_id text,
+  emergency_name text,
+  emergency_phone text,
+  emergency_relation text,
   kyc_completed boolean not null default false,
   role user_role not null default 'borrower',
   verification_status verification_status not null default 'unverified',
@@ -79,6 +84,13 @@ alter table profiles add column if not exists phone text;
 alter table profiles add column if not exists pan_number text;
 alter table profiles add column if not exists cibil_score integer;
 alter table profiles add column if not exists address text;
+alter table profiles add column if not exists bank_name text;
+alter table profiles add column if not exists account_number text;
+alter table profiles add column if not exists ifsc_code text;
+alter table profiles add column if not exists upi_id text;
+alter table profiles add column if not exists emergency_name text;
+alter table profiles add column if not exists emergency_phone text;
+alter table profiles add column if not exists emergency_relation text;
 alter table profiles add column if not exists kyc_completed boolean not null default false;
 alter table profiles add column if not exists role user_role not null default 'borrower';
 alter table profiles add column if not exists verification_status verification_status not null default 'unverified';
@@ -94,8 +106,8 @@ alter table profiles add column if not exists updated_at timestamptz not null de
 create table if not exists loans (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete restrict,
-  customer_id uuid not null references profiles(id) on delete restrict,
-  admin_id uuid references profiles(id),
+  borrower_id uuid not null references profiles(id) on delete restrict,
+  lender_id uuid references profiles(id),
   amount numeric(14,2) not null check (amount > 0),
   purpose text not null,
   duration_days integer not null check (duration_days > 0),
@@ -118,17 +130,15 @@ create table if not exists loans (
   updated_at timestamptz not null default now()
 );
 
-alter table loans add column if not exists status loan_status not null default 'pending';
-alter table loans add column if not exists rejection_reason text;
-alter table loans add column if not exists disbursal_proof_url text;
-alter table loans add column if not exists disbursed_at timestamptz;
-alter table loans add column if not exists repayment_proof_url text;
-alter table loans add column if not exists repayment_submitted_at timestamptz;
-alter table loans add column if not exists late_fee_rate numeric(6,3);
-alter table loans add column if not exists late_fee_amount numeric(14,2);
-alter table loans add column if not exists approved_at timestamptz;
-alter table loans add column if not exists active_at timestamptz;
-alter table loans add column if not exists completed_at timestamptz;
+-- Support migration from old column names if re-run on existing database
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_name = 'loans' and column_name = 'customer_id') then
+    alter table loans rename column customer_id to borrower_id;
+  end if;
+  if exists (select 1 from information_schema.columns where table_name = 'loans' and column_name = 'admin_id') then
+    alter table loans rename column admin_id to lender_id;
+  end if;
+end $$;
 
 -- 5. AGREEMENTS
 create table if not exists agreements (
@@ -168,12 +178,18 @@ language sql stable security definer set search_path = public as $$
   select org_id from profiles where id = auth.uid();
 $$;
 
-create or replace function auth_is_admin()
+create or replace function auth_is_lender()
 returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
-    select 1 from profiles where id = auth.uid() and role in ('admin', 'lender', 'superadmin')
+    select 1 from profiles where id = auth.uid() and role in ('lender', 'admin', 'superadmin')
   );
+$$;
+
+create or replace function auth_is_admin()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth_is_lender();
 $$;
 
 create or replace function auth_is_superadmin()
