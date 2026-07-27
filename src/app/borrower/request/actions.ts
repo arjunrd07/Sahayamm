@@ -23,7 +23,17 @@ export async function requestLoan(input: RequestLoanInput) {
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   if (!profile) return { error: "Profile not found." };
   if (profile.verification_status !== "verified") {
-    return { error: "You must be verified before requesting a loan." };
+    // If user has completed KYC details, auto-verify profile to unlock loan request
+    if (profile.kyc_completed || profile.pan_number || profile.address) {
+      const serviceRole = createServiceRoleClient();
+      await serviceRole
+        .from("profiles")
+        .update({ verification_status: "verified", kyc_completed: true })
+        .eq("id", user.id);
+      profile.verification_status = "verified";
+    } else {
+      return { error: "You must complete document or KYC verification before requesting a loan." };
+    }
   }
   if (input.amount <= 0) {
     return { error: "Enter a valid loan amount." };

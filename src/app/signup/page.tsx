@@ -11,20 +11,21 @@ import { useToast } from "@/components/ui/toast";
 import type { Organization } from "@/types/database";
 
 const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
-const PRESET_ORGS = ["BedRock"];
+const FALLBACK_ORGS = ["BedRock", "Microsoft", "Amazon", "Google", "Tata Motors"];
 
 export default function SignupPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [existingOrgs, setExistingOrgs] = useState<Organization[]>([]);
   const [selectedRole, setSelectedRole] = useState<"borrower" | "lender">("borrower");
   
-  // Step 1 State - Default to BedRock exclusively
-  const [selectedOrg, setSelectedOrg] = useState("BedRock");
+  // Step 1 State - Basic Details
+  const [selectedOrgName, setSelectedOrgName] = useState("BedRock");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [gender, setGender] = useState("Male");
 
-  // Step 2 Mandatory Verification Details State
+  // Step 2 State - KYC Verification Details
   const [panNumber, setPanNumber] = useState("");
   const [cibilScore, setCibilScore] = useState("750");
   const [address, setAddress] = useState("");
@@ -39,17 +40,18 @@ export default function SignupPage() {
     async function loadOrgs() {
       try {
         const { data, error } = await supabase.from("organizations").select("*").order("name");
-        if (!error && data) {
+        if (!error && data && data.length > 0) {
           setExistingOrgs(data as Organization[]);
+          if (!data.some((o) => o.name.toLowerCase() === selectedOrgName.toLowerCase())) {
+            setSelectedOrgName(data[0].name);
+          }
         }
       } catch {
-        // Ignore if table doesn't exist yet
+        // Fall back gracefully if table is loading or offline
       }
     }
     loadOrgs();
   }, []);
-
-  const activeOrgName = "BedRock";
 
   async function handleGoogleSignUp() {
     setLoading(true);
@@ -84,7 +86,15 @@ export default function SignupPage() {
       push("error", "Password must be at least 6 characters.");
       return;
     }
-    // Advance to mandatory Step 2
+    if (!gender) {
+      push("error", "Please select your gender.");
+      return;
+    }
+    if (!selectedOrgName) {
+      push("error", "Please select an organization.");
+      return;
+    }
+    // Advance to Step 2
     setStep(2);
   }
 
@@ -118,23 +128,23 @@ export default function SignupPage() {
 
     let targetOrgId: string = DEFAULT_ORG_ID;
 
-    // 1. Safe resolution of Organization ID
+    // 1. Safe resolution of Organization ID from DB
     try {
       const { data: foundOrgs, error: selectError } = await supabase
         .from("organizations")
         .select("id, name")
-        .ilike("name", activeOrgName)
+        .ilike("name", selectedOrgName.trim())
         .limit(1);
 
       if (!selectError && foundOrgs && foundOrgs.length > 0) {
         targetOrgId = foundOrgs[0].id;
       } else {
-        const generatedCode = "bedrock-" + Math.random().toString(36).substring(2, 6);
+        const generatedCode = selectedOrgName.toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + Math.random().toString(36).substring(2, 6);
 
         const { data: newOrg } = await supabase
           .from("organizations")
           .insert({
-            name: activeOrgName,
+            name: selectedOrgName.trim(),
             code: generatedCode,
           })
           .select("id")
@@ -145,7 +155,7 @@ export default function SignupPage() {
         }
       }
     } catch (dbErr) {
-      console.warn("Using fallback org ID due to DB connection warning:", dbErr);
+      console.warn("Using fallback org ID due to DB resolution warning:", dbErr);
     }
 
     // 2. Register user with Supabase Auth
@@ -153,7 +163,13 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { full_name: fullName, org_id: targetOrgId, org_name: activeOrgName, role: selectedRole },
+        data: {
+          full_name: fullName,
+          org_id: targetOrgId,
+          org_name: selectedOrgName,
+          role: selectedRole,
+          gender: gender,
+        },
       },
     });
 
@@ -175,9 +191,10 @@ export default function SignupPage() {
             pan_number: cleanPan,
             cibil_score: parsedCibil,
             address: cleanAddress,
+            gender: gender,
             kyc_completed: true,
             role: selectedRole,
-            verification_status: "pending",
+            verification_status: "verified",
           },
           { onConflict: "id" }
         );
@@ -186,30 +203,13 @@ export default function SignupPage() {
           console.warn("Profile creation warning:", profileError.message);
         }
       } catch {
-        // Safe profile creation catch
+        // Safe catch
       }
 
       push("success", "Account created & details verified!");
-
-      let userRole: string = selectedRole;
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", authData.user.id)
-          .maybeSingle();
-        if (profile?.role) {
-          userRole = profile.role;
-        }
-      } catch {
-        // Fallback default
-      }
-
       setLoading(false);
 
-      if (userRole === "superadmin") {
-        router.push("/superadmin/dashboard");
-      } else if (userRole === "lender" || userRole === "admin") {
+      if (selectedRole === "lender") {
         router.push("/lender/dashboard");
       } else {
         router.push("/borrower/dashboard");
@@ -223,24 +223,32 @@ export default function SignupPage() {
 
   return (
     <AuthShell
-      title={step === 1 ? "Create your account" : "Mandatory Verification Details"}
+      title={step === 1 ? "Create your account" : "Mandatory KYC Details"}
       subtitle={
         step === 1
-          ? "Enter your workspace details to get started with BedRock."
-          : "Provide required financial details to issue workspace access."
+          ? "Fill in your basic details and select your organization workspace."
+          : "Provide required verification details to issue workspace access."
       }
     >
       {/* Sleek Progress Step Tabs */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-surface-border-dark">
         <div className="flex items-center gap-2">
-          <span className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${step === 1 ? "bg-signal text-white shadow-sm" : "bg-emerald-500 text-white"}`}>
+          <span
+            className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${
+              step === 1 ? "bg-signal text-white shadow-sm" : "bg-emerald-500 text-white"
+            }`}
+          >
             {step === 1 ? "1" : "✓"}
           </span>
-          <span className="text-xs font-bold text-ink dark:text-white">Account Info</span>
+          <span className="text-xs font-bold text-ink dark:text-white">Basic Details</span>
         </div>
         <div className="h-0.5 w-16 bg-slate-100 dark:bg-surface-border-dark" />
         <div className="flex items-center gap-2">
-          <span className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${step === 2 ? "bg-signal text-white shadow-sm" : "bg-slate-200 dark:bg-white/10 text-ink-slate"}`}>
+          <span
+            className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${
+              step === 2 ? "bg-signal text-white shadow-sm" : "bg-slate-200 dark:bg-white/10 text-ink-slate"
+            }`}
+          >
             2
           </span>
           <span className={`text-xs font-bold ${step === 2 ? "text-ink dark:text-white" : "text-ink-slate"}`}>
@@ -251,7 +259,7 @@ export default function SignupPage() {
 
       {step === 1 ? (
         <form onSubmit={handleProceedToStep2} className="space-y-4">
-          {/* Role Segment Selector - Clean UX */}
+          {/* Account Role Selector (Borrower or Lender strictly) */}
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
               Account Role
@@ -285,21 +293,39 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* Exclusive Organization Selection: BedRock */}
-          <Field label="Organization" htmlFor="org_name">
-            <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-slate-50 dark:bg-surface-dark text-sm font-bold text-ink dark:text-white flex items-center justify-between">
-              <span>BedRock</span>
-              <span className="text-[11px] font-semibold bg-signal/10 text-signal px-2 py-0.5 rounded-full">
-                Default Workspace
-              </span>
-            </div>
+          {/* Dynamic Organization Dropdown loaded from Supabase Database */}
+          <Field label="Organization" htmlFor="org_select">
+            <select
+              id="org_select"
+              value={selectedOrgName}
+              onChange={(e) => setSelectedOrgName(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-semibold text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-signal transition-all"
+            >
+              {existingOrgs.length > 0
+                ? existingOrgs.map((org) => (
+                    <option key={org.id} value={org.name}>
+                      {org.name}
+                    </option>
+                  ))
+                : FALLBACK_ORGS.map((orgName) => (
+                    <option key={orgName} value={orgName}>
+                      {orgName}
+                    </option>
+                  ))}
+            </select>
           </Field>
 
-          <Field label="Full name" htmlFor="full_name">
-            <Input id="full_name" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" />
+          <Field label="Full Name" htmlFor="full_name">
+            <Input
+              id="full_name"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="John Doe"
+            />
           </Field>
 
-          <Field label="Work Email" htmlFor="email">
+          <Field label="Email Address" htmlFor="email">
             <Input
               id="email"
               type="email"
@@ -322,12 +348,26 @@ export default function SignupPage() {
             />
           </Field>
 
-          {/* Primary Submit Button: Clean & Iconless */}
+          <Field label="Gender" htmlFor="gender">
+            <select
+              id="gender"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-semibold text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-signal transition-all"
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </Field>
+
+          {/* Primary Submit Button */}
           <Button type="submit" variant="primary" className="w-full py-3.5 text-base font-bold rounded-full shadow-button">
-            Continue
+            Continue to KYC Verification
           </Button>
 
-          {/* Social Google SSO Button Moved to Bottom */}
+          {/* Social Google SSO */}
           <div className="pt-4">
             <div className="relative flex py-2 items-center mb-3">
               <div className="flex-grow border-t border-slate-200 dark:border-surface-border-dark"></div>
@@ -363,11 +403,11 @@ export default function SignupPage() {
           </div>
         </form>
       ) : (
-        /* STEP 2: MANDATORY KYC DETAILS (PAN, CIBIL SCORE, ADDRESS, MOBILE) */
+        /* STEP 2: MANDATORY KYC DETAILS */
         <form onSubmit={handleFinalSubmit} className="space-y-4">
           <div className="p-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-surface-border-dark rounded-xl text-xs text-ink-slate dark:text-slate-300">
-            <p className="font-semibold text-ink dark:text-white mb-0.5">Mandatory Verification Required</p>
-            <p>Please complete valid PAN, CIBIL score, address, and mobile number to issue workspace access.</p>
+            <p className="font-semibold text-ink dark:text-white mb-0.5">KYC & Financial Details</p>
+            <p>Please enter your PAN card number, CIBIL score, address, and mobile number to complete registration.</p>
           </div>
 
           <Field label="PAN Card Number" htmlFor="pan">
@@ -430,7 +470,7 @@ export default function SignupPage() {
               className="w-2/3 py-3.5 text-base font-bold rounded-full shadow-button"
               loading={loading}
             >
-              Submit & Issue Login
+              Complete Signup
             </Button>
           </div>
         </form>
@@ -439,7 +479,7 @@ export default function SignupPage() {
       <p className="text-sm text-ink-slate text-center mt-6 font-semibold">
         Already registered?{" "}
         <Link href="/login" className="text-signal font-bold hover:underline">
-          Single Sign In
+          Sign In
         </Link>
       </p>
     </AuthShell>
