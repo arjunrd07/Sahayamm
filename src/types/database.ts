@@ -30,6 +30,13 @@ export interface Profile {
   pan_number?: string | null;
   cibil_score?: number | null;
   address?: string | null;
+  bank_name?: string | null;
+  account_number?: string | null;
+  ifsc_code?: string | null;
+  upi_id?: string | null;
+  emergency_name?: string | null;
+  emergency_phone?: string | null;
+  emergency_relation?: string | null;
   kyc_completed?: boolean;
   role: UserRole;
   verification_status: VerificationStatus;
