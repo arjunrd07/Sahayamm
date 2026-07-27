@@ -10,7 +10,7 @@ import { Modal } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/utils";
-import type { Profile, VerificationStatus } from "@/types/database";
+import type { Profile } from "@/types/database";
 import { FileText } from "lucide-react";
 import { decideVerification } from "./actions";
 
@@ -28,10 +28,19 @@ export default function AdminVerificationsPage() {
   const supabase = createClient();
 
   async function load() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: myProfile } = await supabase.from("profiles").select("org_id").eq("id", user.id).single();
+    if (!myProfile) return;
+
     const { data } = await supabase
       .from("profiles")
       .select("*")
-      .eq("role", "customer")
+      .eq("org_id", myProfile.org_id)
+      .in("role", ["borrower", "customer"])
       .order("created_at", { ascending: false });
     setProfiles((data as Profile[]) || []);
   }
@@ -48,13 +57,13 @@ export default function AdminVerificationsPage() {
     const urls: { id?: string; employment?: string } = {};
     if (p.id_proof_url) {
       const { data } = await supabase.storage.from("verification-docs").createSignedUrl(p.id_proof_url, 600);
-      urls.id = data?.signedUrl;
+      urls.id = data?.signedUrl || p.id_proof_url;
     }
     if (p.employment_proof_url) {
       const { data } = await supabase.storage
         .from("verification-docs")
         .createSignedUrl(p.employment_proof_url, 600);
-      urls.employment = data?.signedUrl;
+      urls.employment = data?.signedUrl || p.employment_proof_url;
     }
     setDocs(urls);
   }
@@ -72,7 +81,7 @@ export default function AdminVerificationsPage() {
       push("error", result.error);
       return;
     }
-    push("success", approve ? "Customer verified." : "Verification rejected.");
+    push("success", approve ? "Borrower verified." : "Verification rejected.");
     setSelected(null);
     load();
   }
@@ -90,7 +99,7 @@ export default function AdminVerificationsPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Customer Verifications</h2>
+      <h2 className="text-xl font-semibold">Borrower Verifications</h2>
       <Tabs
         value={tab}
         onChange={setTab}
@@ -103,7 +112,7 @@ export default function AdminVerificationsPage() {
       />
 
       {filtered.length === 0 ? (
-        <EmptyState title="Nothing here" description="Applicant submissions will show up in this view." />
+        <EmptyState title="Nothing here" description="Borrower submissions will show up in this view." />
       ) : (
         <Table>
           <Thead>
@@ -135,19 +144,44 @@ export default function AdminVerificationsPage() {
         </Table>
       )}
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.full_name || ""}>
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.full_name || "Borrower Profile"}>
         {selected && (
-          <div className="space-y-4">
-            <div className="text-sm space-y-1.5">
-              <p>
-                <span className="text-muted">Email:</span> {selected.email}
-              </p>
-              <p>
-                <span className="text-muted">Phone:</span> {selected.phone || "—"}
-              </p>
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 bg-surface-pebble dark:bg-white/5 p-3 rounded-xl">
+              <div>
+                <span className="text-xs text-muted block">Full Name</span>
+                <span className="font-semibold">{selected.full_name}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Email</span>
+                <span className="font-semibold break-all">{selected.email}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Phone</span>
+                <span className="font-semibold">{selected.phone || "—"}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">PAN Number</span>
+                <span className="font-mono font-semibold">{selected.pan_number || "—"}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">CIBIL Score</span>
+                <span className="font-semibold">{selected.cibil_score || "—"}</span>
+              </div>
+              <div>
+                <span className="text-xs text-muted block">Verification Status</span>
+                <VerificationBadge status={selected.verification_status} />
+              </div>
             </div>
 
-            <div className="space-y-2">
+            {selected.address && (
+              <div>
+                <span className="text-xs text-muted block mb-1">Address</span>
+                <p className="p-2.5 bg-surface-pebble dark:bg-white/5 rounded-lg text-xs">{selected.address}</p>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-1">
               <DocLink label="Government ID proof" href={docs.id} />
               <DocLink label="Employment proof" href={docs.employment} />
             </div>
@@ -168,16 +202,16 @@ export default function AdminVerificationsPage() {
                         Cancel
                       </Button>
                       <Button variant="danger" className="flex-1" loading={submitting} onClick={() => handleDecision(false)}>
-                        Confirm reject
+                        Confirm Reject
                       </Button>
                     </>
                   ) : (
                     <>
                       <Button variant="danger" className="flex-1" onClick={() => setRejecting(true)}>
-                        Reject
+                        Disapprove / Reject
                       </Button>
                       <Button variant="primary" className="flex-1" loading={submitting} onClick={() => handleDecision(true)}>
-                        Verify
+                        Approve Borrower
                       </Button>
                     </>
                   )}
@@ -204,9 +238,10 @@ function DocLink({ label, href }: { label: string; href?: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="flex items-center gap-2 text-sm text-accent hover:underline"
+      className="flex items-center gap-2 text-sm text-accent hover:underline font-medium"
     >
       <FileText className="h-4 w-4" /> {label}
     </a>
   );
 }
+

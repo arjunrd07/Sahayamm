@@ -1,15 +1,16 @@
 "use server";
 
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
-import { calculateLoan } from "@/lib/loan-math";
+import { calculatePlanLoan, calculateLoan } from "@/lib/loan-math";
 import { dispatchNotification } from "@/lib/notify";
 import { formatINR } from "@/lib/utils";
 
 export interface RequestLoanInput {
   amount: number;
   purpose: string;
-  durationDays: number;
-  interestRateAnnual: number;
+  planId?: string;
+  durationDays?: number;
+  interestRateAnnual?: number;
 }
 
 export async function requestLoan(input: RequestLoanInput) {
@@ -24,24 +25,47 @@ export async function requestLoan(input: RequestLoanInput) {
   if (profile.verification_status !== "verified") {
     return { error: "You must be verified before requesting a loan." };
   }
-  if (input.amount <= 0 || input.durationDays <= 0) {
-    return { error: "Enter a valid amount and duration." };
+  if (input.amount <= 0) {
+    return { error: "Enter a valid loan amount." };
   }
 
-  const calc = calculateLoan(input.amount, input.interestRateAnnual, input.durationDays);
+  let durationDays: number;
+  let interestRateAnnual: number;
+  let calcInterest: number;
+  let totalRepay: number;
+  let dueDate: string;
+
+  if (input.planId) {
+    const calc = calculatePlanLoan(input.amount, input.planId);
+    durationDays = calc.plan.days;
+    interestRateAnnual = calc.annualEquivalentRate;
+    calcInterest = calc.interest;
+    totalRepay = calc.totalRepayment;
+    dueDate = calc.dueDate;
+  } else {
+    const days = input.durationDays || 0;
+    if (days <= 0) return { error: "Enter a valid duration." };
+    const rate = input.interestRateAnnual || 0;
+    const calc = calculateLoan(input.amount, rate, days);
+    durationDays = days;
+    interestRateAnnual = rate;
+    calcInterest = calc.interest;
+    totalRepay = calc.totalRepayment;
+    dueDate = calc.dueDate;
+  }
 
   const { data: loan, error } = await supabase
     .from("loans")
     .insert({
       org_id: profile.org_id,
       customer_id: profile.id,
-      amount: calc.principal,
+      amount: Math.max(0, input.amount),
       purpose: input.purpose,
-      duration_days: input.durationDays,
-      interest_rate_annual: input.interestRateAnnual,
-      calculated_interest: calc.interest,
-      total_repayment: calc.totalRepayment,
-      due_date: calc.dueDate,
+      duration_days: durationDays,
+      interest_rate_annual: interestRateAnnual,
+      calculated_interest: calcInterest,
+      total_repayment: totalRepay,
+      due_date: dueDate,
       status: "pending",
     })
     .select()
@@ -64,9 +88,10 @@ export async function requestLoan(input: RequestLoanInput) {
       userEmail: a.email,
       loanId: loan.id,
       type: "loan_requested",
-      params: { customerName: profile.full_name, amount: formatINR(calc.principal), purpose: input.purpose },
+      params: { customerName: profile.full_name, amount: formatINR(loan.amount), purpose: input.purpose },
     });
   }
 
   return { data: loan };
 }
+

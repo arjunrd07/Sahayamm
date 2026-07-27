@@ -5,10 +5,10 @@ export function resolveDashboardPath(role?: UserRole | null): string {
   if (role === "superadmin") {
     return "/superadmin/dashboard";
   }
-  if (role === "admin") {
-    return "/admin/dashboard";
+  if (role === "lender") {
+    return "/lender/dashboard";
   }
-  return "/customer/dashboard";
+  return "/borrower/dashboard";
 }
 
 describe("Unified Auth Role-Based Dashboard Routing", () => {
@@ -16,16 +16,17 @@ describe("Unified Auth Role-Based Dashboard Routing", () => {
     expect(resolveDashboardPath("superadmin")).toBe("/superadmin/dashboard");
   });
 
-  it("routes admin role to /admin/dashboard", () => {
-    expect(resolveDashboardPath("admin")).toBe("/admin/dashboard");
+  it("routes lender role to /lender/dashboard", () => {
+    expect(resolveDashboardPath("lender")).toBe("/lender/dashboard");
   });
 
-  it("routes customer role to /customer/dashboard", () => {
-    expect(resolveDashboardPath("customer")).toBe("/customer/dashboard");
+  it("routes borrower role to /borrower/dashboard", () => {
+    expect(resolveDashboardPath("borrower")).toBe("/borrower/dashboard");
   });
 
-  it("defaults guest or missing role to /customer/dashboard", () => {
-    expect(resolveDashboardPath(null)).toBe("/customer/dashboard");
-    expect(resolveDashboardPath(undefined)).toBe("/customer/dashboard");
+  it("defaults guest or missing role to /borrower/dashboard", () => {
+    expect(resolveDashboardPath(null)).toBe("/borrower/dashboard");
+    expect(resolveDashboardPath(undefined)).toBe("/borrower/dashboard");
   });
 });
+

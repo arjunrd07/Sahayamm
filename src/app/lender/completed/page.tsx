@@ -45,7 +45,7 @@ export default function AdminCompletedLoansPage() {
             {loans.map((loan) => (
               <Tr key={loan.id}>
                 <Td>
-                  <Link href={`/admin/loans/${loan.id}`} className="font-medium hover:text-accent">
+                  <Link href={`/lender/loans/${loan.id}`} className="font-medium hover:text-accent">
                     {(loan as any).customer?.full_name || "—"}
                   </Link>
                 </Td>

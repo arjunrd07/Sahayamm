@@ -36,29 +36,46 @@ export default function AdminLoanRequestsPage() {
           <Thead>
             <tr>
               <Th>Customer</Th>
-              <Th>Purpose</Th>
+              <Th>Reason / Purpose</Th>
               <Th>Amount</Th>
+              <Th>Plan</Th>
               <Th>Requested</Th>
               <Th>Status</Th>
             </tr>
           </Thead>
           <tbody>
-            {loans.map((loan) => (
-              <Tr key={loan.id}>
-                <Td>
-                  <Link href={`/admin/loans/${loan.id}`} className="font-medium hover:text-accent">
-                    {(loan as any).customer?.full_name || "—"}
-                  </Link>
-                </Td>
-                <Td>{loan.purpose}</Td>
-                <Td>{formatINR(loan.amount)}</Td>
-                <Td>{formatDate(loan.created_at)}</Td>
-                <Td>
-                  <LoanStatusBadge status={loan.status} />
-                </Td>
-              </Tr>
-            ))}
+            {loans.map((loan) => {
+              const planText =
+                loan.duration_days === 7
+                  ? "7 Days (0.4%)"
+                  : loan.duration_days === 14
+                  ? "14 Days (0.8%)"
+                  : loan.duration_days === 21
+                  ? "21 Days (1.6%)"
+                  : `${loan.duration_days} days`;
+              return (
+                <Tr key={loan.id}>
+                  <Td>
+                    <Link href={`/lender/loans/${loan.id}`} className="font-medium hover:text-accent">
+                      {(loan as any).customer?.full_name || "—"}
+                    </Link>
+                  </Td>
+                  <Td>{loan.purpose}</Td>
+                  <Td className="font-semibold">{formatINR(loan.amount)}</Td>
+                  <Td>
+                    <span className="inline-block text-xs font-semibold px-2 py-0.5 rounded bg-surface-border/50 dark:bg-white/10">
+                      {planText}
+                    </span>
+                  </Td>
+                  <Td>{formatDate(loan.created_at)}</Td>
+                  <Td>
+                    <LoanStatusBadge status={loan.status} />
+                  </Td>
+                </Tr>
+              );
+            })}
           </tbody>
+
         </Table>
       )}
     </div>

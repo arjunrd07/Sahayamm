@@ -294,7 +294,7 @@ export default async function AdminDashboardPage() {
               <h3 className="text-lg font-semibold text-ink dark:text-white">Loan requests awaiting review</h3>
               <p className="text-xs sm:text-sm text-ink-slate dark:text-ink-mist mt-0.5">Pending employee applications.</p>
             </div>
-            <Link href="/admin/loans" className="text-xs sm:text-sm font-semibold text-signal hover:underline shrink-0">
+            <Link href="/lender/loans" className="text-xs sm:text-sm font-semibold text-signal hover:underline shrink-0">
               View all ({pending.length})
             </Link>
           </div>
@@ -305,7 +305,7 @@ export default async function AdminDashboardPage() {
               {pending.slice(0, 5).map((loan) => (
                 <Link
                   key={loan.id}
-                  href={`/admin/loans/${loan.id}`}
+                  href={`/lender/loans/${loan.id}`}
                   className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 hover:bg-surface-pebble dark:hover:bg-white/5 -mx-2 px-3 rounded-xl transition-colors gap-2 sm:gap-4"
                 >
                   <div className="min-w-0">

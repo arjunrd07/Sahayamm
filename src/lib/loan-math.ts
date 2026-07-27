@@ -15,6 +15,70 @@ export interface LoanCalculation {
   dueDate: string; // ISO date
 }
 
+export interface LoanPlan {
+  id: "7_days" | "14_days" | "21_days";
+  name: string;
+  days: number;
+  ratePercent: number; // Flat interest % for period
+  description: string;
+}
+
+export const LOAN_PLANS: LoanPlan[] = [
+  {
+    id: "7_days",
+    name: "7 Days",
+    days: 7,
+    ratePercent: 0.4,
+    description: "7 days at 0.4% interest",
+  },
+  {
+    id: "14_days",
+    name: "14 Days",
+    days: 14,
+    ratePercent: 0.8,
+    description: "14 days at 0.8% interest",
+  },
+  {
+    id: "21_days",
+    name: "21 Days",
+    days: 21,
+    ratePercent: 1.6,
+    description: "21 days at 1.6% interest",
+  },
+];
+
+export type LoanPlanId = (typeof LOAN_PLANS)[number]["id"];
+
+export function getLoanPlan(planId: string): LoanPlan {
+  return LOAN_PLANS.find((p) => p.id === planId) || LOAN_PLANS[0];
+}
+
+export function calculatePlanLoan(
+  amount: number,
+  planId: string,
+  fromDate: Date = new Date()
+): LoanCalculation & { plan: LoanPlan; annualEquivalentRate: number } {
+  const plan = getLoanPlan(planId);
+  const principal = Math.max(0, amount || 0);
+  const interest = (principal * plan.ratePercent) / 100;
+  const totalRepayment = principal + interest;
+
+  const due = new Date(fromDate);
+  due.setDate(due.getDate() + plan.days);
+
+  // Annualized rate equivalent for database column `interest_rate_annual`: (flatRate / days) * 365
+  const annualEquivalentRate = (plan.ratePercent / plan.days) * 365;
+
+  return {
+    principal,
+    interest: Math.round(interest * 100) / 100,
+    totalRepayment: Math.round(totalRepayment * 100) / 100,
+    dueDate: due.toISOString().slice(0, 10),
+    plan,
+    annualEquivalentRate: Math.round(annualEquivalentRate * 100) / 100,
+  };
+}
+
 export function calculateLoan(
   amount: number,
   interestRateAnnual: number,
@@ -38,3 +102,4 @@ export function calculateLoan(
     dueDate: due.toISOString().slice(0, 10),
   };
 }
+

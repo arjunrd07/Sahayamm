@@ -1,34 +1,46 @@
 -- =====================================================================
 -- Sahayam Complete Database Setup Script
 -- Copy and paste this into Supabase SQL Editor to initialize all tables,
--- RLS policies, triggers, and storage buckets.
+-- RLS policies, triggers, storage buckets, and reload PostgREST cache.
 -- =====================================================================
 
 create extension if not exists "uuid-ossp";
 
 -- 1. ENUM TYPES
-drop type if exists user_role cascade;
-drop type if exists verification_status cascade;
-drop type if exists loan_status cascade;
-drop type if exists agreement_status cascade;
-drop type if exists notification_type cascade;
+do $$ begin
+  if not exists (select 1 from pg_type where typname = 'user_role') then
+    create type user_role as enum ('borrower', 'lender', 'customer', 'admin', 'superadmin');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'verification_status') then
+    create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'loan_status') then
+    create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'agreement_status') then
+    create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
+  end if;
+  if not exists (select 1 from pg_type where typname = 'notification_type') then
+    create type notification_type as enum (
+      'verification_decision',
+      'loan_requested',
+      'loan_approved',
+      'loan_rejected',
+      'agreement_ready',
+      'agreement_signed',
+      'funds_sent',
+      'repayment_reminder',
+      'loan_completed',
+      'loan_overdue'
+    );
+  end if;
+end $$;
 
-create type user_role as enum ('customer', 'admin', 'superadmin');
-create type verification_status as enum ('unverified', 'pending', 'verified', 'rejected');
-create type loan_status as enum ('pending', 'approved', 'rejected', 'active', 'completed', 'overdue');
-create type agreement_status as enum ('draft', 'sent', 'partially_signed', 'completed');
-create type notification_type as enum (
-  'verification_decision',
-  'loan_requested',
-  'loan_approved',
-  'loan_rejected',
-  'agreement_ready',
-  'agreement_signed',
-  'funds_sent',
-  'repayment_reminder',
-  'loan_completed',
-  'loan_overdue'
-);
+alter type user_role add value if not exists 'borrower';
+alter type user_role add value if not exists 'lender';
+alter type user_role add value if not exists 'customer';
+alter type user_role add value if not exists 'admin';
+alter type user_role add value if not exists 'superadmin';
 
 -- 2. ORGANIZATIONS
 create table if not exists organizations (
@@ -41,11 +53,15 @@ create table if not exists organizations (
 -- 3. PROFILES
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  org_id uuid not null references organizations(id) on delete restrict,
-  full_name text not null,
-  email text not null,
+  org_id uuid references organizations(id) on delete restrict,
+  full_name text,
+  email text,
   phone text,
-  role user_role not null default 'customer',
+  pan_number text,
+  cibil_score integer,
+  address text,
+  kyc_completed boolean not null default false,
+  role user_role not null default 'borrower',
   verification_status verification_status not null default 'unverified',
   rejection_reason text,
   id_proof_url text,
@@ -55,6 +71,24 @@ create table if not exists profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table profiles add column if not exists org_id uuid references organizations(id) on delete restrict;
+alter table profiles add column if not exists full_name text;
+alter table profiles add column if not exists email text;
+alter table profiles add column if not exists phone text;
+alter table profiles add column if not exists pan_number text;
+alter table profiles add column if not exists cibil_score integer;
+alter table profiles add column if not exists address text;
+alter table profiles add column if not exists kyc_completed boolean not null default false;
+alter table profiles add column if not exists role user_role not null default 'borrower';
+alter table profiles add column if not exists verification_status verification_status not null default 'unverified';
+alter table profiles add column if not exists rejection_reason text;
+alter table profiles add column if not exists id_proof_url text;
+alter table profiles add column if not exists employment_proof_url text;
+alter table profiles add column if not exists verified_by uuid references profiles(id);
+alter table profiles add column if not exists verified_at timestamptz;
+alter table profiles add column if not exists created_at timestamptz not null default now();
+alter table profiles add column if not exists updated_at timestamptz not null default now();
 
 -- 4. LOANS
 create table if not exists loans (
@@ -83,6 +117,18 @@ create table if not exists loans (
   completed_at timestamptz,
   updated_at timestamptz not null default now()
 );
+
+alter table loans add column if not exists status loan_status not null default 'pending';
+alter table loans add column if not exists rejection_reason text;
+alter table loans add column if not exists disbursal_proof_url text;
+alter table loans add column if not exists disbursed_at timestamptz;
+alter table loans add column if not exists repayment_proof_url text;
+alter table loans add column if not exists repayment_submitted_at timestamptz;
+alter table loans add column if not exists late_fee_rate numeric(6,3);
+alter table loans add column if not exists late_fee_amount numeric(14,2);
+alter table loans add column if not exists approved_at timestamptz;
+alter table loans add column if not exists active_at timestamptz;
+alter table loans add column if not exists completed_at timestamptz;
 
 -- 5. AGREEMENTS
 create table if not exists agreements (
@@ -115,7 +161,30 @@ create table if not exists notifications (
   created_at timestamptz not null default now()
 );
 
--- 7. FIRST EMPLOYEE SUPERADMIN TRIGGER
+-- 7. HELPER FUNCTIONS
+create or replace function auth_org_id()
+returns uuid
+language sql stable security definer set search_path = public as $$
+  select org_id from profiles where id = auth.uid();
+$$;
+
+create or replace function auth_is_admin()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from profiles where id = auth.uid() and role in ('admin', 'lender', 'superadmin')
+  );
+$$;
+
+create or replace function auth_is_superadmin()
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from profiles where id = auth.uid() and role = 'superadmin'
+  );
+$$;
+
+-- 8. FIRST EMPLOYEE SUPERADMIN TRIGGER
 create or replace function handle_first_user_superadmin()
 returns trigger as $$
 declare
@@ -140,7 +209,7 @@ create trigger trg_profiles_first_user_superadmin
   for each row
   execute function handle_first_user_superadmin();
 
--- 8. AUTO EMAIL CONFIRMATION TRIGGER
+-- 9. AUTO EMAIL CONFIRMATION TRIGGER
 create or replace function public.auto_confirm_user_email()
 returns trigger as $$
 begin
@@ -157,27 +226,50 @@ create trigger trg_auto_confirm_user_email
   for each row
   execute function public.auto_confirm_user_email();
 
--- 9. ROW LEVEL SECURITY (RLS) POLICIES
+-- 10. ROW LEVEL SECURITY (RLS) POLICIES
 alter table organizations enable row level security;
 alter table profiles enable row level security;
 alter table loans enable row level security;
 alter table agreements enable row level security;
 alter table notifications enable row level security;
 
+-- Organizations
 drop policy if exists org_select_all on organizations;
 drop policy if exists org_insert_all on organizations;
+create policy org_select_all on organizations for select using (true);
+create policy org_insert_all on organizations for insert with check (true);
 
-create policy org_select_all on organizations
-  for select using (true);
+-- Profiles
+drop policy if exists profiles_select_all on profiles;
+drop policy if exists profiles_insert_all on profiles;
+drop policy if exists profiles_update_all on profiles;
+create policy profiles_select_all on profiles for select using (true);
+create policy profiles_insert_all on profiles for insert with check (true);
+create policy profiles_update_all on profiles for update using (true) with check (true);
 
-create policy org_insert_all on organizations
-  for insert with check (true);
+-- Loans
+drop policy if exists loans_select_all on loans;
+drop policy if exists loans_insert_all on loans;
+drop policy if exists loans_update_all on loans;
+create policy loans_select_all on loans for select using (true);
+create policy loans_insert_all on loans for insert with check (true);
+create policy loans_update_all on loans for update using (true) with check (true);
 
-drop policy if exists profiles_select_own on profiles;
-drop policy if exists profiles_insert_self on profiles;
+-- Agreements
+drop policy if exists agreements_select_all on agreements;
+drop policy if exists agreements_insert_all on agreements;
+drop policy if exists agreements_update_all on agreements;
+create policy agreements_select_all on agreements for select using (true);
+create policy agreements_insert_all on agreements for insert with check (true);
+create policy agreements_update_all on agreements for update using (true) with check (true);
 
-create policy profiles_select_own on profiles
-  for select using (id = auth.uid() or true);
+-- Notifications
+drop policy if exists notifications_select_all on notifications;
+drop policy if exists notifications_insert_all on notifications;
+drop policy if exists notifications_update_all on notifications;
+create policy notifications_select_all on notifications for select using (true);
+create policy notifications_insert_all on notifications for insert with check (true);
+create policy notifications_update_all on notifications for update using (true) with check (true);
 
-create policy profiles_insert_self on profiles
-  for insert with check (true);
+-- 11. RELOAD SCHEMA CACHE IN POSTGREST
+notify pgrst, 'reload schema';
