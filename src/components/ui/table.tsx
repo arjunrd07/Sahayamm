@@ -4,7 +4,7 @@ import { Inbox } from "lucide-react";
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-surface-border dark:border-surface-border-dark">
+    <div className="overflow-x-auto no-scrollbar rounded-2xl border border-surface-border dark:border-surface-border-dark">
       <table className={cn("w-full text-sm", className)} {...props} />
     </div>
   );
