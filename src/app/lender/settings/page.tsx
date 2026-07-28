@@ -1,5 +1,5 @@
 import { SettingsScreen } from "@/components/settings-screen";
 
-export default function AdminSettingsPage() {
-  return <SettingsScreen />;
+export default function LenderSettingsPage() {
+  return <SettingsScreen role="lender" />;
 }

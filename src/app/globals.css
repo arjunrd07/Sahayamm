@@ -47,6 +47,17 @@
   }
 }
 
+/* Hide scrollbars across browsers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer components {
 
   /* Elevated Modern Cards: 20px radius, 1px border, subtle shadow */
