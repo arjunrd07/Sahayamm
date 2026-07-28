@@ -4,6 +4,8 @@ import { CheckCircle2, XCircle, Info, X } from "lucide-react";
 import { createContext, useCallback, useContext, useState } from "react";
 import { cn } from "@/lib/utils";
 
+import { AnimatedListItem } from "@/components/ui/animated-list";
+
 type ToastKind = "success" | "error" | "info";
 interface Toast {
   id: string;
@@ -16,9 +18,9 @@ const ToastContext = createContext<{ push: (kind: ToastKind, message: string) =>
 );
 
 const icon: Record<ToastKind, React.ReactNode> = {
-  success: <CheckCircle2 className="h-4 w-4 text-success shrink-0" />,
-  error: <XCircle className="h-4 w-4 text-danger shrink-0" />,
-  info: <Info className="h-4 w-4 text-accent shrink-0" />,
+  success: <CheckCircle2 className="h-4 w-4 text-success shrink-0 mt-0.5" />,
+  error: <XCircle className="h-4 w-4 text-danger shrink-0 mt-0.5" />,
+  info: <Info className="h-4 w-4 text-accent shrink-0 mt-0.5" />,
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -33,23 +35,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 w-full max-w-sm">
+      <div className="fixed top-16 right-4 sm:right-6 z-[100] flex flex-col gap-2.5 w-full max-w-sm pointer-events-none">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "card flex items-start gap-2.5 px-4 py-3 shadow-popover animate-in fade-in slide-in-from-bottom-2"
-            )}
-          >
-            {icon[t.kind]}
-            <p className="text-sm flex-1">{t.message}</p>
-            <button
-              onClick={() => setToasts((cur) => cur.filter((x) => x.id !== t.id))}
-              className="text-muted hover:text-ink dark:hover:text-white"
+          <AnimatedListItem key={t.id}>
+            <div
+              className={cn(
+                "card pointer-events-auto flex items-start gap-3 px-4 py-3.5 shadow-elevated border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark rounded-2xl"
+              )}
             >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+              {icon[t.kind]}
+              <p className="text-xs font-bold text-ink dark:text-white flex-1 leading-snug">{t.message}</p>
+              <button
+                onClick={() => setToasts((cur) => cur.filter((x) => x.id !== t.id))}
+                className="text-slate-400 hover:text-ink dark:hover:text-white p-0.5 rounded-lg transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </AnimatedListItem>
         ))}
       </div>
     </ToastContext.Provider>

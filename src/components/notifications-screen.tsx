@@ -5,70 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatDateTime, cn } from "@/lib/utils";
 import { Bell, CheckCircle2, XCircle, Clock, AlertTriangle, FileText, ShieldCheck } from "lucide-react";
 import { useEffect } from "react";
-import type { AppNotification, NotificationType } from "@/types/database";
-
-const DEMO_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: "demo-notif-1",
-    org_id: "demo-org",
-    user_id: "demo-user",
-    loan_id: "demo-loan-1",
-    title: "Loan Request Submitted",
-    message: "Your loan request for ₹50,000 (Emergency Household Expenses) was submitted to BedRock Lending Pool.",
-    type: "loan_requested",
-    read: false,
-    email_sent: true,
-    created_at: "2026-07-26T18:30:00Z",
-  },
-  {
-    id: "demo-notif-2",
-    org_id: "demo-org",
-    user_id: "demo-user",
-    loan_id: "demo-loan-2",
-    title: "Loan Request Approved",
-    message: "Congratulations! Your loan request for ₹75,000 was accepted. Agreement #SHM-2026-089 has been generated.",
-    type: "loan_approved",
-    read: false,
-    email_sent: true,
-    created_at: "2026-07-25T14:15:00Z",
-  },
-  {
-    id: "demo-notif-3",
-    org_id: "demo-org",
-    user_id: "demo-user",
-    loan_id: "demo-loan-2",
-    title: "Agreement Expiring / Repayment Due Soon",
-    message: "Agreement #SHM-2026-089 is approaching its due date on 2026-08-15. Please ensure timely repayment.",
-    type: "repayment_reminder",
-    read: true,
-    email_sent: true,
-    created_at: "2026-07-24T09:00:00Z",
-  },
-  {
-    id: "demo-notif-4",
-    org_id: "demo-org",
-    user_id: "demo-user",
-    loan_id: "demo-loan-3",
-    title: "Loan Request Declined",
-    message: "Your loan request #REQ-103 for ₹1,20,000 was declined by Lender. Reason: Insufficient employment tenure.",
-    type: "loan_rejected",
-    read: true,
-    email_sent: true,
-    created_at: "2026-07-22T16:45:00Z",
-  },
-  {
-    id: "demo-notif-5",
-    org_id: "demo-org",
-    user_id: "demo-user",
-    loan_id: null,
-    title: "KYC & Profile Verified",
-    message: "Your BedRock workspace profile and mandatory KYC details (PAN & CIBIL) have been verified successfully.",
-    type: "verification_decision",
-    read: true,
-    email_sent: true,
-    created_at: "2026-07-20T11:20:00Z",
-  },
-];
+import type { NotificationType } from "@/types/database";
 
 function getNotificationBadge(type: NotificationType) {
   switch (type) {
@@ -114,8 +51,7 @@ function getNotificationBadge(type: NotificationType) {
 }
 
 export function NotificationsScreen() {
-  const { notifications: realNotifications, unreadCount, markAllRead } = useNotifications();
-  const notifications = realNotifications.length > 0 ? realNotifications : DEMO_NOTIFICATIONS;
+  const { notifications, unreadCount, markAllRead } = useNotifications();
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -141,38 +77,50 @@ export function NotificationsScreen() {
         )}
       </div>
 
-      <div className="space-y-3">
-        {notifications.map((n) => {
-          const badge = getNotificationBadge(n.type);
-          const Icon = badge.icon;
-          return (
-            <div
-              key={n.id}
-              className={cn(
-                "p-4 rounded-xl border transition-all flex items-start gap-3.5",
-                !n.read
-                  ? "bg-white dark:bg-surface-dark border-signal/30 shadow-sm ring-1 ring-signal/10"
-                  : "bg-slate-50/70 dark:bg-white/5 border-slate-200 dark:border-surface-border-dark"
-              )}
-            >
-              <div className={cn("p-2 rounded-lg border shrink-0 mt-0.5", badge.bg)}>
-                <Icon className="h-4 w-4" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className={cn("text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border", badge.bg)}>
-                    {badge.label}
-                  </span>
-                  <span className="text-xs text-ink-slate font-medium">{formatDateTime(n.created_at)}</span>
+      {notifications.length === 0 ? (
+        <div className="p-12 text-center rounded-3xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark shadow-card space-y-3">
+          <div className="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-signal flex items-center justify-center mx-auto">
+            <Bell className="h-6 w-6" />
+          </div>
+          <p className="text-base font-bold text-ink dark:text-white">No Workspace Notifications Yet</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto font-medium">
+            Notifications regarding your credit requests, verification decisions, and repayment reminders will appear here in real-time.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {notifications.map((n) => {
+            const badge = getNotificationBadge(n.type);
+            const Icon = badge.icon;
+            return (
+              <div
+                key={n.id}
+                className={cn(
+                  "p-4 rounded-2xl border transition-all flex items-start gap-3.5",
+                  !n.read
+                    ? "bg-white dark:bg-surface-dark border-signal/30 shadow-sm ring-1 ring-signal/10"
+                    : "bg-slate-50/70 dark:bg-white/5 border-slate-200 dark:border-surface-border-dark"
+                )}
+              >
+                <div className={cn("p-2.5 rounded-xl border shrink-0 mt-0.5", badge.bg)}>
+                  <Icon className="h-4 w-4" />
                 </div>
-                <p className="text-sm font-bold text-ink dark:text-white">{n.title}</p>
-                <p className="text-xs text-ink-slate leading-relaxed mt-0.5">{n.message}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={cn("text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border", badge.bg)}>
+                      {badge.label}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">{formatDateTime(n.created_at)}</span>
+                  </div>
+                  <p className="text-sm font-bold text-ink dark:text-white">{n.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed mt-0.5">{n.message}</p>
+                </div>
+                {!n.read && <span className="h-2.5 w-2.5 rounded-full bg-signal shrink-0 mt-2" />}
               </div>
-              {!n.read && <span className="h-2 w-2 rounded-full bg-signal shrink-0 mt-2" />}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

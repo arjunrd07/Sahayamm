@@ -1,169 +1,118 @@
-<<<<<<< HEAD
 # Sahayam — Intra-Organization Lending Platform
 
-Employees/members of an organization can request loans from their org's
-admins instead of informal, undocumented internal lending. Sahayam
-handles verification, requests, approvals, agreements, reminders,
-reports, and history — **it never touches money**. All disbursal and
-repayment happens offline; the platform only tracks proof of it.
+**Sahayam** is an enterprise-grade multi-tenant platform designed for intra-organization micro-lending. It enables employees and members of verified organizations to request emergency loans directly from organization lenders and admins with transparent calculations, automated KYC verification, digital lending agreement execution, and real-time activity tracking — **without handling physical cash on platform**. All disbursement and repayment settlements happen securely, while Sahayam provides complete compliance, tracking, and audit trails.
 
-Built with Next.js 14 (App Router) + TypeScript + Tailwind, Supabase
-(Auth, Postgres, Storage with Row Level Security), DocuSeal (signed
-agreements), and Resend (email notifications).
+---
 
-## Quick start
+## 🌟 Key Features & Portals
+
+### 👤 1. Borrower Experience (`/borrower`)
+- **Interactive Loan Request Calculator**: Real-time interest and total repayment math based on customizable duration.
+- **Borrower Profile & Financial Vault**: Full identity, mobile number validation, CIBIL score tracking, address, bank payout vault, and emergency references.
+- **KYC Verification & Document Upload**: Upload proof of identity and employment for automated verification.
+- **My Loans & Repayment Tracking**: Active, completed, and pending loan requests with disbursal proof inspection.
+- **Digital Agreement Viewer**: View and sign official intra-organization lending agreements with print and PDF export capabilities.
+
+### 🏦 2. Lender & Treasury Vault (`/lender`)
+- **Lender Dashboard & Analytics**: Real-time overview of active capital deployed, pending approvals, and repayment rates.
+- **Verification Management**: Review borrower identity proof, employment credentials, and CIBIL scores to approve or reject KYC verification.
+- **Loan Approvals & Disbursal**: Review loan requests, approve/reject with custom notes, and record disbursal transaction receipts.
+- **Lender Profile & Treasury Vault**: Manage organization treasury pool allocation, max disbursement limits per loan, and settlement bank account details.
+- **Reports & Data Export**: Filter and export loan history to CSV for financial accounting.
+
+### 🛡️ 3. Superadmin Governance (`/superadmin`)
+- **Global Overview**: Multi-tenant workspace metrics across all registered organizations.
+- **Organization Management**: Onboard new corporate entities and assign administrator roles.
+- **User Directory & Security Audit**: Inspect global user accounts, verification statuses, and system audit logs.
+
+### 🔔 4. Real-time Notifications & UX
+- **Live Navbar Notification Dropdown**: Magic UI animated list notifications triggered on loan requests, KYC updates, and agreement actions.
+- **Theme UI Customs**: Interactive custom dropdowns, responsive navigation sidebars, and dark/light theme switching.
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 15 (App Router with SSR Server Actions)
+- **Language**: TypeScript (Strict mode enabled)
+- **Styling**: Vanilla CSS tokens + TailwindCSS + Lucide Icons + Magic UI
+- **Database & Auth**: Supabase (SSR Client, Auth Email OTP/Password, Postgres Database, Storage Buckets, and Row Level Security)
+- **Real-time Engine**: Supabase Realtime Channels for live notifications and badge sync
+- **Document Management**: Built-in SVG/Canvas contract viewer with PDF print generation
+
+---
+
+## 📁 Project Structure
+
+```
+sahayam/
+├── src/
+│   ├── app/
+│   │   ├── (auth) login/, signup/, auth/callback/
+│   │   ├── borrower/      dashboard, verification, request, loans, profile, settings, notifications
+│   │   ├── lender/        dashboard, verifications, loans, active, completed, reports, profile, settings, notifications
+│   │   ├── superadmin/    dashboard, organizations, users, audit
+│   │   └── api/           agreements/webhook, notifications/cron
+│   ├── components/
+│   │   ├── ui/            Select (Theme UI), AnimatedList, Card, Input, Button, Toast, Modal
+│   │   ├── profile/       ProfileHero (Shared Borrower/Lender Banner)
+│   │   ├── agreements/    AgreementCard, ContractViewer, AgreementTemplateViewer
+│   │   ├── layout/        Topbar, Sidebar, AppShell, AuthShell, ThemeToggle
+│   │   ├── calculator/    LiveLoanCalculator
+│   │   └── reports/       ExportCSVButton
+│   ├── context/           auth-context, notification-context, theme-context
+│   ├── lib/               supabase, notify, loan-math, utils, nav
+│   └── types/             database.ts
+└── supabase/
+    ├── migrations/        0001_initial_schema.sql - 0007_migrate_roles_borrower_lender.sql
+    ├── CONSOLIDATED_SETUP.sql
+    ├── schema.sql
+    └── seed.sql
+```
+
+---
+
+## 🗄️ Database Schema & Migrations
+
+The platform enforces strict multi-tenant Row Level Security (RLS) and standardized nomenclature:
+
+- **Roles (`user_role`)**: `borrower`, `lender`, `superadmin`
+- **Columns**: `borrower_id` and `lender_id` on `loans` table; `bank_name`, `account_number`, `ifsc_code`, `upi_id`, `emergency_name`, `emergency_phone`, `emergency_relation` on `profiles` table.
+
+### Applying Database Setup:
+1. Open your **Supabase Dashboard** -> **SQL Editor**.
+2. Run `supabase/migrations/CONSOLIDATED_SETUP.sql` to initialize all tables, RLS policies, triggers, storage buckets, and reload PostgREST schema cache.
+3. If upgrading an existing database, run `supabase/migrations/0007_migrate_roles_borrower_lender.sql`.
+
+---
+
+## ⚡ Quick Start
 
 ```bash
+# 1. Clone & install dependencies
+git clone https://github.com/arjunrd07/Sahayamm.git
+cd sahayam
 npm install
-cp .env.example .env.local   # fill in the values below
+
+# 2. Configure environment variables
+cp .env.example .env.local
+```
+
+### Environment Variables (`.env.local`)
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+```bash
+# 3. Start local development server
 npm run dev
 ```
 
-### 1. Supabase project
+Open [http://localhost:3000](http://localhost:3000) in your browser to start using Sahayam.
 
-1. Create a project at supabase.com.
-2. In the SQL editor, run `supabase/schema.sql`, then `supabase/seed.sql`.
-3. Copy the Project URL and anon/service-role keys into `.env.local`:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` (server-only — never expose to the client)
-4. In Auth settings, enable **Email OTP** sign-in (this is passwordless —
-   Sahayam never asks for a password). Set the Site URL and add
-   `/auth/callback` as a redirect URL.
+---
 
-### 2. Creating an admin
-
-Per the spec, admins never self-register. To create one:
-
-```sql
--- after the person has signed in once as a customer via email OTP
--- (which creates their auth user + a default 'customer' profile row)
-update profiles set role = 'admin' where email = 'someone@org.com';
-```
-
-Or create the auth user directly with `supabase.auth.admin.createUser()`
-using the service-role key, then insert their `profiles` row with
-`role = 'admin'` yourself.
-
-### 3. DocuSeal (optional for local dev)
-
-Without `DOCUSEAL_API_KEY` set, loan approval generates a **mock**
-agreement (no external call) so the full flow — approve, view
-agreement, statuses — is testable end to end. To use real DocuSeal:
-
-1. Create a template titled "Internal Lending Agreement" with fields
-   matching those sent in `src/lib/docuseal.ts` (`agreement_number`,
-   `organization_name`, `loan_amount`, `interest_amount`,
-   `total_repayment`, `duration_days`, `due_date`, `governing_law`) and
-   Borrower/Lender signer roles.
-2. Set `DOCUSEAL_API_KEY`, `DOCUSEAL_BASE_URL`, `DOCUSEAL_TEMPLATE_ID`.
-3. Point the template's webhook at `/api/agreements/webhook` (deployed
-   URL) so signature events update `agreements.status` and store the
-   final signed PDF path.
-
-### 4. Resend (optional for local dev)
-
-Without `RESEND_API_KEY`, emails are logged to the server console
-instead of sent, so notification flows are fully testable without a
-live account. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` to send real
-email.
-
-### 5. Reminders & overdue sweep
-
-`/api/notifications/cron` marks active loans overdue and sends
-repayment reminders (loans due within 3 days). Call it once a day from
-a scheduler, e.g. on Vercel:
-
-```json
-// vercel.json
-{ "crons": [{ "path": "/api/notifications/cron", "schedule": "0 3 * * *" }] }
-```
-
-Set `CRON_SECRET` and the route will require
-`Authorization: Bearer <CRON_SECRET>`.
-
-## Architecture notes
-
-- **Multi-tenancy**: every tenant-scoped table carries `org_id`, and
-  Postgres Row Level Security — not application code — is what makes
-  cross-org access impossible. See `supabase/schema.sql`. The
-  `auth_org_id()` / `auth_is_admin()` helper functions centralize the
-  checks so every policy reads the same way.
-- **Auth**: passwordless email OTP via Supabase Auth. Signup collects
-  name/org/phone as `user_metadata` on the OTP call; `/auth/callback`
-  provisions the `profiles` row on first login only (idempotent).
-- **Loan math**: `src/lib/loan-math.ts` is the single source of truth
-  for interest/repayment/due-date, imported by both the live calculator
-  UI and the loan-request Server Action, so what the customer sees
-  before submitting always matches what gets persisted. Simple
-  interest: `I = P × R × T / (365 × 100)`.
-- **Late-payment penalty interest**: intentionally not built (per
-  spec). The schema already has nullable `late_fee_rate` /
-  `late_fee_amount` columns on `loans` so it can be added later without
-  a migration reshuffle.
-- **Storage**: three private buckets (`verification-docs`,
-  `payment-proofs`, `agreements`), all access via signed URLs generated
-  on demand — nothing is public. Upload paths are
-  `{org_id}/{user_id}/...`, and that folder prefix is itself part of
-  the RLS check on `storage.objects`.
-- **Notifications**: `src/lib/notify.ts` writes the in-app row and
-  sends the matching email in one call, so the two channels can never
-  drift out of sync. Copy for every notification type lives in
-  `src/lib/resend.ts` (`notificationCopy`) as a single source of truth.
-- **Reports**: CSV export today (`papaparse`, client-side, in
-  `src/components/reports/export-csv-button.tsx`) built to take a flat
-  row array — handing the same rows to an Excel (SheetJS) or PDF
-  renderer later doesn't require restructuring the report layer.
-
-## What's real vs. mocked out of the box
-
-| Piece | Without credentials | With credentials |
-|---|---|---|
-| Auth, DB, Storage, RLS | Fully real (needs a Supabase project) | same |
-| Agreements (DocuSeal) | Mock submission id, no PDF, status stays "sent" | Real submission, signatures, webhook-delivered PDF |
-| Email (Resend) | Logged to console | Real delivery |
-
-## Project structure
-
-```
-src/
-  app/
-    (auth) login/, signup/, auth/callback/
-    customer/  dashboard, verification, request, loans, loans/[id], profile, settings, notifications
-    admin/     dashboard, verifications, loans, loans/[id], active, completed, reports, settings, notifications
-    api/       agreements/webhook, notifications/cron
-  components/
-    ui/            Button, Card, Input, Modal, Table, Tabs, Toast, status badges
-    layout/        Sidebar, Topbar, AppShell, AuthShell, ThemeToggle
-    calculator/    LiveLoanCalculator
-    agreements/    AgreementCard
-    loans/         LoanTimeline
-    reports/       ExportCSVButton
-  context/         theme, auth, notifications (realtime via Supabase channels)
-  lib/             supabase (client/server/service-role), docuseal, resend, notify, loan-math, utils, nav
-  types/           database.ts (hand-written types — regenerate with
-                    `supabase gen types typescript` once the project is linked, for full type safety)
-supabase/
-  schema.sql   full schema + RLS
-  seed.sql     sample organizations
-```
-
-## Known gaps / where to look next
-
-- `types/database.ts` is hand-written rather than generated; the
-  Supabase clients aren't passed a `Database` generic (dropped to avoid
-  a type-inference conflict with the hand-written shape during build).
-  Run `supabase gen types typescript --linked > src/types/database.ts`
-  once the project is linked to get full autocomplete + strict typing
-  back, and re-add `createBrowserClient<Database>(...)` /
-  `createServerClient<Database>(...)`.
-- No automated test suite yet (unit tests for `loan-math.ts` and RLS
-  policy tests would be the highest-value additions).
-- The DocuSeal webhook handler assumes a payload shape based on
-  DocuSeal's documented events; verify field names against your
-  account's actual webhook payloads before relying on it in
-  production.
-=======
-# Sahayamm
-Platfrom of Intra-Organization Lending 
->>>>>>> 8da9bbe14d3ccce78699ebae2b53015157df7b80
+## 📜 License
+Privately developed for intra-organization micro-lending and employee emergency credit management.

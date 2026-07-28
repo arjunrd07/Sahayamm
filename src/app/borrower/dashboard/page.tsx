@@ -303,17 +303,17 @@ export default async function CustomerDashboardPage() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <Card key={s.label} className="p-5 hover:-translate-y-0.5 transition-all duration-200 border border-slate-200 dark:border-surface-border-dark">
+          <Card key={s.label} className="p-5 border border-slate-200/90 dark:border-surface-border-dark shadow-card">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white">
+              <div className="icon-box">
                 <s.icon className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
-                Verified
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/50 px-2.5 py-0.5 rounded-full">
+                Active Pool
               </span>
             </div>
-            <p className="text-2xl font-extrabold text-ink dark:text-white tracking-tight">{s.value}</p>
-            <p className="text-xs text-ink-slate dark:text-ink-mist mt-1 font-medium">{s.label}</p>
+            <p className="text-2xl font-black text-ink dark:text-white tracking-tight">{s.value}</p>
+            <p className="text-xs text-ink-slate dark:text-slate-400 mt-1 font-semibold">{s.label}</p>
           </Card>
         ))}
       </div>

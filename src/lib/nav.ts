@@ -47,6 +47,7 @@ export const superadminNav: NavItem[] = [
   { href: "/superadmin/dashboard", label: "Superadmin Overview", icon: LayoutDashboard },
   { href: "/superadmin/organizations", label: "Organizations", icon: FileText },
   { href: "/superadmin/users", label: "Global Users", icon: User },
-  { href: "/superadmin/audit", label: "Audit & Security Logs", icon: Bell },
+  { href: "/lender/notifications", label: "Notifications", icon: Bell },
+  { href: "/superadmin/audit", label: "Audit Logs", icon: Bell },
   { href: "/lender/dashboard", label: "Lender View", icon: Settings },
 ];

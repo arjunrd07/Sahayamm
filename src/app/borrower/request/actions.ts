@@ -73,25 +73,38 @@ export async function requestLoan(input: RequestLoanInput) {
 
   if (error || !loan) return { error: error?.message || "Could not submit request." };
 
-  // Notify every admin in the organization.
+  const customerName = profile.full_name || profile.email || "Borrower";
+
+  // 1. Notify Borrower Confirmation
+  await dispatchNotification({
+    orgId: profile.org_id,
+    userId: profile.id,
+    userEmail: profile.email,
+    loanId: loan.id,
+    type: "loan_requested",
+    params: { customerName, amount: formatINR(loan.amount), purpose: input.purpose },
+  });
+
+  // 2. Notify Lenders in the Organization
   const admin = createServiceRoleClient();
-  const { data: admins } = await admin
+  const { data: lenders } = await admin
     .from("profiles")
     .select("id, email")
     .eq("org_id", profile.org_id)
-    .eq("role", "admin");
+    .in("role", ["lender", "superadmin"]);
 
-  for (const a of admins || []) {
-    await dispatchNotification({
-      orgId: profile.org_id,
-      userId: a.id,
-      userEmail: a.email,
-      loanId: loan.id,
-      type: "loan_requested",
-      params: { customerName: profile.full_name, amount: formatINR(loan.amount), purpose: input.purpose },
-    });
+  for (const l of lenders || []) {
+    if (l.id !== profile.id) {
+      await dispatchNotification({
+        orgId: profile.org_id,
+        userId: l.id,
+        userEmail: l.email,
+        loanId: loan.id,
+        type: "loan_requested",
+        params: { customerName, amount: formatINR(loan.amount), purpose: input.purpose },
+      });
+    }
   }
 
   return { data: loan };
 }
-

@@ -48,12 +48,12 @@ export function Select({
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          "w-full flex items-center justify-between rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-canvas-dark px-3.5 py-2.5 text-sm font-medium text-ink dark:text-white shadow-xs transition-all",
+          "w-full flex items-center justify-between rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark px-3.5 py-2.5 text-sm font-semibold text-ink dark:text-white shadow-sm transition-all",
           "hover:border-signal/50 focus:outline-none focus:ring-2 focus:ring-signal",
           isOpen && "ring-2 ring-signal border-signal"
         )}
       >
-        <span className={selectedOption ? "font-semibold" : "text-slate-400 font-normal"}>
+        <span className={selectedOption ? "font-bold text-ink dark:text-white" : "text-slate-400 dark:text-slate-400 font-medium"}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform duration-200", isOpen && "rotate-180 text-signal")} />
@@ -74,14 +74,14 @@ export function Select({
                     setIsOpen(false);
                   }}
                   className={cn(
-                    "w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors text-left",
+                    "w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-bold transition-colors text-left",
                     isSelected
-                      ? "bg-signal-soft text-signal"
-                      : "text-ink dark:text-white hover:bg-slate-100 dark:hover:bg-white/5"
+                      ? "bg-signal-soft text-signal-cobalt dark:bg-signal/20 dark:text-blue-300 border border-signal/30"
+                      : "text-ink dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60"
                   )}
                 >
                   <span>{option.label}</span>
-                  {isSelected && <Check className="h-3.5 w-3.5 text-signal" />}
+                  {isSelected && <Check className="h-3.5 w-3.5 text-signal dark:text-blue-300" />}
                 </button>
               );
             })}
