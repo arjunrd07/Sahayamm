@@ -61,7 +61,6 @@ export default function BorrowerLoansPage() {
             Track active loan balances, repayment schedules, and application status.
           </p>
         </div>
-        <span className="text-xs text-slate-400 font-medium">Click any row to open loan details</span>
       </div>
 
       {/* Top Status Cards */}

@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { formatINR, formatDate } from "@/lib/utils";
 import type { Agreement, Loan, Profile } from "@/types/database";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { approveLoan, rejectLoan } from "../actions";
 
 export default function AdminLoanDetailPage() {
@@ -96,11 +98,23 @@ export default function AdminLoanDetailPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">{loan.purpose}</h2>
-          <p className="text-sm text-muted mt-1">Requested {formatDate(loan.created_at)}</p>
+    <div className="space-y-6 max-w-4xl pb-12">
+      {/* Header with Inline Back Arrow */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/lender/loans"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
+            title="Back to Loan Requests"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-ink dark:text-white">{loan.purpose}</h1>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Requested on {formatDate(loan.created_at)}
+            </p>
+          </div>
         </div>
         <LoanStatusBadge status={loan.status} />
       </div>

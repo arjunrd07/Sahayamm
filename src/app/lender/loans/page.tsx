@@ -81,7 +81,6 @@ export default function AdminLoanRequestsPage() {
             Review and manage intra-organization employee loan applications.
           </p>
         </div>
-        <span className="text-xs text-slate-400 font-medium">Click any row to open request details</span>
       </div>
 
       {/* Top Status Cards Grid */}
