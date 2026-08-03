@@ -31,7 +31,7 @@ export async function dispatchNotification(input: DispatchNotificationInput) {
       type: input.type,
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Failed to write notification:", error.message);

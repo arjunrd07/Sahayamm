@@ -2,12 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-/**
- * Repayment proof submission isn't one of the spec's notification
- * types (only the outcomes — completed / overdue — are), so this just
- * records the proof. Admins see it show up in their Active Loans queue
- * to verify and mark the loan Completed.
- */
 export async function submitRepaymentProof(loanId: string, proofPath: string) {
   const supabase = await createClient();
   const {
@@ -22,8 +16,24 @@ export async function submitRepaymentProof(loanId: string, proofPath: string) {
     .eq("customer_id", user.id)
     .eq("status", "active")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not submit repayment proof." };
+
+  // Record payment in loan_payments table
+  try {
+    await supabase.from("loan_payments").insert({
+      loan_id: loan.id,
+      org_id: loan.org_id,
+      borrower_id: user.id,
+      amount: loan.total_repayment,
+      payment_proof_url: proofPath,
+      payment_type: "repayment",
+      status: "submitted",
+    });
+  } catch (paymentErr) {
+    console.warn("Repayment proof record notice:", paymentErr);
+  }
+
   return { data: loan };
 }
