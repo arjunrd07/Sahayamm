@@ -42,8 +42,8 @@ export const LOAN_PLANS: LoanPlan[] = [
     id: "21_days",
     name: "21 Days",
     days: 21,
-    ratePercent: 1.6,
-    description: "21 days at 1.6% interest",
+    ratePercent: 1.4,
+    description: "21 days at 1.4% interest",
   },
 ];
 

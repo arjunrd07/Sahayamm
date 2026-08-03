@@ -12,7 +12,7 @@ async function requireLender() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, lender: null };
-  const { data: lender } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data: lender } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (
     !lender ||
     (lender.role !== "lender" && lender.role !== "admin" && lender.role !== "superadmin")
@@ -48,14 +48,31 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     .eq("org_id", lender.org_id)
     .eq("status", "pending")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not approve loan." };
 
+  // Record payment in loan_payments table if proof was attached
+  if (disbursalProofUrl) {
+    try {
+      await supabase.from("loan_payments").insert({
+        loan_id: loan.id,
+        org_id: lender.org_id,
+        borrower_id: loan.customer_id,
+        amount: loan.amount,
+        payment_proof_url: disbursalProofUrl,
+        payment_type: "disbursal",
+        status: "verified",
+      });
+    } catch (paymentErr) {
+      console.warn("Payment proof record insertion notice:", paymentErr);
+    }
+  }
+
   const service = createServiceRoleClient();
   const [{ data: org }, { data: borrower }] = await Promise.all([
-    service.from("organizations").select("*").eq("id", lender.org_id).single(),
-    service.from("profiles").select("*").eq("id", loan.customer_id).single(),
+    service.from("organizations").select("*").eq("id", lender.org_id).maybeSingle(),
+    service.from("profiles").select("*").eq("id", loan.customer_id).maybeSingle(),
   ]);
 
   const { count } = await service
@@ -82,37 +99,39 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
       status: result.status,
     })
     .select()
-    .single();
+    .maybeSingle();
 
-  await dispatchNotification({
-    orgId: lender.org_id,
-    userId: loan.customer_id,
-    userEmail: (borrower as Profile).email,
-    loanId: loan.id,
-    type: "loan_approved",
-    params: { amount: formatINR(loan.total_repayment) },
-  });
-
-  if (disbursalProofUrl) {
+  if (borrower) {
     await dispatchNotification({
       orgId: lender.org_id,
       userId: loan.customer_id,
       userEmail: (borrower as Profile).email,
       loanId: loan.id,
-      type: "funds_sent",
-      params: { amount: formatINR(loan.amount), dueDate: loan.due_date || "" },
+      type: "loan_approved",
+      params: { amount: formatINR(loan.total_repayment) },
     });
-  }
 
-  if (agreement) {
-    await dispatchNotification({
-      orgId: lender.org_id,
-      userId: loan.customer_id,
-      userEmail: (borrower as Profile).email,
-      loanId: loan.id,
-      type: "agreement_ready",
-      params: { agreementNumber },
-    });
+    if (disbursalProofUrl) {
+      await dispatchNotification({
+        orgId: lender.org_id,
+        userId: loan.customer_id,
+        userEmail: (borrower as Profile).email,
+        loanId: loan.id,
+        type: "funds_sent",
+        params: { amount: formatINR(loan.amount), dueDate: loan.due_date || "" },
+      });
+    }
+
+    if (agreement) {
+      await dispatchNotification({
+        orgId: lender.org_id,
+        userId: loan.customer_id,
+        userEmail: (borrower as Profile).email,
+        loanId: loan.id,
+        type: "agreement_ready",
+        params: { agreementNumber },
+      });
+    }
   }
 
   return { data: loan };
@@ -134,7 +153,7 @@ export async function rejectLoan(loanId: string, reason: string) {
     .eq("org_id", lender.org_id)
     .eq("status", "pending")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not reject loan." };
 
@@ -143,16 +162,18 @@ export async function rejectLoan(loanId: string, reason: string) {
     .from("profiles")
     .select("email")
     .eq("id", loan.customer_id)
-    .single();
+    .maybeSingle();
 
-  await dispatchNotification({
-    orgId: lender.org_id,
-    userId: loan.customer_id,
-    userEmail: borrower!.email,
-    loanId: loan.id,
-    type: "loan_rejected",
-    params: { amount: formatINR(loan.amount), reason },
-  });
+  if (borrower) {
+    await dispatchNotification({
+      orgId: lender.org_id,
+      userId: loan.customer_id,
+      userEmail: borrower.email,
+      loanId: loan.id,
+      type: "loan_rejected",
+      params: { amount: formatINR(loan.amount), reason },
+    });
+  }
 
   return { data: loan };
 }
@@ -173,27 +194,78 @@ export async function uploadDisbursalProof(loanId: string, proofPath: string) {
     .eq("org_id", lender.org_id)
     .eq("status", "approved")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not mark loan active." };
+
+  // Record proof in loan_payments
+  try {
+    await supabase.from("loan_payments").insert({
+      loan_id: loan.id,
+      org_id: lender.org_id,
+      borrower_id: loan.customer_id,
+      amount: loan.amount,
+      payment_proof_url: proofPath,
+      payment_type: "disbursal",
+      status: "verified",
+    });
+  } catch (paymentErr) {
+    console.warn("Loan payment record notice:", paymentErr);
+  }
 
   const service = createServiceRoleClient();
   const { data: borrower } = await service
     .from("profiles")
     .select("email")
     .eq("id", loan.customer_id)
-    .single();
+    .maybeSingle();
+
+  if (borrower) {
+    await dispatchNotification({
+      orgId: lender.org_id,
+      userId: loan.customer_id,
+      userEmail: borrower.email,
+      loanId: loan.id,
+      type: "funds_sent",
+      params: { amount: formatINR(loan.amount), dueDate: loan.due_date || "" },
+    });
+  }
+
+  return { data: loan };
+}
+
+export async function sendRepaymentReminder(loanId: string) {
+  const { supabase, lender } = await requireLender();
+  if (!lender) return { error: "Not authorized." };
+
+  const { data: loan } = await supabase
+    .from("loans")
+    .select("*")
+    .eq("id", loanId)
+    .eq("org_id", lender.org_id)
+    .maybeSingle();
+
+  if (!loan) return { error: "Loan not found." };
+
+  const service = createServiceRoleClient();
+  const { data: borrower } = await service
+    .from("profiles")
+    .select("email")
+    .eq("id", loan.customer_id)
+    .maybeSingle();
+
+  if (!borrower) return { error: "Borrower profile not found." };
 
   await dispatchNotification({
     orgId: lender.org_id,
     userId: loan.customer_id,
-    userEmail: borrower!.email,
+    userEmail: borrower.email,
     loanId: loan.id,
-    type: "funds_sent",
-    params: { amount: formatINR(loan.amount), dueDate: loan.due_date || "" },
+    type: "repayment_reminder",
+    params: { amount: formatINR(loan.total_repayment), dueDate: loan.due_date || "Soon" },
   });
 
-  return { data: loan };
+  return { success: true };
 }
 
 export async function verifyRepaymentAndComplete(loanId: string) {
@@ -207,7 +279,7 @@ export async function verifyRepaymentAndComplete(loanId: string) {
     .eq("org_id", lender.org_id)
     .eq("status", "active")
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not complete loan." };
 
@@ -216,17 +288,18 @@ export async function verifyRepaymentAndComplete(loanId: string) {
     .from("profiles")
     .select("email")
     .eq("id", loan.customer_id)
-    .single();
+    .maybeSingle();
 
-  await dispatchNotification({
-    orgId: lender.org_id,
-    userId: loan.customer_id,
-    userEmail: borrower!.email,
-    loanId: loan.id,
-    type: "loan_completed",
-    params: { amount: formatINR(loan.total_repayment) },
-  });
+  if (borrower) {
+    await dispatchNotification({
+      orgId: lender.org_id,
+      userId: loan.customer_id,
+      userEmail: borrower.email,
+      loanId: loan.id,
+      type: "loan_completed",
+      params: { amount: formatINR(loan.total_repayment) },
+    });
+  }
 
   return { data: loan };
 }
-

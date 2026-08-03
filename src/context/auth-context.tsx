@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
     setProfile(data as Profile | null);
     setLoading(false);
   }
