@@ -2,9 +2,9 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { createClient as createRawClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key";
+const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim() || "https://placeholder-project.supabase.co";
+const supabaseAnonKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim() || "placeholder-anon-key";
+const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim() || "placeholder-service-key";
 
 export async function createClient() {
   const cookieStore = await cookies();

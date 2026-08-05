@@ -27,13 +27,13 @@ describe("Loan Math & Plan Calculations", () => {
     expect(result.dueDate).toBe("2026-08-15");
   });
 
-  it("calculates 21 days plan at 1.6% interest correctly", () => {
+  it("calculates 21 days plan at 1.4% interest correctly", () => {
     const fixedDate = new Date("2026-08-01T00:00:00Z");
     const result = calculatePlanLoan(10000, "21_days", fixedDate);
 
     expect(result.principal).toBe(10000);
-    expect(result.interest).toBe(160); // 10000 * 1.6% = 160
-    expect(result.totalRepayment).toBe(10160);
+    expect(result.interest).toBe(140); // 10000 * 1.4% = 140
+    expect(result.totalRepayment).toBe(10140);
     expect(result.dueDate).toBe("2026-08-22");
   });
 });
