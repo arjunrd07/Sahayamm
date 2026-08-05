@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { logAuditEntry } from "@/lib/audit";
+import { formatINR } from "@/lib/utils";
 
 export async function submitRepaymentProof(loanId: string, proofPath: string) {
   const supabase = await createClient();
@@ -34,6 +36,14 @@ export async function submitRepaymentProof(loanId: string, proofPath: string) {
   } catch (paymentErr) {
     console.warn("Repayment proof record notice:", paymentErr);
   }
+
+  await logAuditEntry({
+    action: "Submit Repayment Proof",
+    actor_id: user.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Borrower submitted repayment proof for active loan ${loan.id} of ${formatINR(loan.total_repayment)}.`,
+  });
 
   return { data: loan };
 }

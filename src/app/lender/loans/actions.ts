@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { createLendingAgreement, generateAgreementNumber } from "@/lib/docuseal";
 import { dispatchNotification } from "@/lib/notify";
 import { formatINR } from "@/lib/utils";
+import { logAuditEntry } from "@/lib/audit";
 import type { Organization, Profile } from "@/types/database";
 
 async function requireLender() {
@@ -134,6 +135,26 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     }
   }
 
+  await logAuditEntry({
+    action: disbursalProofUrl ? "Disburse Loan & Activate" : "Approve Loan Request",
+    actor_id: lender.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: disbursalProofUrl
+      ? `Lender ${lender.full_name || lender.email} approved & disbursed ${formatINR(loan.amount)} (Total Repayment: ${formatINR(loan.total_repayment)}) for loan request ${loan.id}.`
+      : `Lender ${lender.full_name || lender.email} approved loan request ${loan.id} for ${formatINR(loan.amount)}.`,
+  });
+
+  if (agreement) {
+    await logAuditEntry({
+      action: "Create Lending Agreement",
+      actor_id: lender.id,
+      entity_type: "agreement",
+      entity_id: agreement.id,
+      details: `Lending agreement ${agreementNumber} created for loan ${loan.id} between borrower and lender.`,
+    });
+  }
+
   return { data: loan };
 }
 
@@ -174,6 +195,14 @@ export async function rejectLoan(loanId: string, reason: string) {
       params: { amount: formatINR(loan.amount), reason },
     });
   }
+
+  await logAuditEntry({
+    action: "Reject Loan Request",
+    actor_id: lender.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Lender ${lender.full_name || lender.email} rejected loan request ${loan.id} of ${formatINR(loan.amount)}. Reason: ${reason || "Not specified"}.`,
+  });
 
   return { data: loan };
 }
@@ -231,6 +260,14 @@ export async function uploadDisbursalProof(loanId: string, proofPath: string) {
     });
   }
 
+  await logAuditEntry({
+    action: "Disburse Loan Funds",
+    actor_id: lender.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Lender ${lender.full_name || lender.email} uploaded disbursal proof and marked loan ${loan.id} of ${formatINR(loan.amount)} as active.`,
+  });
+
   return { data: loan };
 }
 
@@ -263,6 +300,14 @@ export async function sendRepaymentReminder(loanId: string) {
     loanId: loan.id,
     type: "repayment_reminder",
     params: { amount: formatINR(loan.total_repayment), dueDate: loan.due_date || "Soon" },
+  });
+
+  await logAuditEntry({
+    action: "Send Repayment Reminder",
+    actor_id: lender.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Lender ${lender.full_name || lender.email} sent repayment reminder for active loan ${loan.id} (Total Repayment: ${formatINR(loan.total_repayment)}).`,
   });
 
   return { success: true };
@@ -300,6 +345,14 @@ export async function verifyRepaymentAndComplete(loanId: string) {
       params: { amount: formatINR(loan.total_repayment) },
     });
   }
+
+  await logAuditEntry({
+    action: "Complete Loan Repayment",
+    actor_id: lender.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Lender ${lender.full_name || lender.email} verified repayment and marked loan ${loan.id} of ${formatINR(loan.total_repayment)} as completed.`,
+  });
 
   return { data: loan };
 }
