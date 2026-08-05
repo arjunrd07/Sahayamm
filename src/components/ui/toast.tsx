@@ -13,7 +13,7 @@ interface Toast {
   message: string;
 }
 
-const ToastContext = createContext<{ push: (kind: ToastKind, message: string) => void } | null>(
+const ToastContext = createContext<{ push: (kind: ToastKind, message: any) => void } | null>(
   null
 );
 
@@ -26,9 +26,21 @@ const icon: Record<ToastKind, React.ReactNode> = {
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const push = useCallback((kind: ToastKind, message: string) => {
+  const push = useCallback((kind: ToastKind, rawMessage: any) => {
+    let messageText = "An error occurred";
+    if (typeof rawMessage === "string") {
+      messageText = rawMessage;
+    } else if (rawMessage && typeof rawMessage === "object") {
+      messageText = rawMessage.message || rawMessage.error_description || rawMessage.error || JSON.stringify(rawMessage);
+    } else if (rawMessage !== undefined && rawMessage !== null) {
+      messageText = String(rawMessage);
+    }
+    if (messageText === "{}" || !messageText) {
+      messageText = "Authentication failed. Please check credentials or network.";
+    }
+
     const id = Math.random().toString(36).slice(2);
-    setToasts((t) => [...t, { id, kind, message }]);
+    setToasts((t) => [...t, { id, kind, message: messageText }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4500);
   }, []);
 

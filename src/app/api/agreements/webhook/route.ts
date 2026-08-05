@@ -51,8 +51,8 @@ export async function POST(request: Request) {
 
     const loan = (agreement as any).loan;
     if (loan) {
-      const { data: borrower } = await supabase.from("profiles").select("email").eq("id", loan.customer_id).single();
-      const { data: lender } = await supabase.from("profiles").select("email").eq("id", loan.admin_id).single();
+      const { data: borrower } = await supabase.from("profiles").select("email").eq("id", loan.customer_id).maybeSingle();
+      const { data: lender } = await supabase.from("profiles").select("email").eq("id", loan.admin_id).maybeSingle();
 
       for (const recipient of [
         { id: loan.customer_id, email: borrower?.email },

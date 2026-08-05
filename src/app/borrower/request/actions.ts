@@ -20,7 +20,7 @@ export async function requestLoan(input: RequestLoanInput) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (!profile) return { error: "Profile not found." };
   if (profile.verification_status !== "verified") {
     return { error: "You must be verified before requesting a loan." };
@@ -43,8 +43,8 @@ export async function requestLoan(input: RequestLoanInput) {
     totalRepay = calc.totalRepayment;
     dueDate = calc.dueDate;
   } else {
-    const days = input.durationDays || 0;
-    if (days <= 0) return { error: "Enter a valid duration." };
+    const days = input.durationDays || 7;
+    if (![7, 14, 21].includes(days)) return { error: "Loan duration must be 7, 14, or 21 days." };
     const rate = input.interestRateAnnual || 0;
     const calc = calculateLoan(input.amount, rate, days);
     durationDays = days;
@@ -69,7 +69,7 @@ export async function requestLoan(input: RequestLoanInput) {
       status: "pending",
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not submit request." };
 

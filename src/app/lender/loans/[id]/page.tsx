@@ -9,12 +9,13 @@ import { LoanTimeline } from "@/components/loans/loan-timeline";
 import { AgreementCard } from "@/components/agreements/agreement-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
+import { FileUploader } from "@/components/ui/file-uploader";
 import { useToast } from "@/components/ui/toast";
 import { formatINR, formatDate } from "@/lib/utils";
 import type { Agreement, Loan, Profile } from "@/types/database";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { approveLoan, rejectLoan } from "../actions";
+import { ArrowLeft, Bell } from "lucide-react";
+import { approveLoan, rejectLoan, sendRepaymentReminder } from "../actions";
 
 export default function AdminLoanDetailPage() {
   const params = useParams<{ id: string }>();
@@ -28,13 +29,14 @@ export default function AdminLoanDetailPage() {
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reminderSending, setReminderSending] = useState(false);
 
   async function load() {
-    const { data: loanData } = await supabase.from("loans").select("*").eq("id", params.id).single();
+    const { data: loanData } = await supabase.from("loans").select("*").eq("id", params.id).maybeSingle();
     setLoan(loanData as Loan);
     if (loanData) {
       const [{ data: cust }, { data: agr }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", loanData.customer_id).single(),
+        supabase.from("profiles").select("*").eq("id", loanData.customer_id).maybeSingle(),
         supabase.from("agreements").select("*").eq("loan_id", loanData.id).maybeSingle(),
       ]);
       setCustomer(cust as Profile);
@@ -60,7 +62,7 @@ export default function AdminLoanDetailPage() {
       push("error", result.error);
       return;
     }
-    push("success", "Loan approved & activated with payment proof.");
+    push("success", "Loan approved & activated with payment proof recorded.");
     load();
   }
 
@@ -80,13 +82,24 @@ export default function AdminLoanDetailPage() {
     load();
   }
 
+  async function handleSendReminder() {
+    setReminderSending(true);
+    const result = await sendRepaymentReminder(loan!.id);
+    setReminderSending(false);
+    if ("error" in result && result.error) {
+      push("error", result.error);
+      return;
+    }
+    push("success", "Repayment reminder notification sent to borrower.");
+  }
+
   const planLabel =
     loan.duration_days === 7
       ? "7 Days Plan (0.4% interest)"
       : loan.duration_days === 14
       ? "14 Days Plan (0.8% interest)"
       : loan.duration_days === 21
-      ? "21 Days Plan (1.6% interest)"
+      ? "21 Days Plan (1.4% interest)"
       : `${loan.duration_days} days`;
 
   const facts = [
@@ -116,7 +129,19 @@ export default function AdminLoanDetailPage() {
             </p>
           </div>
         </div>
-        <LoanStatusBadge status={loan.status} />
+        <div className="flex items-center gap-2">
+          {loan.status === "active" && (
+            <Button
+              variant="secondary"
+              className="text-xs flex items-center gap-1.5"
+              loading={reminderSending}
+              onClick={handleSendReminder}
+            >
+              <Bell className="h-3.5 w-3.5" /> Notify Repayment Due
+            </Button>
+          )}
+          <LoanStatusBadge status={loan.status} />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -128,15 +153,12 @@ export default function AdminLoanDetailPage() {
                 <VerificationBadge status={customer.verification_status} />
               </div>
               <div className="text-sm space-y-1.5">
-                <p className="font-medium">{customer.full_name}</p>
+                <p className="font-bold text-ink dark:text-white">{customer.full_name}</p>
                 <p className="text-muted">{customer.email}</p>
                 {customer.phone && <p className="text-muted">{customer.phone}</p>}
-                {customer.pan_number && (
-                  <p className="text-xs text-muted">
-                    PAN: <span className="font-mono font-semibold">{customer.pan_number}</span> | CIBIL:{" "}
-                    <span className="font-semibold">{customer.cibil_score || "N/A"}</span>
-                  </p>
-                )}
+                <p className="text-[11px] text-slate-400 italic mt-1">
+                  🔒 Sensitive PAN/CIBIL details masked for compliance.
+                </p>
               </div>
             </Card>
           )}
@@ -156,9 +178,9 @@ export default function AdminLoanDetailPage() {
           {loan.disbursal_proof_url && (
             <Card className="border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20">
               <CardTitle className="text-emerald-900 dark:text-emerald-300 mb-2">
-                Payment Receipt / Disbursal Proof
+                Disbursal Payment Proof (Image/Doc)
               </CardTitle>
-              <p className="text-xs text-muted mb-3">Attached proof of funds transfer between lender and borrower.</p>
+              <p className="text-xs text-muted mb-3">Stored proof of payment in Supabase Storage & loan_payments table.</p>
               {loan.disbursal_proof_url.startsWith("http") || loan.disbursal_proof_url.startsWith("/") || loan.disbursal_proof_url.startsWith("data:") ? (
                 <img
                   src={loan.disbursal_proof_url}
@@ -167,7 +189,7 @@ export default function AdminLoanDetailPage() {
                 />
               ) : (
                 <div className="p-3 bg-white dark:bg-black/20 rounded-lg text-xs font-mono break-all border">
-                  Proof Reference: {loan.disbursal_proof_url}
+                  Proof File: {loan.disbursal_proof_url}
                 </div>
               )}
             </Card>
@@ -177,28 +199,27 @@ export default function AdminLoanDetailPage() {
             <Card>
               <CardTitle>Lender Decision</CardTitle>
               <CardDescription className="mb-4">
-                Approve request and attach payment receipt proof to activate loan, or reject.
+                Upload payment receipt proof (Image or Document) to approve and activate loan, or reject request.
               </CardDescription>
 
               {approving ? (
-                <div className="space-y-3 mb-4">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-ink dark:text-white">
-                      Payment Receipt Image URL / Document Proof (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full text-xs p-2.5 rounded-lg border border-surface-border dark:border-surface-border-dark bg-white dark:bg-black/20"
-                      placeholder="Paste receipt image URL (e.g. https://... or screenshot link)"
-                      value={disbursalProofUrl}
-                      onChange={(e) => setDisbursalProofUrl(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex gap-2">
+                <div className="space-y-4 mb-4">
+                  <FileUploader
+                    bucket="disbursals"
+                    label="Upload Disbursal Payment Proof"
+                    onUploadComplete={(url) => setDisbursalProofUrl(url)}
+                  />
+
+                  <div className="flex gap-2 pt-2">
                     <Button variant="secondary" className="flex-1 text-xs" onClick={() => setApproving(false)}>
                       Back
                     </Button>
-                    <Button variant="primary" className="flex-1 text-xs" loading={submitting} onClick={handleApprove}>
+                    <Button
+                      variant="primary"
+                      className="flex-1 text-xs font-bold"
+                      loading={submitting}
+                      onClick={handleApprove}
+                    >
                       Confirm Approval & Activate
                     </Button>
                   </div>

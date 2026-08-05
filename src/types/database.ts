@@ -28,6 +28,7 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
+  mobile_number?: string | null;
   pan_number?: string | null;
   cibil_score?: number | null;
   address?: string | null;
@@ -46,6 +47,17 @@ export interface Profile {
   employment_proof_url: string | null;
   verified_by: string | null;
   verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Borrower {
+  id: string;
+  organization_id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  verification_status: VerificationStatus;
   created_at: string;
   updated_at: string;
 }
@@ -75,6 +87,18 @@ export interface Loan {
   active_at: string | null;
   completed_at: string | null;
   updated_at: string;
+}
+
+export interface LoanPayment {
+  id: string;
+  loan_id: string;
+  org_id: string;
+  borrower_id: string;
+  amount: number;
+  payment_proof_url: string;
+  payment_type: "disbursal" | "repayment";
+  status: "submitted" | "verified" | "rejected";
+  created_at: string;
 }
 
 export interface Agreement {
@@ -107,7 +131,6 @@ export interface AppNotification {
 }
 
 // Minimal Database generic shape so @supabase/ssr type params resolve.
-// Extend with `supabase gen types typescript` once the project is linked.
 export interface Database {
   public: {
     Tables: {
@@ -123,10 +146,22 @@ export interface Database {
         Update: Partial<Profile>;
         Relationships: [];
       };
+      borrowers: {
+        Row: Borrower;
+        Insert: Partial<Borrower>;
+        Update: Partial<Borrower>;
+        Relationships: [];
+      };
       loans: {
         Row: Loan;
         Insert: Partial<Loan>;
         Update: Partial<Loan>;
+        Relationships: [];
+      };
+      loan_payments: {
+        Row: LoanPayment;
+        Insert: Partial<LoanPayment>;
+        Update: Partial<LoanPayment>;
         Relationships: [];
       };
       agreements: {
