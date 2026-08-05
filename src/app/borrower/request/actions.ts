@@ -82,7 +82,12 @@ export async function requestLoan(input: RequestLoanInput) {
     userEmail: profile.email,
     loanId: loan.id,
     type: "loan_requested",
-    params: { customerName, amount: formatINR(loan.amount), purpose: input.purpose },
+    params: {
+      customerName,
+      amount: formatINR(loan.amount),
+      purpose: input.purpose,
+      isBorrower: "true",
+    },
   });
 
   // 2. Notify Lenders in the Organization
