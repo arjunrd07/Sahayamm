@@ -88,7 +88,11 @@ export function Topbar({ items }: TopbarProps) {
   const isSuperadmin = pathname?.startsWith("/superadmin");
   const portalLabel = isSuperadmin ? "Superadmin" : isLender ? "Lender Portal" : "Borrower Portal";
 
-  const notificationsHref = isLender ? "/lender/notifications" : "/borrower/notifications";
+  const notificationsHref = isSuperadmin
+    ? "/superadmin/notifications"
+    : isLender
+      ? "/lender/notifications"
+      : "/borrower/notifications";
   const active = items.find((item) => pathname?.startsWith(item.href));
   const title = active?.label ?? "Sahayam";
 
