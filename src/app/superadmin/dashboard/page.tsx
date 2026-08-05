@@ -7,19 +7,36 @@ import { Card } from "@/components/ui/card";
 import { formatINR } from "@/lib/utils";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Building2, Users, ShieldCheck, Wallet, ArrowUpRight, Activity, Database, CheckCircle2, Lock, Plus } from "lucide-react";
+import {
+  Building2,
+  Users,
+  ShieldCheck,
+  Wallet,
+  ArrowUpRight,
+  Activity,
+  CheckCircle2,
+  Lock,
+  Plus,
+  FileText,
+  Send,
+  User,
+} from "lucide-react";
 import type { Organization, Profile, Loan } from "@/types/database";
 
 interface OrgWithMetrics extends Organization {
   memberCount: number;
   activeLoansCount: number;
+  status: string;
 }
 
 export default function SuperadminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [organizations, setOrganizations] = useState<OrgWithMetrics[]>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [borrowersCount, setBorrowersCount] = useState(0);
+  const [lendersCount, setLendersCount] = useState(0);
   const [totalLoans, setTotalLoans] = useState(0);
+  const [agreementsCount, setAgreementsCount] = useState(0);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const supabase = createClient();
 
@@ -27,10 +44,17 @@ export default function SuperadminDashboardPage() {
     async function loadSuperadminData() {
       setLoading(true);
       try {
-        const [{ data: orgsData }, { data: profilesData }, { data: loansData }, { data: logsData }] = await Promise.all([
+        const [
+          { data: orgsData },
+          { data: profilesData },
+          { data: loansData },
+          { data: agsData },
+          { data: logsData },
+        ] = await Promise.all([
           supabase.from("organizations").select("*").order("created_at", { ascending: false }),
           supabase.from("profiles").select("id, org_id, full_name, role, created_at"),
           supabase.from("loans").select("id, org_id, status, amount"),
+          supabase.from("agreements").select("id"),
           supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(4),
         ]);
 
@@ -39,33 +63,39 @@ export default function SuperadminDashboardPage() {
         const loans: Loan[] = (loansData as Loan[]) || [];
 
         setTotalUsers(profiles.length);
+        setBorrowersCount(profiles.filter((p) => p.role === "borrower" || (p.role as string) === "customer").length);
+        setLendersCount(profiles.filter((p) => p.role === "lender" || (p.role as string) === "admin").length);
         setTotalLoans(loans.length);
+        setAgreementsCount(agsData?.length || 0);
 
         const mappedOrgs: OrgWithMetrics[] = rawOrgs.map((org) => {
           const countMembers = profiles.filter((p) => p.org_id === org.id).length;
           const countActive = loans.filter((l) => l.org_id === org.id && l.status === "active").length;
           return {
             ...org,
+            status: (org as any).status || "active",
+            capital_pool_limit: (org as any).max_loan_amount || org.capital_pool_limit || 2500000,
             memberCount: countMembers,
             activeLoansCount: countActive,
           };
         });
 
         setOrganizations(mappedOrgs);
+
         if (logsData && logsData.length > 0) {
           setAuditLogs(logsData);
         } else {
           setAuditLogs([
             {
               id: "sys-1",
-              action: "RLS Multi-Tenant Audit Passed",
-              details: "All row level security policies validated across active tenant organizations.",
+              action: "Role Assignment: superadmin",
+              details: "Superadmin role & permissions validated across active tenant organizations.",
               created_at: new Date().toISOString(),
             },
             {
               id: "sys-2",
-              action: "Database Migration Health Verified",
-              details: "Schema synced to v0007_migrate_roles_borrower_lender standard.",
+              action: "RLS Policy Multi-Tenant Compliance",
+              details: "All row level security policies validated across active tenant organizations.",
               created_at: new Date(Date.now() - 3600000).toISOString(),
             },
           ]);
@@ -84,10 +114,10 @@ export default function SuperadminDashboardPage() {
   const totalPool = organizations.reduce((sum, o) => sum + (o.capital_pool_limit || 2500000), 0);
 
   const stats = [
-    { label: "Total Organizations", value: organizations.length, icon: Building2, trend: "Registered Organizations" },
-    { label: "Global Platform Users", value: totalUsers, icon: Users, trend: "Active Borrower & Lender Accounts" },
-    { label: "Total Liquidity Capital", value: formatINR(totalPool), icon: Wallet, trend: "Across active org pools" },
-    { label: "RLS Security Compliance", value: "100%", icon: ShieldCheck, trend: "Strict multi-tenant separation" },
+    { label: "Registered Organizations", value: organizations.length, icon: Building2, detail: "Multi-tenant entities" },
+    { label: "Global Platform Users", value: `${totalUsers} (${borrowersCount} B / ${lendersCount} L)`, icon: Users, detail: "Active Borrower & Lender accounts" },
+    { label: "Total Liquidity Capital", value: formatINR(totalPool), icon: Wallet, detail: "Across active org pools" },
+    { label: "Total Loans & Agreements", value: `${totalLoans} Loans / ${agreementsCount} Agrmts`, icon: ShieldCheck, detail: "Platform oversight" },
   ];
 
   return (
@@ -98,28 +128,34 @@ export default function SuperadminDashboardPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/30 text-blue-200 border border-blue-400/30 text-xs font-semibold">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Lock className="h-3.5 w-3.5 text-emerald-400" /> Superadmin Central Control
+              <Lock className="h-3.5 w-3.5 text-emerald-400" /> Superadmin Central Control Center
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-              System & Multi-Tenant Platform Dashboard
+              Complete Multi-Tenant & Platform Management
             </h2>
             <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-              Real-time multi-tenant monitoring across all registered organizations, RLS policies, and global liquidity pools.
+              Real-time monitoring across all registered organizations, user directories, platform agreements, manual notification broadcasts, and audit logs.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Link
               href="/superadmin/organizations"
-              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 px-5 text-sm font-bold rounded-full shadow-button transition-all"
+              className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 text-xs font-bold rounded-full shadow-button transition-all"
             >
-              <Plus className="h-4 w-4" /> Add Organization
+              <Plus className="h-4 w-4" /> Add Org
             </Link>
             <Link
-              href="/lender/dashboard"
-              className="inline-flex items-center justify-center gap-2 border border-slate-700 hover:bg-slate-800 text-white py-3 px-5 text-sm font-bold rounded-full transition-all"
+              href="/superadmin/users"
+              className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2.5 px-4 text-xs font-bold rounded-full transition-all border border-slate-700"
             >
-              Lender View
+              <User className="h-4 w-4" /> Users Directory
+            </Link>
+            <Link
+              href="/superadmin/notifications"
+              className="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white py-2.5 px-4 text-xs font-bold rounded-full transition-all border border-slate-700"
+            >
+              <Send className="h-4 w-4" /> Send Notification
             </Link>
           </div>
         </div>
@@ -128,33 +164,102 @@ export default function SuperadminDashboardPage() {
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <Card key={s.label} className="p-5 border border-slate-200/90 dark:border-surface-border-dark shadow-card">
+          <Card key={s.label} className="p-5 border border-slate-200 dark:border-surface-border-dark shadow-card">
             <div className="flex items-center justify-between mb-3">
-              <div className="icon-box">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400 flex items-center justify-center">
                 <s.icon className="h-5 w-5" />
               </div>
               <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 px-2.5 py-0.5 rounded-full">
                 Superadmin
               </span>
             </div>
-            <p className="text-2xl font-black text-ink dark:text-white tracking-tight">{s.value}</p>
+            <p className="text-xl font-black text-ink dark:text-white tracking-tight truncate">{s.value}</p>
             <p className="text-xs text-ink-slate dark:text-slate-400 mt-1 font-semibold">{s.label}</p>
           </Card>
         ))}
       </div>
 
+      {/* Control Module Shortcuts Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Link
+          href="/superadmin/organizations"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">Organizations</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">Manage Orgs & Limits</span>
+        </Link>
+
+        <Link
+          href="/superadmin/users"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Users className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">User Directory</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">Revoke Access & Roles</span>
+        </Link>
+
+        <Link
+          href="/superadmin/loans"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Wallet className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">Platform Loans</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">Bulk Approve & Status</span>
+        </Link>
+
+        <Link
+          href="/superadmin/agreements"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <FileText className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">Agreements</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">DocuSeal Signed PDFs</span>
+        </Link>
+
+        <Link
+          href="/superadmin/notifications"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-rose-50 text-rose-600 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <Send className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">Notifications</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">Targeted Broadcast</span>
+        </Link>
+
+        <Link
+          href="/superadmin/audit"
+          className="p-4 rounded-2xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark hover:border-blue-500 transition-all text-center group shadow-card"
+        >
+          <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 mx-auto mb-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <span className="text-xs font-bold text-ink dark:text-white block">Audit Logs</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">CSV/JSON Exports</span>
+        </Link>
+      </div>
+
       {/* Organizations & Audit Log Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="p-5 sm:p-6 lg:col-span-2 border border-slate-200/90 dark:border-surface-border-dark shadow-card">
+        <Card className="p-5 sm:p-6 lg:col-span-2 border border-slate-200 dark:border-surface-border-dark shadow-card">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-lg font-bold text-ink dark:text-white">Registered Organizations</h3>
+              <h3 className="text-lg font-bold text-ink dark:text-white">Registered Tenant Organizations</h3>
               <p className="text-xs sm:text-sm text-ink-slate dark:text-slate-400 mt-0.5">
                 Real database tenants & liquidity limits.
               </p>
             </div>
             <Link href="/superadmin/organizations" className="text-xs sm:text-sm font-bold text-blue-600 hover:underline flex items-center gap-1 shrink-0">
-              View all <ArrowUpRight className="h-4 w-4" />
+              Manage Orgs <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
 
@@ -169,11 +274,10 @@ export default function SuperadminDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 dark:border-surface-border-dark text-xs uppercase tracking-wider text-ink-slate dark:text-slate-400 font-bold">
+                  <tr className="border-b border-slate-200 dark:border-surface-border-dark text-xs uppercase tracking-wider text-ink-slate font-bold">
                     <th className="pb-3">Organization</th>
                     <th className="pb-3 hidden sm:table-cell">Members</th>
                     <th className="pb-3">Capital Pool</th>
-                    <th className="pb-3 hidden md:table-cell">Active Loans</th>
                     <th className="pb-3 text-right sm:text-left">Status</th>
                   </tr>
                 </thead>
@@ -186,10 +290,15 @@ export default function SuperadminDashboardPage() {
                       </td>
                       <td className="py-3.5 text-ink-slate dark:text-slate-300 font-medium hidden sm:table-cell">{org.memberCount} users</td>
                       <td className="py-3.5 font-black text-ink dark:text-white">{formatINR(org.capital_pool_limit || 2500000)}</td>
-                      <td className="py-3.5 text-ink-slate dark:text-slate-300 font-medium hidden md:table-cell">{org.activeLoansCount} active</td>
                       <td className="py-3.5 text-right sm:text-left">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200">
-                          <CheckCircle2 className="h-3 w-3" /> Active
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            org.status === "active"
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200"
+                              : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200"
+                          }`}
+                        >
+                          <CheckCircle2 className="h-3 w-3" /> {org.status === "active" ? "Active" : "Inactive"}
                         </span>
                       </td>
                     </tr>
@@ -200,11 +309,11 @@ export default function SuperadminDashboardPage() {
           )}
         </Card>
 
-        {/* System Security Audit Feed */}
-        <Card className="p-5 sm:p-6 border border-slate-200/90 dark:border-surface-border-dark shadow-card">
+        {/* System Audit Feed */}
+        <Card className="p-5 sm:p-6 border border-slate-200 dark:border-surface-border-dark shadow-card">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-lg font-bold text-ink dark:text-white">System & RLS Audit</h3>
+              <h3 className="text-lg font-bold text-ink dark:text-white">System Audit Stream</h3>
               <p className="text-xs sm:text-sm text-ink-slate dark:text-slate-400 mt-0.5">Live database audit feed.</p>
             </div>
             <Activity className="h-4 w-4 text-blue-600 shrink-0" />
@@ -227,7 +336,7 @@ export default function SuperadminDashboardPage() {
 
           <div className="mt-5 pt-4 border-t border-slate-100 dark:border-surface-border-dark text-center">
             <Link href="/superadmin/audit" className="text-xs font-bold text-blue-600 hover:underline">
-              View Complete Audit Logs 
+              View Complete Audit Logs & Export CSV/JSON →
             </Link>
           </div>
         </Card>

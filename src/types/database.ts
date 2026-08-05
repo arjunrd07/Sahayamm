@@ -28,6 +28,7 @@ export interface Profile {
   full_name: string;
   email: string;
   phone: string | null;
+  mobile_number?: string | null;
   pan_number?: string | null;
   cibil_score?: number | null;
   address?: string | null;
