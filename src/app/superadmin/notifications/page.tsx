@@ -46,7 +46,7 @@ export default function SuperadminNotificationsPage() {
       supabase.from("organizations").select("*").order("name"),
       supabase
         .from("notifications")
-        .select("*, profiles:user_id(full_name, email)")
+        .select("*, profiles:profiles!notifications_user_id_fkey(full_name, email)")
         .order("created_at", { ascending: false })
         .limit(10),
     ]);

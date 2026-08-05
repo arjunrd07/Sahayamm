@@ -51,7 +51,7 @@ export default function SuperadminAgreementsPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from("agreements")
-      .select("*, loans:loan_id(amount, purpose, borrowers:borrower_id(full_name, email), organizations(name, code))")
+      .select("*, loans:loan_id(amount, purpose, borrowers:profiles!loans_customer_id_fkey(full_name, email), organizations(name, code))")
       .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {

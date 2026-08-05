@@ -80,7 +80,7 @@ export default function SuperadminLoansPage() {
     const [{ data: loansData }, { data: orgsData }] = await Promise.all([
       supabase
         .from("loans")
-        .select("*, borrowers:borrower_id(full_name, email), organizations(name, code)")
+        .select("*, borrowers:profiles!loans_customer_id_fkey(full_name, email), organizations(name, code)")
         .order("created_at", { ascending: false }),
       supabase.from("organizations").select("*").order("name"),
     ]);
