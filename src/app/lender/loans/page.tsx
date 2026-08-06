@@ -32,14 +32,37 @@ export default function AdminLoanRequestsPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase
-      .from("loans")
-      .select("*, customer:profiles!loans_customer_id_fkey(full_name,email)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setAllLoans((data as any) || []);
+    async function loadLoans() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
         setLoading(false);
-      });
+        return;
+      }
+
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!myProfile?.org_id) {
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("loans")
+        .select("*, customer:profiles!loans_customer_id_fkey(full_name,email)")
+        .eq("org_id", myProfile.org_id)
+        .order("created_at", { ascending: false });
+
+      setAllLoans((data as any) || []);
+      setLoading(false);
+    }
+
+    loadLoans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

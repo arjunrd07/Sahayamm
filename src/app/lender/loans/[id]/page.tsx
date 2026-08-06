@@ -32,16 +32,37 @@ export default function AdminLoanDetailPage() {
   const [reminderSending, setReminderSending] = useState(false);
 
   async function load() {
-    const { data: loanData } = await supabase.from("loans").select("*").eq("id", params.id).maybeSingle();
-    setLoan(loanData as Loan);
-    if (loanData) {
-      const [{ data: cust }, { data: agr }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", loanData.customer_id).maybeSingle(),
-        supabase.from("agreements").select("*").eq("loan_id", loanData.id).maybeSingle(),
-      ]);
-      setCustomer(cust as Profile);
-      setAgreement(agr as Agreement | null);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: myProfile } = await supabase
+      .from("profiles")
+      .select("org_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!myProfile?.org_id) return;
+
+    const { data: loanData } = await supabase
+      .from("loans")
+      .select("*")
+      .eq("id", params.id)
+      .eq("org_id", myProfile.org_id)
+      .maybeSingle();
+
+    if (!loanData) {
+      router.push("/lender/loans");
+      return;
     }
+
+    setLoan(loanData as Loan);
+    const [{ data: cust }, { data: agr }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", loanData.customer_id).maybeSingle(),
+      supabase.from("agreements").select("*").eq("loan_id", loanData.id).maybeSingle(),
+    ]);
+    setCustomer(cust as Profile);
+    setAgreement(agr as Agreement | null);
   }
 
   useEffect(() => {

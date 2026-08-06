@@ -25,8 +25,18 @@ export async function sendManualNotification(payload: NotificationPayload) {
 
   const service = createServiceRoleClient();
 
+  // Fetch the first organization as a fallback for users without an org_id
+  const { data: fallbackOrg } = await service
+    .from("organizations")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const fallbackOrgId = fallbackOrg?.id ?? null;
+
   // Determine target users
-  let targetUserIds: { id: string; org_id: string }[] = [];
+  let targetUserIds: { id: string; org_id: string | null }[] = [];
 
   if (payload.targetType === "user" && payload.targetId) {
     const { data: targetUser } = await service
@@ -59,9 +69,16 @@ export async function sendManualNotification(payload: NotificationPayload) {
     return { error: "No target users found for notification broadcast." };
   }
 
-  const notificationRows = targetUserIds.map((u) => ({
+  // Filter out users who have no org_id and no fallback org exists
+  const validTargets = targetUserIds.filter((u) => u.org_id || fallbackOrgId);
+
+  if (validTargets.length === 0) {
+    return { error: "No valid target users found (missing organization assignments)." };
+  }
+
+  const notificationRows = validTargets.map((u) => ({
     user_id: u.id,
-    org_id: u.org_id || "00000000-0000-0000-0000-000000000001",
+    org_id: u.org_id || fallbackOrgId!,
     title: payload.title.trim(),
     message: payload.message.trim(),
     type: payload.type || "verification_decision",
@@ -81,8 +98,8 @@ export async function sendManualNotification(payload: NotificationPayload) {
     action: "Send Manual Notification",
     actor_id: user.id,
     entity_type: "system",
-    details: `Broadcasted notification "${payload.title}" to ${targetUserIds.length} users (Target: ${payload.targetType})`,
+    details: `Broadcasted notification "${payload.title}" to ${validTargets.length} users (Target: ${payload.targetType})`,
   });
 
-  return { success: true, count: targetUserIds.length };
+  return { success: true, count: validTargets.length };
 }

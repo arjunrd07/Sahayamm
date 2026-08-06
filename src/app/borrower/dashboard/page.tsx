@@ -114,7 +114,7 @@ export default async function CustomerDashboardPage() {
     userProfile = (prof as Profile) || null;
   }
 
-  if (!user || list.length === 0) {
+  if (!user) {
     list = DEMO_LOANS;
     isDemoData = true;
   }
