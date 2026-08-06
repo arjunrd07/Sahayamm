@@ -9,7 +9,6 @@ import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { ensureSuperadminAccount } from "./actions";
-import { Lock } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -18,12 +17,6 @@ export default function LoginPage() {
   const { push } = useToast();
   const router = useRouter();
   const supabase = createClient();
-
-  function fillSuperadminCreds() {
-    setEmail("Superadmin@gmail.com");
-    setPassword("Superadmin@Sahayamm");
-    push("info", "Superadmin credentials pre-filled!");
-  }
 
   async function handleGoogleLogin() {
     setLoading(true);
@@ -161,25 +154,6 @@ export default function LoginPage() {
       title="Single Workspace Sign In"
       subtitle="Enter your organization email or sign in with Google to access your dashboard."
     >
-      {/* Superadmin Default Credentials Shortcut Badge */}
-      <div className="mb-4 p-3 rounded-2xl bg-slate-900 text-white border border-slate-800 shadow-md">
-        <div className="flex items-center justify-between text-xs font-bold mb-1">
-          <span className="flex items-center gap-1.5 text-blue-400">
-            <Lock className="h-3.5 w-3.5 text-emerald-400" /> Default Superadmin Credentials
-          </span>
-          <button
-            type="button"
-            onClick={fillSuperadminCreds}
-            className="text-[11px] bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded-lg transition-colors font-bold"
-          >
-            Auto Fill
-          </button>
-        </div>
-        <p className="text-[11px] text-slate-300 font-mono">
-          Superadmin@gmail.com &bull; Superadmin@Sahayamm
-        </p>
-      </div>
-
       {/* Social Google SSO Button */}
       <div className="space-y-3 mb-6">
         <button

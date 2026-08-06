@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { LoanStatusBadge, VerificationBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/table";
 import { formatINR, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Loan, Profile } from "@/types/database";
-import { Users, HandCoins, AlertTriangle, Wallet, Sparkles, Building2, ShieldCheck, CheckCircle2, ArrowRight } from "lucide-react";
+import { Users, HandCoins, AlertTriangle, Wallet, Sparkles, Building2, ShieldCheck, CheckCircle2, ArrowRight, Layers } from "lucide-react";
 
 const DEMO_LOANS: Loan[] = [
   {
@@ -60,58 +60,6 @@ const DEMO_LOANS: Loan[] = [
     completed_at: null,
     updated_at: "2026-07-21T14:40:00Z",
   },
-  {
-    id: "admin-demo-loan-3",
-    org_id: "demo-org",
-    customer_id: "demo-cust-3",
-    admin_id: "demo-admin",
-    amount: 60000,
-    purpose: "Family Medical Advance",
-    duration_days: 90,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 60000,
-    due_date: "2026-10-01",
-    status: "active",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: "2026-07-01T10:00:00Z",
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: null,
-    late_fee_amount: null,
-    created_at: "2026-06-25T11:00:00Z",
-    approved_at: "2026-06-28T09:00:00Z",
-    active_at: "2026-07-01T10:00:00Z",
-    completed_at: null,
-    updated_at: "2026-07-01T10:00:00Z",
-  },
-  {
-    id: "admin-demo-loan-4",
-    org_id: "demo-org",
-    customer_id: "demo-cust-4",
-    admin_id: "demo-admin",
-    amount: 20000,
-    purpose: "Emergency Relocation Expenses",
-    duration_days: 30,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 20000,
-    due_date: "2026-07-15",
-    status: "overdue",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: "2026-06-15T10:00:00Z",
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: 5,
-    late_fee_amount: 1000,
-    created_at: "2026-06-10T10:00:00Z",
-    approved_at: "2026-06-12T11:00:00Z",
-    active_at: "2026-06-15T10:00:00Z",
-    completed_at: null,
-    updated_at: "2026-07-16T00:00:00Z",
-  },
 ];
 
 const DEMO_PROFILES: Profile[] = [
@@ -131,38 +79,6 @@ const DEMO_PROFILES: Profile[] = [
     created_at: "2026-07-23T11:00:00Z",
     updated_at: "2026-07-23T11:00:00Z",
   },
-  {
-    id: "demo-user-2",
-    org_id: "demo-org",
-    full_name: "David Chen",
-    email: "david.c@company.com",
-    phone: "+91 98123 45678",
-    role: "borrower",
-    verification_status: "pending",
-    rejection_reason: null,
-    id_proof_url: "verification-docs/id2.pdf",
-    employment_proof_url: "verification-docs/letter2.pdf",
-    verified_by: null,
-    verified_at: null,
-    created_at: "2026-07-24T08:30:00Z",
-    updated_at: "2026-07-24T08:30:00Z",
-  },
-  {
-    id: "demo-user-3",
-    org_id: "demo-org",
-    full_name: "Meera Nair",
-    email: "meera.n@company.com",
-    phone: "+91 97654 32109",
-    role: "borrower",
-    verification_status: "pending",
-    rejection_reason: null,
-    id_proof_url: "verification-docs/id3.pdf",
-    employment_proof_url: "verification-docs/letter3.pdf",
-    verified_by: null,
-    verified_at: null,
-    created_at: "2026-07-25T14:10:00Z",
-    updated_at: "2026-07-25T14:10:00Z",
-  },
 ];
 
 export default async function AdminDashboardPage() {
@@ -173,7 +89,6 @@ export default async function AdminDashboardPage() {
 
   let list: Loan[] = [];
   let pendingVerifications: Profile[] = [];
-  let isDemoData = false;
 
   if (user) {
     const { data: me } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
@@ -194,15 +109,6 @@ export default async function AdminDashboardPage() {
     }
   }
 
-  if (!user || list.length === 0) {
-    const { data: publicLoans } = await supabase.from("loans").select("*").order("created_at", { ascending: false });
-    const { data: publicProfiles } = await supabase.from("profiles").select("*").eq("verification_status", "pending");
-
-    list = publicLoans && publicLoans.length > 0 ? (publicLoans as Loan[]) : DEMO_LOANS;
-    pendingVerifications = publicProfiles && publicProfiles.length > 0 ? (publicProfiles as Profile[]) : DEMO_PROFILES;
-    isDemoData = true;
-  }
-
   const pending = list.filter((l) => l.status === "pending");
   const active = list.filter((l) => l.status === "active");
   const overdue = list.filter((l) => l.status === "overdue");
@@ -214,95 +120,85 @@ export default async function AdminDashboardPage() {
   const stats = [
     { label: "Total Outstanding Capital", value: formatINR(outstanding), icon: Wallet },
     { label: "Available Pool Liquidity", value: formatINR(availableLiquidity), icon: Building2 },
-    { label: "Pending Requests", value: pending.length, icon: HandCoins },
-    { label: "Verifications Queue", value: pendingVerifications.length, icon: Users },
+    { label: "Pending Loan Requests", value: pending.length, icon: HandCoins },
+    { label: "Identity Verifications", value: pendingVerifications.length, icon: Users },
   ];
 
   return (
-    <div className="space-y-6">
-      {!user ? (
-        <div className="p-4 rounded-2xl bg-slate-900 text-white text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-semibold shadow-sm border border-slate-800">
-          <span>Viewing Lender Dashboard (Guest Preview Mode with Demo Data)</span>
-          <Link href="/login" className="underline hover:text-blue-300 shrink-0">Sign In as Lender</Link>
-        </div>
-      ) : isDemoData ? (
-        <div className="p-4 rounded-2xl bg-signal-soft border border-signal/20 text-xs sm:text-sm text-signal-cobalt flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 font-semibold">
-          <span className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-signal shrink-0" />
-            Showing Admin Demo Data & Verification Queue
-          </span>
-          <Link href="/admin/verifications" className="btn-primary text-xs py-1.5 px-4 rounded-full shrink-0">
-            Review Verifications
-          </Link>
-        </div>
-      ) : null}
-
-      {/* Admin Capital Summary Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a192f] via-[#0d2847] to-[#071324] text-white p-6 sm:p-8 shadow-elevated border border-white/10">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-signal/20 rounded-full blur-3xl pointer-events-none -z-0" />
+    <div className="space-y-8 max-w-7xl">
+      {/* Soft UI Admin Hero Header */}
+      <div className="card p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-elevated relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-primary/20 rounded-full blur-3xl -z-0 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-white">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" /> Organization Admin Management
+              <ShieldCheck className="h-4 w-4 text-emerald-400" /> Organization Lender Workspace
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-              Organization Capital Pool & Oversight
-            </h2>
-            <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-              Monitor liquidity, approve employee loan requests, and verify member identity proofs.
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+              Capital Liquidity &amp; Approval Hub
+            </h1>
+            <p className="text-sm text-slate-300 max-w-xl leading-relaxed font-medium">
+              Monitor organization credit allocations, evaluate loan applications, and manage employee verifications.
             </p>
           </div>
-          <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 min-w-[140px] text-center">
-            <p className="text-xs text-slate-300 font-medium uppercase tracking-wider">Total Capital Pool</p>
-            <p className="text-2xl font-black text-white mt-0.5">{formatINR(totalOrgPool)}</p>
+
+          <div className="p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 min-w-[170px] text-center shrink-0">
+            <p className="text-[11px] text-slate-300 font-bold uppercase tracking-wider">Total Capital Pool</p>
+            <p className="text-2xl font-black text-white mt-1">{formatINR(totalOrgPool)}</p>
+            <p className="text-[11px] text-emerald-400 font-bold mt-0.5">SLA Liquidity Pool</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {stats.map((s) => (
-          <Card key={s.label} className="p-5 border border-slate-200/90 dark:border-surface-border-dark shadow-card">
-            <div className="flex items-center justify-between mb-3">
+          <Card key={s.label} className="p-6 space-y-3">
+            <div className="flex items-center justify-between">
               <div className="icon-box">
                 <s.icon className="h-5 w-5" />
               </div>
-              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 px-2.5 py-0.5 rounded-full">
+              <span className="badge bg-primary-soft text-primary border border-primary/20 text-[11px] font-extrabold">
                 Lender Vault
               </span>
             </div>
-            <p className="text-2xl font-black text-ink dark:text-white tracking-tight">{s.value}</p>
-            <p className="text-xs text-ink-slate dark:text-slate-400 mt-1 font-semibold">{s.label}</p>
+            <div>
+              <p className="text-2xl font-black text-ink dark:text-white tracking-tight">{s.value}</p>
+              <p className="text-xs font-semibold text-ink-slate dark:text-slate-400 mt-1">{s.label}</p>
+            </div>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-5">
+      {/* Two Column Grid for Applications and Verifications */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="p-7 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/5">
             <div>
-              <h3 className="text-lg font-semibold text-ink dark:text-white">Loan requests awaiting review</h3>
-              <p className="text-xs sm:text-sm text-ink-slate dark:text-ink-mist mt-0.5">Pending employee applications.</p>
+              <h3 className="text-lg font-bold text-ink dark:text-white tracking-tight">Pending Loan Applications</h3>
+              <p className="text-xs text-ink-slate font-medium mt-0.5">Applications waiting for lender review.</p>
             </div>
-            <Link href="/lender/loans" className="text-xs sm:text-sm font-semibold text-signal hover:underline shrink-0">
+            <Link href="/lender/loans" className="text-xs font-extrabold text-primary hover:underline shrink-0">
               View all ({pending.length})
             </Link>
           </div>
+
           {pending.length === 0 ? (
-            <EmptyState title="Nothing pending" description="New loan requests will appear here." />
+            <EmptyState title="No pending loan requests" description="Incoming borrower requests will be listed here." />
           ) : (
-            <div className="divide-y divide-surface-border dark:divide-surface-border-dark">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
               {pending.slice(0, 5).map((loan) => (
                 <Link
                   key={loan.id}
                   href={`/lender/loans/${loan.id}`}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 hover:bg-surface-pebble dark:hover:bg-white/5 -mx-2 px-3 rounded-xl transition-colors gap-2 sm:gap-4"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between py-4 hover:bg-slate-50/80 dark:hover:bg-white/5 -mx-3 px-4 rounded-2xl transition-all duration-200 gap-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink dark:text-white truncate">{loan.purpose}</p>
-                    <p className="text-xs text-ink-slate dark:text-ink-mist mt-0.5">
-                      <span className="font-bold text-ink dark:text-white">{formatINR(loan.amount)}</span> · Requested {formatDate(loan.created_at)}
+                    <p className="text-sm font-bold text-ink dark:text-white truncate">{loan.purpose}</p>
+                    <p className="text-xs text-ink-slate mt-1 font-medium">
+                      <span className="font-extrabold text-ink dark:text-white">{formatINR(loan.amount)}</span> · Requested {formatDate(loan.created_at)}
                     </p>
                   </div>
                   <div className="self-start sm:self-center shrink-0">
@@ -314,29 +210,30 @@ export default async function AdminDashboardPage() {
           )}
         </Card>
 
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-5">
+        <Card className="p-7 space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/5">
             <div>
-              <h3 className="text-lg font-semibold text-ink dark:text-white">Verification queue</h3>
-              <p className="text-xs sm:text-sm text-ink-slate dark:text-ink-mist mt-0.5">Pending identity reviews.</p>
+              <h3 className="text-lg font-bold text-ink dark:text-white tracking-tight">Verification Queue</h3>
+              <p className="text-xs text-ink-slate font-medium mt-0.5">Pending identity & KYC verification reviews.</p>
             </div>
-            <Link href="/admin/verifications" className="text-xs sm:text-sm font-semibold text-signal hover:underline shrink-0">
+            <Link href="/admin/verifications" className="text-xs font-extrabold text-primary hover:underline shrink-0">
               View all ({pendingVerifications.length})
             </Link>
           </div>
+
           {pendingVerifications.length === 0 ? (
-            <EmptyState title="Nothing to review" description="Pending customer verifications appear here." />
+            <EmptyState title="No pending verifications" description="New identity verification requests will appear here." />
           ) : (
-            <div className="divide-y divide-surface-border dark:divide-surface-border-dark">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
               {pendingVerifications.slice(0, 5).map((p) => (
                 <Link
                   key={p.id}
                   href={`/admin/verifications`}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 hover:bg-surface-pebble dark:hover:bg-white/5 -mx-2 px-3 rounded-xl transition-colors gap-2 sm:gap-4"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between py-4 hover:bg-slate-50/80 dark:hover:bg-white/5 -mx-3 px-4 rounded-2xl transition-all duration-200 gap-3"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-ink dark:text-white truncate">{p.full_name}</p>
-                    <p className="text-xs text-ink-slate dark:text-ink-mist mt-0.5 truncate">{p.email}</p>
+                    <p className="text-sm font-bold text-ink dark:text-white truncate">{p.full_name}</p>
+                    <p className="text-xs text-ink-slate mt-1 font-medium truncate">{p.email}</p>
                   </div>
                   <div className="self-start sm:self-center shrink-0">
                     <VerificationBadge status={p.verification_status} />
