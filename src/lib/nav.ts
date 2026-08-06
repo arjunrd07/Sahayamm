@@ -10,7 +10,6 @@ import {
   User,
   Building2,
   FileText,
-  Send,
   ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -52,6 +51,6 @@ export const superadminNav: NavItem[] = [
   { href: "/superadmin/users", label: "Global Users", icon: User },
   { href: "/superadmin/loans", label: "Platform Loans", icon: Wallet },
   { href: "/superadmin/agreements", label: "Agreements", icon: FileText },
-  { href: "/superadmin/notifications", label: "Send Notifications", icon: Send },
+  { href: "/superadmin/notifications", label: "Notifications", icon: Bell },
   { href: "/superadmin/audit", label: "Audit Logs", icon: ShieldCheck },
 ];

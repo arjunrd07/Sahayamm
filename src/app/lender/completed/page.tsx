@@ -14,15 +14,38 @@ export default function AdminCompletedLoansPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase
-      .from("loans")
-      .select("*, customer:profiles!loans_customer_id_fkey(full_name)")
-      .eq("status", "completed")
-      .order("completed_at", { ascending: false })
-      .then(({ data }) => {
-        setLoans((data as any) || []);
+    async function loadLoans() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
         setLoading(false);
-      });
+        return;
+      }
+
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!myProfile?.org_id) {
+        setLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("loans")
+        .select("*, customer:profiles!loans_customer_id_fkey(full_name)")
+        .eq("org_id", myProfile.org_id)
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false });
+
+      setLoans((data as any) || []);
+      setLoading(false);
+    }
+
+    loadLoans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

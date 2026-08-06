@@ -27,6 +27,9 @@ export default async function CustomerLoanDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Fetch loan directly from database
   const { data: loanData } = await supabase
@@ -35,7 +38,7 @@ export default async function CustomerLoanDetailPage({
     .eq("id", id)
     .maybeSingle();
 
-  if (!loanData) notFound();
+  if (!loanData || (user && loanData.customer_id !== user.id)) notFound();
 
   const l = loanData as Loan;
 

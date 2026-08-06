@@ -19,11 +19,30 @@ export default function AdminReportsPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase
-      .from("loans")
-      .select("*, customer:profiles!loans_customer_id_fkey(full_name,email)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setLoans((data as any) || []));
+    async function loadReports() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: myProfile } = await supabase
+        .from("profiles")
+        .select("org_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!myProfile?.org_id) return;
+
+      const { data } = await supabase
+        .from("loans")
+        .select("*, customer:profiles!loans_customer_id_fkey(full_name,email)")
+        .eq("org_id", myProfile.org_id)
+        .order("created_at", { ascending: false });
+
+      setLoans((data as any) || []);
+    }
+
+    loadReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

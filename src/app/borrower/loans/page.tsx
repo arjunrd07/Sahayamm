@@ -22,14 +22,26 @@ export default function BorrowerLoansPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase
-      .from("loans")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setLoans((data as Loan[]) || []);
+    async function loadLoans() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
         setLoading(false);
-      });
+        return;
+      }
+
+      const { data } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("customer_id", user.id)
+        .order("created_at", { ascending: false });
+
+      setLoans((data as Loan[]) || []);
+      setLoading(false);
+    }
+
+    loadLoans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
