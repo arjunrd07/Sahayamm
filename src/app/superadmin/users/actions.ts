@@ -3,7 +3,7 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { logAuditEntry } from "@/lib/audit";
 
-export async function toggleUserAccess(userId: string, currentStatus: string, reason?: string) {
+export async function toggleUserAccess(userId: string, targetStatusOrCurrentStatus: string, reason?: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -16,7 +16,9 @@ export async function toggleUserAccess(userId: string, currentStatus: string, re
   }
 
   const service = createServiceRoleClient();
-  const newStatus = currentStatus === "rejected" ? "verified" : "rejected";
+  const newStatus = (targetStatusOrCurrentStatus === "verified" || targetStatusOrCurrentStatus === "rejected")
+    ? targetStatusOrCurrentStatus
+    : (targetStatusOrCurrentStatus === "rejected" ? "verified" : "rejected");
 
   const { data, error } = await service
     .from("profiles")

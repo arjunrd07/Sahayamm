@@ -67,7 +67,7 @@ export default function SuperadminUsersPage() {
   async function loadUsersData() {
     setLoading(true);
     const [{ data: profiles }, { data: orgsData }] = await Promise.all([
-      supabase.from("profiles").select("*, organizations(name, code)").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("*, organizations!org_id(name, code)").order("created_at", { ascending: false }),
       supabase.from("organizations").select("*").order("name"),
     ]);
 
@@ -95,11 +95,27 @@ export default function SuperadminUsersPage() {
     setAccessModalOpen(true);
   }
 
+  async function executeDirectStatusChange(user: UserProfileWithOrg, targetStatus: "verified" | "rejected", reason?: string) {
+    setUpdatingId(user.id);
+    const result = await toggleUserAccess(user.id, targetStatus, reason);
+    setUpdatingId(null);
+
+    if ("error" in result && result.error) {
+      push("error", result.error);
+      return;
+    }
+
+    const actionText = targetStatus === "verified" ? "Access approved/restored" : "Access revoked";
+    push("success", `${actionText} for ${user.full_name || user.email}`);
+    loadUsersData();
+  }
+
   async function executeAccessToggle() {
     if (!userForAccessToggle) return;
     const user = userForAccessToggle;
     setUpdatingId(user.id);
-    const result = await toggleUserAccess(user.id, user.verification_status, revocationReason);
+    const targetStatus = user.verification_status === "rejected" ? "verified" : "rejected";
+    const result = await toggleUserAccess(user.id, targetStatus, revocationReason);
     setUpdatingId(null);
     setAccessModalOpen(false);
 
@@ -108,7 +124,7 @@ export default function SuperadminUsersPage() {
       return;
     }
 
-    const actionText = user.verification_status === "rejected" ? "Access restored" : "Access revoked";
+    const actionText = targetStatus === "verified" ? "Access restored" : "Access revoked";
     push("success", `${actionText} for ${user.full_name || user.email}`);
     loadUsersData();
   }
@@ -347,22 +363,45 @@ export default function SuperadminUsersPage() {
                                 <Edit className="w-4 h-4" />
                               </button>
 
-                              {/* Revoke / Restore Access */}
-                              <Button
-                                variant={isRevoked ? "primary" : "danger"}
-                                className="text-xs py-1 px-2.5"
-                                onClick={() => openAccessModal(u)}
-                              >
-                                {isRevoked ? (
-                                  <>
-                                    <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Restore
-                                  </>
-                                ) : (
-                                  <>
-                                    <ShieldAlert className="w-3.5 h-3.5 mr-1" /> Revoke
-                                  </>
-                                )}
-                              </Button>
+                              {/* Revoke / Restore / Approve Access */}
+                              {u.verification_status === "pending" || u.verification_status === "unverified" ? (
+                                <>
+                                  <Button
+                                    variant="primary"
+                                    className="text-xs py-1 px-2 text-white bg-emerald-600 hover:bg-emerald-700"
+                                    disabled={updatingId === u.id}
+                                    onClick={() => executeDirectStatusChange(u, "verified")}
+                                  >
+                                    <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Approve
+                                  </Button>
+                                  <Button
+                                    variant="danger"
+                                    className="text-xs py-1 px-2"
+                                    disabled={updatingId === u.id}
+                                    onClick={() => openAccessModal(u)}
+                                  >
+                                    <ShieldAlert className="w-3.5 h-3.5 mr-1" /> Reject
+                                  </Button>
+                                </>
+                              ) : isRevoked ? (
+                                <Button
+                                  variant="primary"
+                                  className="text-xs py-1 px-2.5"
+                                  disabled={updatingId === u.id}
+                                  onClick={() => executeDirectStatusChange(u, "verified")}
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Restore
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="danger"
+                                  className="text-xs py-1 px-2.5"
+                                  disabled={updatingId === u.id}
+                                  onClick={() => openAccessModal(u)}
+                                >
+                                  <ShieldAlert className="w-3.5 h-3.5 mr-1" /> Revoke
+                                </Button>
+                              )}
 
                               {/* Delete User */}
                               <button

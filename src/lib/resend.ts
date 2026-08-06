@@ -77,10 +77,15 @@ export const notificationCopy: Record<
         ? `You're verified with ${p.orgName}. You can now request a loan.`
         : `Your verification was rejected. Reason: ${p.reason || "Not specified"}.`,
   }),
-  loan_requested: (p) => ({
-    title: "New loan request",
-    message: `${p.customerName} requested ${p.amount} for "${p.purpose}".`,
-  }),
+  loan_requested: (p) => {
+    const isBorrower = p.isBorrower === "true";
+    return {
+      title: isBorrower ? "Request Submitted" : "New loan request",
+      message: isBorrower
+        ? `Your loan request of ${p.amount} is currently under pending review.`
+        : `${p.customerName} requested ${p.amount} for "${p.purpose}".`,
+    };
+  },
   loan_approved: (p) => ({
     title: "Loan approved",
     message: `Your request for ${p.amount} was approved. Agreement is being prepared.`,

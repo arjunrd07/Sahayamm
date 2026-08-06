@@ -2,6 +2,7 @@
 
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { dispatchNotification } from "@/lib/notify";
+import { logAuditEntry } from "@/lib/audit";
 
 async function requireLender() {
   const supabase = await createClient();
@@ -60,6 +61,16 @@ export async function decideVerification(
     userEmail: target.email,
     type: "verification_decision",
     params: { approved: String(approve), orgName: "", reason: rejectionReason || "" },
+  });
+
+  await logAuditEntry({
+    action: approve ? "Approve KYC Verification" : "Reject KYC Verification",
+    actor_id: lender.id,
+    entity_type: "user",
+    entity_id: target.id,
+    details: approve
+      ? `Lender ${lender.full_name || lender.email} approved KYC verification for ${target.full_name || target.email}.`
+      : `Lender ${lender.full_name || lender.email} rejected KYC verification for ${target.full_name || target.email}. Reason: ${rejectionReason || "Not specified"}.`,
   });
 
   return { data: target };

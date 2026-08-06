@@ -4,6 +4,7 @@ import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { calculatePlanLoan, calculateLoan } from "@/lib/loan-math";
 import { dispatchNotification } from "@/lib/notify";
 import { formatINR } from "@/lib/utils";
+import { logAuditEntry } from "@/lib/audit";
 
 export interface RequestLoanInput {
   amount: number;
@@ -82,7 +83,12 @@ export async function requestLoan(input: RequestLoanInput) {
     userEmail: profile.email,
     loanId: loan.id,
     type: "loan_requested",
-    params: { customerName, amount: formatINR(loan.amount), purpose: input.purpose },
+    params: {
+      customerName,
+      amount: formatINR(loan.amount),
+      purpose: input.purpose,
+      isBorrower: "true",
+    },
   });
 
   // 2. Notify Lenders in the Organization
@@ -105,6 +111,14 @@ export async function requestLoan(input: RequestLoanInput) {
       });
     }
   }
+
+  await logAuditEntry({
+    action: "Request Loan",
+    actor_id: profile.id,
+    entity_type: "loan",
+    entity_id: loan.id,
+    details: `Borrower ${profile.full_name || profile.email} requested a loan of ${formatINR(loan.amount)} for "${input.purpose}".`,
+  });
 
   return { data: loan };
 }

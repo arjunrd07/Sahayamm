@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { dispatchNotification } from "@/lib/notify";
+import { logAuditEntry } from "@/lib/audit";
 
 /**
  * Configure this URL as the DocuSeal webhook endpoint for the template
@@ -40,6 +41,15 @@ export async function POST(request: Request) {
     }
     patch.status = "partially_signed";
     await supabase.from("agreements").update(patch).eq("id", agreement.id);
+
+    const loan = (agreement as any).loan;
+    await logAuditEntry({
+      action: "Sign Lending Agreement",
+      actor_id: role === "Borrower" ? loan?.customer_id : loan?.admin_id,
+      entity_type: "agreement",
+      entity_id: agreement.id,
+      details: `${role} signed lending agreement ${agreement.agreement_number} for loan ${agreement.loan_id}.`,
+    });
   }
 
   if (eventType === "submission.completed") {
@@ -68,6 +78,14 @@ export async function POST(request: Request) {
         });
       }
     }
+
+    await logAuditEntry({
+      action: "Complete Lending Agreement",
+      actor_id: "system",
+      entity_type: "agreement",
+      entity_id: agreement.id,
+      details: `Lending agreement ${agreement.agreement_number} is fully signed and completed. PDF URL: ${pdfUrl || "Not specified"}.`,
+    });
   }
 
   return NextResponse.json({ ok: true });
