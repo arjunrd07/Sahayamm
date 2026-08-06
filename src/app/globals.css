@@ -3,31 +3,33 @@
 @tailwind utilities;
 
 :root {
-  --color-ink-navy: #0b3558;
-  --color-signal-blue: #006bff;
-  --color-signal-hover: #0059d6;
-  --color-slate-gray: #476788;
-  --color-mist-gray: #94a3b8;
-  --color-cloud: #f8f9fb;
-  --color-paper: #ffffff;
-  --color-pebble: #f0f3f8;
-  --color-hairline: #e2e8f0;
-  --color-carbon: #09090b;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-canvas: #f7f9fc;
+  --color-card: #ffffff;
+  --color-dark: #0f172a;
+  --color-gray: #64748b;
+  --color-border: rgba(15, 23, 42, 0.06);
 
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.08);
-  --shadow-button: 0 4px 14px rgba(0, 107, 255, 0.25);
+  --shadow-card: 0 20px 40px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 30px 60px rgba(15, 23, 42, 0.12);
+  --shadow-button: 0 10px 30px rgba(37, 99, 235, 0.20);
 }
 
 @layer base {
   html {
-    @apply antialiased font-sans scroll-smooth;
-    color: var(--color-ink-navy);
+    @apply antialiased font-sans scroll-smooth text-slate-900 dark:text-white;
+    background-color: #f7f9fc;
   }
 
   body {
-    @apply bg-canvas text-ink dark:bg-canvas-dark dark:text-ink-dark transition-colors duration-200;
+    @apply transition-colors duration-200 text-slate-900 dark:text-slate-100;
+    background-color: #f7f9fc;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .dark html, html.dark, .dark body, body.dark {
+    background-color: #0f172a;
   }
 
   h1 {
@@ -39,11 +41,11 @@
   }
 
   * {
-    @apply border-surface-border dark:border-surface-border-dark;
+    @apply border-slate-200/80 dark:border-white/10;
   }
 
   ::selection {
-    @apply bg-signal-soft text-signal-cobalt;
+    @apply bg-blue-50 text-blue-600;
   }
 }
 
@@ -60,69 +62,61 @@
 
 @layer components {
 
-  /* Elevated Modern Cards: 20px radius, 1px border, subtle shadow */
+  /* Floating Soft Cards: rounded-lg radius, subtle soft border, static floating shadow */
   .card {
-    @apply bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-2xl shadow-card transition-colors duration-200;
+    @apply bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/10 rounded-lg shadow-lg;
   }
 
-  .card-product {
-    @apply bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-2xl shadow-elevated transition-colors duration-200;
+  .card-static {
+    @apply bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/10 rounded-lg shadow-lg;
   }
 
   /* Glassmorphism Panel */
   .glass-panel {
-    @apply bg-white/80 dark:bg-surface-dark/80 backdrop-blur-xl border border-slate-200/80 dark:border-surface-border-dark/80 shadow-elevated;
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-slate-200/70 dark:border-white/10 shadow-xl rounded-lg;
   }
 
-  /* Buttons: 12px radius, min 44px touch target */
+  /* Buttons: rounded-lg radius, min 46px touch target */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold px-5 py-2.5 min-h-[44px] whitespace-nowrap transition-colors duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 dark:focus-visible:ring-offset-canvas-dark;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-bold px-6 py-3 min-h-[46px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 active:scale-[0.98];
   }
 
   .btn-primary {
-    @apply btn bg-primary text-white hover:brightness-105 shadow-button;
-  }
-
-  .btn-emerald {
-    @apply btn bg-emerald-gradient text-white hover:brightness-105 shadow-md;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-bold px-6 py-3 min-h-[46px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer bg-blue-600 text-white hover:bg-blue-700 shadow-md active:scale-[0.98];
   }
 
   .btn-dark {
-    @apply btn bg-ink text-white dark:bg-white dark:text-ink hover:bg-ink/90 dark:hover:bg-white/90;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-bold px-6 py-3 min-h-[46px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white/90 shadow-sm active:scale-[0.98];
   }
 
   .btn-secondary {
-    @apply btn bg-surface-pebble dark:bg-white/10 text-ink dark:text-white border border-slate-200/80 dark:border-surface-border-dark hover:bg-slate-200/70 dark:hover:bg-white/15;
-  }
-
-  .btn-outline-blue {
-    @apply btn bg-white dark:bg-surface-dark text-signal border-2 border-signal hover:bg-signal-soft dark:hover:bg-signal/20;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-bold px-6 py-3 min-h-[46px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer bg-white dark:bg-white/10 text-slate-900 dark:text-white border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/15 shadow-sm active:scale-[0.98];
   }
 
   .btn-ghost {
-    @apply btn text-ink-slate dark:text-slate-300 hover:bg-surface-pebble dark:hover:bg-white/10 px-4 py-2.5;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg text-sm font-semibold px-4 py-2.5 transition-all duration-200 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10;
   }
 
   .btn-danger {
-    @apply btn bg-danger text-white hover:bg-danger/90;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-lg text-sm font-bold px-6 py-3 min-h-[46px] whitespace-nowrap transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none cursor-pointer bg-red-600 text-white hover:bg-red-700 shadow-sm active:scale-[0.98];
   }
 
-  /* Form Inputs: 12px radius & 44px min-height */
+  /* Form Inputs: rounded-lg radius & 46px min-height */
   .input {
-    @apply w-full min-h-[44px] rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark px-4 py-2.5 text-sm text-ink dark:text-white placeholder:text-ink-mist focus:outline-none focus:ring-2 focus:ring-signal/30 focus:border-signal transition-all shadow-sm focus-visible:ring-2 focus-visible:ring-signal;
+    @apply w-full min-h-[46px] rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all shadow-sm;
   }
 
   .label {
-    @apply block text-sm font-semibold text-ink dark:text-white mb-1.5;
+    @apply block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2;
   }
 
-  /* Pill Badges: Pill rounded full */
+  /* Pill Badges: rounded-lg */
   .badge {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border;
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1 text-xs font-bold border border-transparent shadow-sm;
   }
 
-  /* Icon Container Wrapper: 40x40 rounded-xl with soft tinted background */
+  /* Icon Container Wrapper: rounded-lg */
   .icon-box {
-    @apply flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-pebble dark:bg-white/10 text-signal shadow-sm;
+    @apply flex w-11 h-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-white/10 text-blue-600 shadow-sm;
   }
 }
