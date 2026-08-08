@@ -50,12 +50,6 @@ export default function BorrowerProfilePage() {
   const [cibilScore, setCibilScore] = useState("");
   const [address, setAddress] = useState("");
 
-  // Bank Account State
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [upiId, setUpiId] = useState("");
-
   // Emergency Contact State
   const [emergencyName, setEmergencyName] = useState("");
   const [emergencyPhone, setEmergencyPhone] = useState("");
@@ -68,11 +62,6 @@ export default function BorrowerProfilePage() {
     setPanNumber(profile.pan_number || "");
     setCibilScore(profile.cibil_score ? String(profile.cibil_score) : "");
     setAddress(profile.address || "");
-
-    setBankName(profile.bank_name || "");
-    setAccountNumber(profile.account_number || "");
-    setIfscCode(profile.ifsc_code || "");
-    setUpiId(profile.upi_id || "");
 
     setEmergencyName(profile.emergency_name || "");
     setEmergencyPhone(profile.emergency_phone || "");
@@ -154,10 +143,6 @@ export default function BorrowerProfilePage() {
           pan_number: cleanPan || null,
           cibil_score: parsedCibil,
           address: address.trim() || null,
-          bank_name: bankName.trim() || null,
-          account_number: accountNumber.trim() || null,
-          ifsc_code: ifscCode.trim().toUpperCase() || null,
-          upi_id: upiId.trim() || null,
           emergency_name: emergencyName.trim() || null,
           emergency_phone: emergencyPhone.trim() || null,
           emergency_relation: emergencyRelation || null,
@@ -188,7 +173,7 @@ export default function BorrowerProfilePage() {
         org={org}
         isEditing={isEditing}
         onToggleEdit={() => setIsEditing((prev) => !prev)}
-        subtitle="Manage your personal identity, bank payout details, employment credentials, and emergency references."
+        subtitle="Manage your personal identity, employment credentials, and emergency references."
       />
 
       {/* Main Details Tiles */}
@@ -261,52 +246,7 @@ export default function BorrowerProfilePage() {
             </div>
           </Card>
 
-          {/* Tile 3: Bank Disbursal Account */}
-          <Card className="p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600">
-                  <Landmark className="h-4.5 w-4.5" />
-                </div>
-                <CardTitle className="text-sm font-bold text-ink dark:text-white">
-                  Bank Disbursal Account
-                </CardTitle>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="font-semibold text-ink-slate">Bank Name</span>
-                <p className={`font-bold mt-0.5 ${bankName ? "text-ink dark:text-white" : "text-slate-400 font-normal italic"}`}>
-                  {bankName || "—"}
-                </p>
-              </div>
-
-              <div>
-                <span className="font-semibold text-ink-slate">IFSC Code</span>
-                <p className={`font-bold mt-0.5 ${ifscCode ? "text-ink dark:text-white uppercase" : "text-slate-400 font-normal italic"}`}>
-                  {ifscCode || "—"}
-                </p>
-              </div>
-
-              <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-surface-border-dark flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-ink-slate">Account Number</span>
-                  <p className={`font-bold mt-0.5 ${accountNumber ? "text-ink dark:text-white" : "text-slate-400 font-normal italic"}`}>
-                    {accountNumber || "—"}
-                  </p>
-                </div>
-                <div>
-                  <span className="font-semibold text-ink-slate">UPI ID</span>
-                  <p className={`font-bold mt-0.5 ${upiId ? "text-blue-600" : "text-slate-400 font-normal italic"}`}>
-                    {upiId || "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Tile 4: Emergency Reference */}
+          {/* Tile 3: Emergency Reference */}
           <Card className="p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
               <div className="flex items-center gap-2">
@@ -341,8 +281,8 @@ export default function BorrowerProfilePage() {
             </div>
           </Card>
 
-          {/* Tile 5: Address */}
-          <Card className="md:col-span-2 p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
+          {/* Tile 4: Address */}
+          <Card className="p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600">
@@ -365,10 +305,10 @@ export default function BorrowerProfilePage() {
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-4">
             <div>
               <h2 className="text-base font-bold text-ink dark:text-white flex items-center gap-2">
-                <Edit3 className="h-4 w-4 text-signal" /> Update Profile & Financial Credentials
+                <Edit3 className="h-4 w-4 text-signal" /> Update Profile &amp; Credentials
               </h2>
               <p className="text-xs text-ink-slate mt-0.5 font-medium">
-                Enter your identity, bank disbursal, and emergency reference details.
+                Enter your identity and emergency reference details.
               </p>
             </div>
           </div>
@@ -376,7 +316,7 @@ export default function BorrowerProfilePage() {
           <form onSubmit={handleSaveProfile} className="space-y-6">
             {/* Section 1: Personal & Tax Identification */}
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-signal mb-3">1. Personal & Tax Identification</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-signal mb-3">1. Personal &amp; Tax Identification</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Full Name" htmlFor="edit_fullname">
                   <Input
@@ -422,55 +362,9 @@ export default function BorrowerProfilePage() {
               </div>
             </div>
 
-            {/* Section 2: Bank Disbursal Account */}
+            {/* Section 2: Emergency Reference Contact */}
             <div className="pt-4 border-t border-slate-100 dark:border-surface-border-dark">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-3">2. Bank Disbursal Account</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Bank Name" htmlFor="edit_bank">
-                  <Input
-                    id="edit_bank"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="Enter Bank Name"
-                    className="rounded-xl"
-                  />
-                </Field>
-
-                <Field label="IFSC Code" htmlFor="edit_ifsc">
-                  <Input
-                    id="edit_ifsc"
-                    value={ifscCode}
-                    onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                    placeholder="IFSC Code"
-                    className="rounded-xl font-bold uppercase"
-                  />
-                </Field>
-
-                <Field label="Account Number" htmlFor="edit_acc">
-                  <Input
-                    id="edit_acc"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="Account Number"
-                    className="rounded-xl"
-                  />
-                </Field>
-
-                <Field label="UPI ID (Optional)" htmlFor="edit_upi">
-                  <Input
-                    id="edit_upi"
-                    value={upiId}
-                    onChange={(e) => setUpiId(e.target.value)}
-                    placeholder="user@upi"
-                    className="rounded-xl"
-                  />
-                </Field>
-              </div>
-            </div>
-
-            {/* Section 3: Emergency Reference Contact */}
-            <div className="pt-4 border-t border-slate-100 dark:border-surface-border-dark">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-rose-600 mb-3">3. Emergency Reference Contact</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-rose-600 mb-3">2. Emergency Reference Contact</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Field label="Contact Name" htmlFor="edit_emerg_name">
                   <Input

@@ -22,7 +22,7 @@ import {
   Building2,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import type { Profile, Organization } from "@/types/database";
+import type { Profile, Organization, UserRole } from "@/types/database";
 import { toggleUserAccess, updateUserRoleAndOrg, purgeUserAccount } from "./actions";
 
 interface UserProfileWithOrg extends Profile {
@@ -52,7 +52,7 @@ export default function SuperadminUsersPage() {
   // Edit Role/Org Modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfileWithOrg | null>(null);
-  const [newRole, setNewRole] = useState<"borrower" | "lender" | "superadmin">("borrower");
+  const [newRole, setNewRole] = useState<UserRole>("borrower");
   const [newOrgId, setNewOrgId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -485,15 +485,9 @@ export default function SuperadminUsersPage() {
             </div>
 
             <div className="p-4 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark space-y-2">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-ink-slate">Banking & Address Information</h4>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>Bank: <strong>{selectedUserDetail.bank_name || "—"}</strong></div>
-                <div>Account: <strong>{selectedUserDetail.account_number || "—"}</strong></div>
-                <div>IFSC: <strong>{selectedUserDetail.ifsc_code || "—"}</strong></div>
-                <div>UPI ID: <strong>{selectedUserDetail.upi_id || "—"}</strong></div>
-              </div>
-              <p className="text-xs text-ink-slate pt-1">
-                Address: <strong className="text-ink dark:text-white">{selectedUserDetail.address || "—"}</strong>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-ink-slate">Address Information</h4>
+              <p className="text-xs text-ink-slate">
+                Residential Address: <strong className="text-ink dark:text-white">{selectedUserDetail.address || "—"}</strong>
               </p>
             </div>
 
@@ -563,7 +557,7 @@ export default function SuperadminUsersPage() {
             >
               <option value="borrower">Borrower</option>
               <option value="lender">Lender</option>
-              <option value="superadmin">Superadmin</option>
+              <option value="admin">Admin</option>
             </select>
           </Field>
 

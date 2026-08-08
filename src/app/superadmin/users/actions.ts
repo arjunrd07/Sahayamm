@@ -2,6 +2,7 @@
 
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { logAuditEntry } from "@/lib/audit";
+import type { UserRole } from "@/types/database";
 
 export async function toggleUserAccess(userId: string, targetStatusOrCurrentStatus: string, reason?: string) {
   const supabase = await createClient();
@@ -10,9 +11,9 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -24,7 +25,7 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
     .from("profiles")
     .update({
       verification_status: newStatus,
-      rejection_reason: newStatus === "rejected" ? reason || "Access revoked by Superadmin" : null,
+      rejection_reason: newStatus === "rejected" ? reason || "Access revoked by Admin" : null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", userId)
@@ -49,7 +50,7 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
     actor_id: user.id,
     entity_type: "user",
     entity_id: userId,
-    details: `User access status updated to "${newStatus}" for ${data.email}. Reason: ${reason || "Superadmin directive"}`,
+    details: `User access status updated to "${newStatus}" for ${data.email}. Reason: ${reason || "Admin directive"}`,
   });
 
   return { data };
@@ -57,7 +58,7 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
 
 export async function updateUserRoleAndOrg(
   userId: string,
-  newRole: "borrower" | "lender" | "superadmin",
+  newRole: UserRole,
   orgId?: string
 ) {
   const supabase = await createClient();
@@ -66,9 +67,9 @@ export async function updateUserRoleAndOrg(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -109,9 +110,9 @@ export async function purgeUserAccount(userId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();

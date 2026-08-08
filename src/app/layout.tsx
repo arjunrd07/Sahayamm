@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import { Merriweather_Sans } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/theme-context";
 import { AuthProvider } from "@/context/auth-context";
 import { NotificationProvider } from "@/context/notification-context";
 import { ToastProvider } from "@/components/ui/toast";
+
+const merriweatherSans = Merriweather_Sans({
+  subsets: ["latin"],
+  variable: "--font-merriweather-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Sahayam — Automated Intra-Organization Lending Platform",
@@ -12,8 +19,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+    <html lang="en" className={merriweatherSans.variable} suppressHydrationWarning>
+      <body className={`${merriweatherSans.className} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <ToastProvider>
             <AuthProvider>

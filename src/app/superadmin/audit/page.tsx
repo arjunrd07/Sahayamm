@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck,
@@ -50,7 +50,7 @@ export default function SuperadminAuditPage() {
       if (!error && data && data.length > 0) {
         setLogs(data);
       } else {
-        // Fallback default audit events if database audit_logs table is initial
+        // Fallback default audit events
         setLogs([
           {
             id: "log-101",
@@ -161,61 +161,52 @@ export default function SuperadminAuditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Clean Professional Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-surface-border-dark pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-ink dark:text-white">Security & System Audit Logs</h2>
-          <p className="text-sm text-ink-slate">
-            System health events, security enforcement checks, and immutable superadmin action trails.
+          <h1 className="text-2xl font-black tracking-tight text-ink dark:text-white">
+            Audit Logs &amp; Security
+          </h1>
+          <p className="text-xs sm:text-sm text-ink-slate font-medium mt-1">
+            System health events, RLS enforcement checks, and immutable action audit trails.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="secondary" className="text-xs flex items-center gap-1.5" onClick={fetchAuditLogs}>
+          <Button variant="secondary" size="sm" onClick={fetchAuditLogs}>
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
-          <Button variant="secondary" className="text-xs flex items-center gap-1.5" onClick={exportAsJSON}>
-            <Download className="h-3.5 w-3.5" /> Export JSON
+          <Button variant="secondary" size="sm" onClick={exportAsJSON}>
+            <Download className="h-3.5 w-3.5" /> JSON
           </Button>
-          <Button variant="primary" className="text-xs flex items-center gap-1.5 shadow-button" onClick={exportAsCSV}>
+          <Button variant="primary" size="sm" onClick={exportAsCSV}>
             <Download className="h-3.5 w-3.5" /> Export CSV
           </Button>
         </div>
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 flex items-center gap-4 border border-slate-200 dark:border-surface-border-dark">
-          <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 flex items-center justify-center font-bold">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-ink-slate">RLS Status</p>
-            <p className="text-lg font-bold text-ink dark:text-white">Active & Enforced</p>
-          </div>
-        </Card>
-        <Card className="p-5 flex items-center gap-4 border border-slate-200 dark:border-surface-border-dark">
-          <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 flex items-center justify-center font-bold">
-            <Lock className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-ink-slate">Org Data Isolation</p>
-            <p className="text-lg font-bold text-ink dark:text-white">Strict Multi-Tenant</p>
-          </div>
-        </Card>
-        <Card className="p-5 flex items-center gap-4 border border-slate-200 dark:border-surface-border-dark">
-          <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-900/30 flex items-center justify-center font-bold">
-            <Database className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-ink-slate">Total Log Entries</p>
-            <p className="text-lg font-bold text-ink dark:text-white">{filteredLogs.length} Events</p>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+          <span className="text-xs font-bold text-ink-slate">RLS Policy Status</span>
+          <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">Active &amp; Enforced</p>
+          <p className="text-[11px] text-ink-slate font-medium">Zero cross-tenant leakage</p>
+        </div>
+        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+          <span className="text-xs font-bold text-ink-slate">Data Isolation</span>
+          <p className="text-xl font-black text-primary">Strict Multi-Tenant</p>
+          <p className="text-[11px] text-ink-slate font-medium">Organization UUID bounded</p>
+        </div>
+        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+          <span className="text-xs font-bold text-ink-slate">Total Audit Events</span>
+          <p className="text-xl font-black text-ink dark:text-white">{filteredLogs.length} Events</p>
+          <p className="text-[11px] text-ink-slate font-medium">Immutable event ledger</p>
+        </div>
       </div>
 
-      {/* Main Audit Table Card */}
-      <Card className="p-6 border border-slate-200 dark:border-surface-border-dark">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+      {/* Main Audit Log Grid */}
+      <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-slate" />
             <input
@@ -226,12 +217,12 @@ export default function SuperadminAuditPage() {
                 setSearch(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+              className="w-full pl-9 pr-4 py-2 rounded-lg bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-medium focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-semibold text-ink-slate flex-wrap w-full md:w-auto">
-            <Filter className="h-4 w-4" /> Entity Filter:
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-slate flex-wrap">
+            <Filter className="h-3.5 w-3.5" /> Entity:
             {["all", "user", "organization", "loan", "agreement", "system"].map((ent) => (
               <button
                 key={ent}
@@ -239,10 +230,10 @@ export default function SuperadminAuditPage() {
                   setEntityFilter(ent);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1 rounded-md capitalize transition-colors ${
+                className={`px-3 py-1 rounded-lg capitalize transition-all ${
                   entityFilter === ent
-                    ? "bg-blue-600 text-white font-bold"
-                    : "bg-surface-pebble dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10"
+                    ? "bg-primary text-white font-bold shadow-xs"
+                    : "bg-slate-100 dark:bg-white/5 text-ink-slate hover:text-ink dark:hover:text-white"
                 }`}
               >
                 {ent}
@@ -257,18 +248,18 @@ export default function SuperadminAuditPage() {
             <div className="h-16 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse" />
           </div>
         ) : paginatedLogs.length === 0 ? (
-          <p className="text-center py-10 text-sm text-ink-slate">No audit logs matching your search and filter criteria.</p>
+          <p className="text-center py-10 text-xs text-ink-slate">No audit logs matching search and filter parameters.</p>
         ) : (
           <div className="space-y-3">
             {paginatedLogs.map((log) => (
               <div
                 key={log.id}
-                className="p-4 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark/60 hover:border-blue-200 dark:hover:border-blue-900 transition-colors"
+                className="p-4 rounded-xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 hover:border-primary/40 transition-colors"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1.5">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-bold capitalize ${
                         log.entity_type === "user"
                           ? "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300"
                           : log.entity_type === "organization"
@@ -282,23 +273,23 @@ export default function SuperadminAuditPage() {
                     >
                       {log.entity_type || "system"}
                     </span>
-                    <h4 className="font-bold text-sm text-ink dark:text-white flex items-center gap-1.5">
-                      <FileText className="h-4 w-4 text-blue-600" />
+                    <h4 className="font-bold text-xs text-ink dark:text-white flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-primary" />
                       {log.action}
                     </h4>
                   </div>
-                  <span className="text-xs font-mono text-ink-slate">{new Date(log.created_at).toLocaleString()}</span>
+                  <span className="text-[11px] font-mono text-ink-slate">{new Date(log.created_at).toLocaleString()}</span>
                 </div>
 
-                <p className="text-xs text-ink-slate dark:text-slate-300 mb-2.5 leading-relaxed font-medium">{log.details}</p>
+                <p className="text-xs text-ink-slate dark:text-slate-300 mb-2 leading-relaxed font-medium">{log.details}</p>
 
-                <div className="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-surface-border dark:border-surface-border-dark/50 gap-2">
-                  <div className="flex items-center gap-4 text-ink-slate font-mono text-[11px]">
+                <div className="flex flex-wrap items-center justify-between text-xs pt-2 border-t border-slate-200/60 dark:border-white/5 gap-2">
+                  <div className="flex items-center gap-4 text-ink-slate font-mono text-[10px]">
                     <span>Actor: {log.actor_id || "System"}</span>
                     {log.entity_id && <span>Target ID: {log.entity_id}</span>}
                   </div>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" /> Audit Logged
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" /> Audit Verified
                   </span>
                 </div>
               </div>
@@ -306,16 +297,16 @@ export default function SuperadminAuditPage() {
           </div>
         )}
 
-        {/* Pagination Bar */}
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-surface-border-dark mt-6">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/5">
             <span className="text-xs font-semibold text-ink-slate">
-              Page {currentPage} of {totalPages} ({filteredLogs.length} total entries)
+              Page {currentPage} of {totalPages} ({filteredLogs.length} total events)
             </span>
             <div className="flex items-center gap-2">
               <Button
                 variant="secondary"
-                className="text-xs py-1.5 px-3"
+                size="sm"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
@@ -323,7 +314,7 @@ export default function SuperadminAuditPage() {
               </Button>
               <Button
                 variant="secondary"
-                className="text-xs py-1.5 px-3"
+                size="sm"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               >
@@ -332,7 +323,7 @@ export default function SuperadminAuditPage() {
             </div>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }

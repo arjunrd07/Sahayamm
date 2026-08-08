@@ -35,19 +35,11 @@ export default function LenderProfilePage() {
   // State
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
-  const [upiId, setUpiId] = useState("");
 
   useEffect(() => {
     if (!profile) return;
     setFullName(profile.full_name || "");
     setPhone(profile.phone || "");
-    setBankName(profile.bank_name || "");
-    setAccountNumber(profile.account_number || "");
-    setIfscCode(profile.ifsc_code || "");
-    setUpiId(profile.upi_id || "");
 
     supabase
       .from("organizations")
@@ -92,10 +84,6 @@ export default function LenderProfilePage() {
         .update({
           full_name: fullName.trim(),
           phone: phone.trim() || null,
-          bank_name: bankName.trim() || null,
-          account_number: accountNumber.trim() || null,
-          ifsc_code: ifscCode.trim().toUpperCase() || null,
-          upi_id: upiId.trim() || null,
         })
         .eq("id", profile.id);
 
@@ -122,7 +110,7 @@ export default function LenderProfilePage() {
         org={org}
         isEditing={isEditing}
         onToggleEdit={() => setIsEditing((prev) => !prev)}
-        subtitle="Manage your Lender Admin credentials, Organization Treasury, and disbursal payout bank account."
+        subtitle="Manage your Lender Admin credentials and Organization Treasury pool."
       />
 
       {!isEditing ? (
@@ -135,7 +123,7 @@ export default function LenderProfilePage() {
                   <Wallet className="h-4.5 w-4.5" />
                 </div>
                 <CardTitle className="text-sm font-bold text-ink dark:text-white">
-                  Organization Treasury & Pool
+                  Organization Treasury &amp; Pool
                 </CardTitle>
               </div>
             </div>
@@ -158,74 +146,31 @@ export default function LenderProfilePage() {
             </div>
           </Card>
 
-          {/* Tile 2: Disbursal Settlement Bank Vault */}
+          {/* Tile 2: Authorized Signatory Credentials */}
           <Card className="p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600">
-                  <Landmark className="h-4.5 w-4.5" />
-                </div>
-                <CardTitle className="text-sm font-bold text-ink dark:text-white">
-                  Disbursal Settlement Bank Vault
-                </CardTitle>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="font-semibold text-ink-slate">Bank Name</span>
-                <p className={`font-bold mt-0.5 ${bankName ? "text-ink dark:text-white" : "text-slate-400 font-normal italic"}`}>
-                  {bankName || "—"}
-                </p>
-              </div>
-              <div>
-                <span className="font-semibold text-ink-slate">IFSC Code</span>
-                <p className={`font-bold mt-0.5 ${ifscCode ? "text-ink dark:text-white uppercase" : "text-slate-400 font-normal italic"}`}>
-                  {ifscCode || "—"}
-                </p>
-              </div>
-              <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-surface-border-dark flex items-center justify-between">
-                <div>
-                  <span className="font-semibold text-ink-slate">Disbursal Account Number</span>
-                  <p className={`font-bold mt-0.5 ${accountNumber ? "text-ink dark:text-white" : "text-slate-400 font-normal italic"}`}>
-                    {accountNumber || "—"}
-                  </p>
-                </div>
-                <div>
-                  <span className="font-semibold text-ink-slate">Treasury UPI ID</span>
-                  <p className={`font-bold mt-0.5 ${upiId ? "text-blue-600" : "text-slate-400 font-normal italic"}`}>
-                    {upiId || "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Tile 3: Authorized Signatory Credentials */}
-          <Card className="md:col-span-2 p-5 bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark shadow-sm rounded-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600">
                   <FileCheck2 className="h-4.5 w-4.5" />
                 </div>
                 <CardTitle className="text-sm font-bold text-ink dark:text-white">
-                  Lender Approval & Signatory Credentials
+                  Lender Approval Credentials
                 </CardTitle>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <span className="font-semibold text-ink-slate">Designated Role</span>
                 <p className="font-bold text-ink dark:text-white mt-0.5">Lender Admin Officer</p>
               </div>
               <div>
-                <span className="font-semibold text-ink-slate">Agreement Signing Stamp</span>
+                <span className="font-semibold text-ink-slate">Agreement Stamp</span>
                 <p className="font-bold text-emerald-600 mt-0.5 flex items-center gap-1">
                   <ShieldCheck className="h-3.5 w-3.5" /> Digital Seal Enabled
                 </p>
               </div>
-              <div>
+              <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-surface-border-dark">
                 <span className="font-semibold text-ink-slate">Contact Phone</span>
                 <p className={`font-bold mt-0.5 ${phone ? "text-ink dark:text-white" : "text-slate-400 font-normal italic"}`}>
                   {phone || "—"}
@@ -243,7 +188,7 @@ export default function LenderProfilePage() {
                 <Edit3 className="h-4 w-4 text-signal" /> Update Lender Admin Credentials
               </h2>
               <p className="text-xs text-ink-slate mt-0.5 font-medium">
-                Update officer identity and organization treasury disbursal payout details.
+                Update officer identity and contact information.
               </p>
             </div>
           </div>
@@ -268,46 +213,6 @@ export default function LenderProfilePage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. 9876543210"
-                  className="rounded-xl"
-                />
-              </Field>
-
-              <Field label="Disbursal Bank Name" htmlFor="edit_lender_bank">
-                <Input
-                  id="edit_lender_bank"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="e.g. HDFC Bank"
-                  className="rounded-xl"
-                />
-              </Field>
-
-              <Field label="IFSC Code" htmlFor="edit_lender_ifsc">
-                <Input
-                  id="edit_lender_ifsc"
-                  value={ifscCode}
-                  onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                  placeholder="IFSC Code"
-                  className="rounded-xl font-bold uppercase"
-                />
-              </Field>
-
-              <Field label="Treasury Account Number" htmlFor="edit_lender_acc">
-                <Input
-                  id="edit_lender_acc"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="Account Number"
-                  className="rounded-xl"
-                />
-              </Field>
-
-              <Field label="Treasury UPI ID (Optional)" htmlFor="edit_lender_upi">
-                <Input
-                  id="edit_lender_upi"
-                  value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
-                  placeholder="treasury@upi"
                   className="rounded-xl"
                 />
               </Field>

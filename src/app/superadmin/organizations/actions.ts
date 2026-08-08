@@ -10,9 +10,9 @@ export async function createOrganization(name: string, code: string, capitalLimi
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -49,9 +49,9 @@ export async function toggleOrganizationStatus(orgId: string, currentStatus: str
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const newStatus = currentStatus === "active" ? "inactive" : "active";
@@ -101,9 +101,9 @@ export async function updateOrganizationLiquidity(orgId: string, newLimit: numbe
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -136,9 +136,9 @@ export async function assignUserToOrganization(userId: string, orgId: string) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
