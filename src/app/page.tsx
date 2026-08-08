@@ -122,7 +122,7 @@ export default async function RootPage() {
           <div className="lg:col-span-6 text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-signal-soft text-signal-cobalt text-xs font-bold border border-signal/20 shadow-sm">
               <Building2 className="h-4 w-4 text-signal" />
-              <span>Automated Intra-Organization Lending Platform</span>
+              <span>Digital Loan Agreement Platform</span>
             </div>
 
             <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-tight leading-[1.08] text-ink dark:text-white">
