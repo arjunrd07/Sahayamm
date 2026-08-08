@@ -108,7 +108,7 @@ export function PricingSection() {
               <p className="text-[11px] font-semibold text-slate-400 mb-6">{prices.subtext}</p>
               <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Unlimited employees &amp; liquidity pools</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Superadmin &amp; Lender multi-tenant oversight</li>
+                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Admin &amp; Lender multi-tenant oversight</li>
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Dedicated database isolation &amp; RLS audit</li>
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Priority SLA &amp; instant CIBIL scoring</li>
               </ul>

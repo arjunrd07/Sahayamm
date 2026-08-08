@@ -1,6 +1,6 @@
 import { calculatePlanLoan, calculateLoan } from "@/lib/loan-math";
 import { formatINR, formatDate } from "@/lib/utils";
-import { ShieldCheck, Sparkles, Calendar, ArrowRightLeft, TrendingUp } from "lucide-react";
+import { ShieldCheck, Calendar, TrendingUp, Sparkles, PieChart } from "lucide-react";
 
 interface LiveLoanCalculatorProps {
   amount: number;
@@ -33,70 +33,75 @@ export function LiveLoanCalculator({
   const principalPct = calc.totalRepayment > 0 ? Math.round((calc.principal / calc.totalRepayment) * 100) : 100;
 
   return (
-    <div className="rounded-3xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark p-6 shadow-card space-y-5">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-surface-border-dark">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-signal-soft text-signal">
-            <ArrowRightLeft className="h-4 w-4" />
+    <div className="card-static p-6 sm:p-7 space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+            <PieChart className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-ink dark:text-white">Loan Breakdown</h4>
-            <p className="text-[11px] text-ink-slate">Live Terms &amp; Repayment Projection</p>
+            <h4 className="text-base font-bold text-ink dark:text-white tracking-tight">Loan Summary</h4>
+            <p className="text-xs text-ink-slate font-medium">Instant Liquidity Calculation</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold border border-emerald-200 dark:border-emerald-800/40">
-          0% Hidden Fees
+        <span className="badge bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-black">
+          0% Platform Fees
         </span>
       </div>
 
       {/* Visual Breakdown Progress Bar */}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         <div className="flex justify-between text-xs font-bold">
           <span className="text-ink dark:text-white">Principal: {formatINR(calc.principal)}</span>
-          <span className="text-signal">Total: {formatINR(calc.totalRepayment)}</span>
+          <span className="text-primary font-black">Total: {formatINR(calc.totalRepayment)}</span>
         </div>
-        <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex">
-          <div className="h-full bg-signal transition-all duration-300" style={{ width: `${principalPct}%` }} />
-          <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${100 - principalPct}%` }} />
+        <div className="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex p-0.5">
+          <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${principalPct}%` }} />
+          <div className="h-full bg-amber-400 rounded-full transition-all duration-500" style={{ width: `${100 - principalPct}%` }} />
         </div>
       </div>
 
-      {/* Rows */}
-      <div className="space-y-3 pt-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-ink-slate font-medium">Principal Amount</span>
+      {/* Breakdown Rows */}
+      <div className="space-y-3.5 pt-1">
+        <div className="flex items-center justify-between text-xs font-medium">
+          <span className="text-ink-slate">Requested Principal</span>
           <span className="font-bold text-ink dark:text-white">{formatINR(calc.principal)}</span>
         </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-ink-slate font-medium">{interestLabel}</span>
-          <span className="font-bold text-amber-600 dark:text-amber-400">{formatINR(calc.interest)}</span>
+        <div className="flex items-center justify-between text-xs font-medium">
+          <span className="text-ink-slate">{interestLabel}</span>
+          <span className="font-bold text-amber-600 dark:text-amber-400">+{formatINR(calc.interest)}</span>
         </div>
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-ink-slate font-medium flex items-center gap-1">
-            <Calendar className="h-3.5 w-3.5 text-slate-400" /> Repayment Due Date
+        <div className="flex items-center justify-between text-xs font-medium">
+          <span className="text-ink-slate flex items-center gap-1.5">
+            <Calendar className="h-3.5 w-3.5 text-slate-400" /> Due Date
           </span>
           <span className="font-bold text-ink dark:text-white">
             {(planId || (durationDays && durationDays > 0)) ? formatDate(calc.dueDate) : "Select Plan"}
           </span>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 dark:border-surface-border-dark flex items-center justify-between">
+        {/* Total Repayment Card Highlight */}
+        <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
           <div>
-            <p className="text-[11px] text-ink-slate font-semibold uppercase tracking-wider">Total Repayment</p>
-            <p className="text-2xl font-black text-ink dark:text-white mt-0.5">{formatINR(calc.totalRepayment)}</p>
+            <p className="text-[11px] text-ink-slate font-extrabold uppercase tracking-wider">Total Repayment Amount</p>
+            <p className="text-3xl font-black text-ink dark:text-white tracking-tight mt-0.5">
+              {formatINR(calc.totalRepayment)}
+            </p>
           </div>
           <div className="text-right">
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 text-[11px] font-bold">
-              <TrendingUp className="h-3 w-3" /> {durationLabel}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary-soft text-primary text-xs font-extrabold">
+              <TrendingUp className="h-3.5 w-3.5" /> {durationLabel}
             </span>
           </div>
         </div>
       </div>
 
       {/* Guarantee Footer */}
-      <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-surface-border-dark flex items-center gap-2.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-        <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
-        <span>Backed by organization capital pool SLA &amp; automated payroll deduction schedules.</span>
+      <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-start gap-3 text-xs text-ink-slate font-medium">
+        <ShieldCheck className="h-4.5 w-4.5 text-emerald-500 shrink-0 mt-0.5" />
+        <span className="leading-relaxed">
+          Backed by official organization liquidity pool SLA and automatic payroll deduction schedules.
+        </span>
       </div>
     </div>
   );

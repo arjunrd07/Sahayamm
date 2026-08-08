@@ -163,6 +163,23 @@ export default function AdminVerificationsPage() {
               </div>
             </div>
 
+            {/* Submitted Proof Documents */}
+            <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl space-y-2 text-xs">
+              <span className="font-bold text-ink dark:text-white block mb-1">Submitted Identity &amp; Employment Proofs</span>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 py-1 border-b border-slate-100 dark:border-white/5">
+                <span className="font-medium">• Government ID Proof:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {selected.id_proof_url ? "Uploaded & Available" : "On Record"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-300 py-1">
+                <span className="font-medium">• Employee Pay Slip (Salary Slip ID Proof):</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {selected.employment_proof_url ? "Uploaded & Available" : "On Record"}
+                </span>
+              </div>
+            </div>
+
             <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl text-xs text-blue-800 dark:text-blue-200">
               🔒 Sensitive identifiers (PAN, Aadhaar, CIBIL) are encrypted and restricted from lender view per privacy compliance rules.
             </div>

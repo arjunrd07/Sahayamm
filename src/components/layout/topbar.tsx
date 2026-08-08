@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Menu, X, ArrowRight, CheckCheck, ChevronRight } from "lucide-react";
+import { Bell, Menu, X, ArrowRight, CheckCheck, ChevronRight, Search } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useNotifications } from "@/context/notification-context";
 import { useAuth } from "@/context/auth-context";
@@ -86,7 +86,7 @@ export function Topbar({ items }: TopbarProps) {
 
   const isLender = pathname?.startsWith("/lender");
   const isSuperadmin = pathname?.startsWith("/superadmin");
-  const portalLabel = isSuperadmin ? "Superadmin" : isLender ? "Lender Portal" : "Borrower Portal";
+  const portalLabel = isSuperadmin ? "Admin Portal" : isLender ? "Lender Portal" : "Borrower Portal";
 
   const notificationsHref = isSuperadmin
     ? "/superadmin/notifications"
@@ -164,8 +164,24 @@ export function Topbar({ items }: TopbarProps) {
           </div>
         </div>
 
-        {/* Right Section: Theme Toggle & Notification Popover */}
+        {/* Right Section: Command Palette Trigger, Theme Toggle & Notification Popover */}
         <div className="flex items-center gap-3 relative" ref={popoverRef}>
+          {/* Command Palette Trigger Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const event = new KeyboardEvent("keydown", { key: "k", ctrlKey: true });
+              window.dispatchEvent(event);
+            }}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>Search...</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300">
+              Ctrl K
+            </kbd>
+          </button>
+
           <ThemeToggle />
 
           {/* Notification Trigger Button */}

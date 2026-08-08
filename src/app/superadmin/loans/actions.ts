@@ -10,9 +10,9 @@ export async function superadminOverrideLoanStatus(loanId: string, newStatus: st
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -29,7 +29,7 @@ export async function superadminOverrideLoanStatus(loanId: string, newStatus: st
   } else if (newStatus === "completed") {
     updatePayload.completed_at = new Date().toISOString();
   } else if (newStatus === "rejected") {
-    updatePayload.rejection_reason = reason || "Superadmin override";
+    updatePayload.rejection_reason = reason || "Admin override";
   }
 
   const { data, error } = await service
@@ -42,11 +42,11 @@ export async function superadminOverrideLoanStatus(loanId: string, newStatus: st
   if (error || !data) return { error: error?.message || "Could not update loan status." };
 
   await logAuditEntry({
-    action: "Superadmin Loan Status Override",
+    action: "Admin Loan Status Override",
     actor_id: user.id,
     entity_type: "loan",
     entity_id: loanId,
-    details: `Overrode loan status to "${newStatus}". Amount: ₹${data.amount}. Reason: ${reason || "Superadmin directive"}`,
+    details: `Overrode loan status to "${newStatus}". Amount: ₹${data.amount}. Reason: ${reason || "Admin directive"}`,
   });
 
   return { data };
@@ -59,9 +59,9 @@ export async function superadminBulkUpdateLoanStatus(loanIds: string[], newStatu
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   if (!loanIds || loanIds.length === 0) {
@@ -77,7 +77,7 @@ export async function superadminBulkUpdateLoanStatus(loanIds: string[], newStatu
   if (newStatus === "approved") {
     updatePayload.approved_at = new Date().toISOString();
   } else if (newStatus === "rejected") {
-    updatePayload.rejection_reason = reason || "Bulk Superadmin rejection";
+    updatePayload.rejection_reason = reason || "Bulk Admin rejection";
   }
 
   const { data, error } = await service
@@ -89,7 +89,7 @@ export async function superadminBulkUpdateLoanStatus(loanIds: string[], newStatu
   if (error) return { error: error.message };
 
   await logAuditEntry({
-    action: "Superadmin Bulk Loan Override",
+    action: "Admin Bulk Loan Override",
     actor_id: user.id,
     entity_type: "loan",
     details: `Bulk updated ${loanIds.length} loans to status "${newStatus}"`,

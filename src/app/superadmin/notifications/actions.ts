@@ -18,9 +18,9 @@ export async function sendManualNotification(payload: NotificationPayload) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: superadmin } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (!superadmin || superadmin.role !== "superadmin") {
-    return { error: "Superadmin privileges required." };
+  const { data: adminUser } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (!adminUser || (adminUser.role !== "superadmin" && adminUser.role !== "admin")) {
+    return { error: "Admin privileges required." };
   }
 
   const service = createServiceRoleClient();
@@ -58,7 +58,7 @@ export async function sendManualNotification(payload: NotificationPayload) {
       targetUserIds = orgUsers.map((u) => ({ id: u.id, org_id: u.org_id }));
     }
   } else {
-    // Global broadcast to all profiles
+    // Global notification
     const { data: allUsers } = await service.from("profiles").select("id, org_id");
     if (allUsers) {
       targetUserIds = allUsers.map((u) => ({ id: u.id, org_id: u.org_id }));
@@ -66,40 +66,32 @@ export async function sendManualNotification(payload: NotificationPayload) {
   }
 
   if (targetUserIds.length === 0) {
-    return { error: "No target users found for notification broadcast." };
+    return { error: "No target users found." };
   }
 
-  // Filter out users who have no org_id and no fallback org exists
-  const validTargets = targetUserIds.filter((u) => u.org_id || fallbackOrgId);
-
-  if (validTargets.length === 0) {
-    return { error: "No valid target users found (missing organization assignments)." };
-  }
-
-  const notificationRows = validTargets.map((u) => ({
+  // Insert notifications
+  const rowsToInsert = targetUserIds.map((u) => ({
+    org_id: u.org_id || fallbackOrgId,
     user_id: u.id,
-    org_id: u.org_id || fallbackOrgId!,
-    title: payload.title.trim(),
-    message: payload.message.trim(),
-    type: payload.type || "verification_decision",
+    title: payload.title,
+    message: payload.message,
+    type: payload.type || "global_broadcast",
     read: false,
     email_sent: false,
-    created_at: new Date().toISOString(),
   }));
 
-  const { error } = await service.from("notifications").insert(notificationRows);
+  const { error } = await service.from("notifications").insert(rowsToInsert);
 
   if (error) {
-    console.error("Error inserting notifications:", error);
     return { error: error.message };
   }
 
   await logAuditEntry({
-    action: "Send Manual Notification",
+    action: "Manual Notification Broadcast",
     actor_id: user.id,
     entity_type: "system",
-    details: `Broadcasted notification "${payload.title}" to ${validTargets.length} users (Target: ${payload.targetType})`,
+    details: `Sent notification "${payload.title}" to ${targetUserIds.length} target users (${payload.targetType})`,
   });
 
-  return { success: true, count: validTargets.length };
+  return { count: targetUserIds.length };
 }

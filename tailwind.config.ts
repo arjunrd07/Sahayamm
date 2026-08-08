@@ -6,91 +6,82 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: {
-          DEFAULT: "#0b3558", // Ink Navy — primary text & headings
-          navy: "#0b3558",
-          slate: "#476788", // Slate Gray — secondary text & labels
-          mist: "#94a3b8",  // Mist Gray — muted text
-          carbon: "#0a0a0a",
-          dark: "#f8fafc",   // Soft light text in dark mode
-        },
-        signal: {
-          DEFAULT: "#006bff", // Signal Blue — primary CTA
-          blue: "#006bff",
-          hover: "#0059d6",
-          soft: "#e6f0ff",   // Soft blue tint
-          cobalt: "#004eba", // Deep cobalt
-        },
-        brand: {
-          emerald: "#14b8a6",
-          emeraldSoft: "#ecfeff",
-          emeraldDark: "#042f2e",
+        primary: {
+          DEFAULT: "#2563EB",
+          hover: "#1D4ED8",
+          light: "#3B82F6",
+          soft: "#EFF6FF",
         },
         canvas: {
-          DEFAULT: "#f8f9fb", // Cloud background
-          cloud: "#f8f9fb",
-          dark: "#0f172a",   // Slate-900 Rich Navy Canvas
+          DEFAULT: "#F7F9FC",
+          cloud: "#F7F9FC",
+          dark: "#0F172A",
         },
         surface: {
-          DEFAULT: "#ffffff", // Paper card surface
-          paper: "#ffffff",
-          pebble: "#f0f3f8",  // Subtle pebble gray
-          dark: "#1e293b",   // Slate-800 Card & Input Surface
-          border: "#e2e8f0",  // Hairline light border
-          hairline: "#e2e8f0",
-          "border-dark": "#334155", // Slate-700 Hairline dark border
+          DEFAULT: "#FFFFFF",
+          paper: "#FFFFFF",
+          pebble: "#F1F5F9",
+          dark: "#1E293B",
+          border: "#E5E7EB",
+          hairline: "rgba(15, 23, 42, 0.06)",
+          "border-dark": "rgba(255, 255, 255, 0.1)",
         },
-        glass: {
-          light: "rgba(255, 255, 255, 0.75)",
-          dark: "rgba(30, 41, 59, 0.85)",
+        ink: {
+          DEFAULT: "#0F172A",
+          navy: "#0F172A",
+          slate: "#64748B",
+          mist: "#94A3B8",
+          carbon: "#020617",
+          dark: "#F8FAFC",
         },
-        accent: {
-          DEFAULT: "#006bff",
-          hover: "#0059d6",
-          soft: "#e6f0ff",
-          magenta: "#e55cff",
-          cyan: "#0099ff",
+        signal: {
+          DEFAULT: "#2563EB",
+          blue: "#2563EB",
+          hover: "#1D4ED8",
+          soft: "#EFF6FF",
+          cobalt: "#1E40AF",
         },
-        success: { DEFAULT: "#10b981", soft: "#ecfdf5" },
-        warning: { DEFAULT: "#f59e0b", soft: "#fffbeb" },
-        danger: { DEFAULT: "#ef4444", soft: "#fef2f2" },
-        muted: { DEFAULT: "#476788" },
+        success: { DEFAULT: "#22C55E", soft: "#F0FDF4" },
+        warning: { DEFAULT: "#F59E0B", soft: "#FFFBEB" },
+        danger: { DEFAULT: "#EF4444", soft: "#FEF2F2" },
+        info: { DEFAULT: "#0EA5E9", soft: "#F0F9FF" },
+        muted: { DEFAULT: "#64748B" },
       },
       backgroundImage: {
-        hero: "linear-gradient(135deg, #006bff 0%, #3b82f6 60%, #7dd3fc 100%)",
-        primary: "linear-gradient(90deg, #006bff 0%, #0059d6 100%)",
-        card: "linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%)",
-        "card-dark": "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
-        "emerald-gradient": "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+        hero: "linear-gradient(135deg, #2563EB 0%, #3B82F6 60%, #60A5FA 100%)",
+        primary: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+        card: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
+        "card-dark": "linear-gradient(180deg, #1E293B 0%, #0F172A 100%)",
+        "emerald-gradient": "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)",
       },
       fontFamily: {
         sans: [
-          "Manrope",
-          "Gilroy",
+          "var(--font-merriweather-sans)",
+          "Merriweather Sans",
           "Inter",
+          "Manrope",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
           "sans-serif",
         ],
       },
       borderRadius: {
-        sm: "6px",
+        sm: "8px",
         md: "8px",
-        lg: "10px",
-        xl: "12px",     // 12px Button & Input radius
-        "2xl": "20px",   // 20px Card radius
-        "3xl": "28px",   // 28px Modal radius
+        lg: "8px",
+        xl: "8px",
+        "2xl": "8px",
+        "3xl": "8px",
+        "4xl": "8px",
         full: "9999px",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.06)",
-        elevated: "0 10px 40px rgba(0, 0, 0, 0.08)",
-        button: "0 4px 14px rgba(0, 107, 255, 0.25)",
-        glow: "0 0 25px rgba(0, 107, 255, 0.35)",
+        card: "0 20px 40px rgba(15, 23, 42, 0.06)",
+        "card-hover": "0 30px 60px rgba(15, 23, 42, 0.12)",
+        button: "0 10px 30px rgba(37, 99, 235, 0.20)",
+        glow: "0 0 30px rgba(37, 99, 235, 0.30)",
+        elevated: "0 20px 40px rgba(15, 23, 42, 0.08)",
       },
     },
   },

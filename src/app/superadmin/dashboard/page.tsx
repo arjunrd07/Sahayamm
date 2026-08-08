@@ -128,7 +128,7 @@ export default function SuperadminDashboardPage() {
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-600/30 text-blue-200 border border-blue-400/30 text-xs font-semibold">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <Lock className="h-3.5 w-3.5 text-emerald-400" /> Superadmin Central Control Center
+              <Lock className="h-3.5 w-3.5 text-emerald-400" /> Admin Control Center
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
               Complete Multi-Tenant & Platform Management
@@ -170,7 +170,7 @@ export default function SuperadminDashboardPage() {
                 <s.icon className="h-5 w-5" />
               </div>
               <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/50 px-2.5 py-0.5 rounded-full">
-                Superadmin
+                Admin
               </span>
             </div>
             <p className="text-xl font-black text-ink dark:text-white tracking-tight truncate">{s.value}</p>
