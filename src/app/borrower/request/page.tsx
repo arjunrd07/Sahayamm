@@ -14,14 +14,27 @@ import { useToast } from "@/components/ui/toast";
 import { LiveLoanCalculator } from "@/components/calculator/live-loan-calculator";
 import { LOAN_PLANS, LoanPlanId } from "@/lib/loan-math";
 import { requestLoan } from "./actions";
-import { ShieldCheck, Sparkles, CheckCircle2, Clock, Landmark, ArrowRight, AlertCircle, FileText } from "lucide-react";
+import { formatINR } from "@/lib/utils";
+import {
+  ShieldCheck,
+  Sparkles,
+  CheckCircle2,
+  Clock,
+  Landmark,
+  ArrowRight,
+  AlertCircle,
+  FileText,
+  Sliders,
+  Award,
+  Zap
+} from "lucide-react";
 
 export default function RequestLoanPage() {
   const { profile } = useAuth();
   const { push } = useToast();
   const router = useRouter();
 
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState<string>("25000");
   const [purpose, setPurpose] = useState("");
   const [selectedPlanId, setSelectedPlanId] = useState<LoanPlanId>("7_days");
   const [submitting, setSubmitting] = useState(false);
@@ -33,8 +46,9 @@ export default function RequestLoanPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
+    const numAmount = parseFloat(amount) || 0;
     const result = await requestLoan({
-      amount: parseFloat(amount) || 0,
+      amount: numAmount,
       purpose,
       planId: selectedPlanId,
     });
@@ -52,21 +66,21 @@ export default function RequestLoanPage() {
   if (profile && profile.verification_status !== "verified") {
     return (
       <div className="max-w-xl space-y-6">
-        <div className="p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-amber-500 text-white shrink-0 shadow-sm">
+        <div className="p-8 rounded-3xl bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/20 space-y-5 shadow-card">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 rounded-2xl bg-amber-500 text-white shrink-0 shadow-sm">
               <AlertCircle className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-amber-950 dark:text-amber-100">Verification Required</h3>
-              <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
+              <h3 className="text-lg font-black text-ink dark:text-white">Verification Required</h3>
+              <p className="text-xs text-amber-800 dark:text-amber-300 font-medium mt-0.5">
                 Your profile status is currently <strong className="capitalize">{profile.verification_status}</strong>. Please complete KYC verification to unlock credit requests.
               </p>
             </div>
           </div>
           <Link
             href="/borrower/verification"
-            className="inline-flex items-center justify-center gap-2 w-full py-3 px-5 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-sm transition-all"
+            className="btn-primary w-full py-3.5 px-6 rounded-2xl text-xs font-bold shadow-button"
           >
             <span>Proceed to Verification Page</span>
             <ArrowRight className="h-4 w-4" />
@@ -76,80 +90,148 @@ export default function RequestLoanPage() {
     );
   }
 
+  const numericAmount = parseFloat(amount) || 0;
+
   return (
-    <div className="space-y-6">
-      {/* Top Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-sm">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 text-xs font-bold mb-2">
-            <Landmark className="h-3.5 w-3.5" /> Emergency Credit Application
+    <div className="space-y-8 max-w-6xl">
+      {/* Top Application Flow Stepper */}
+      <div className="card p-6 sm:p-7 space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft text-primary text-xs font-extrabold mb-2">
+              <Zap className="h-3.5 w-3.5" /> Express Intra-Org Liquidity
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink dark:text-white tracking-tight">
+              Emergency Loan Application
+            </h1>
+            <p className="text-xs sm:text-sm text-ink-slate dark:text-slate-400 mt-1 font-medium">
+              Request instant payroll-backed credit up to your organization limit.
+            </p>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-ink dark:text-white tracking-tight">Request Emergency Loan</h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
-            Submit your internal credit request backed by organization liquidity pool terms.
-          </p>
+
+          <div className="flex items-center gap-2">
+            <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20 inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4" /> 0% Hidden Fees SLA
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200/80 dark:border-surface-border-dark text-xs font-bold text-slate-600 dark:text-slate-300">
-          <span className="px-3 py-1.5 rounded-xl bg-signal text-white shadow-xs">Step 1: Application</span>
-          <span className="px-3 py-1.5 rounded-xl text-slate-400 font-medium">Step 2: Approval</span>
+        {/* Animated Stepper Workflow */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-slate-100 dark:border-white/5 text-xs font-bold">
+          <div className="p-3 rounded-2xl bg-primary text-white flex items-center gap-2.5 shadow-sm">
+            <span className="h-6 w-6 rounded-xl bg-white/20 flex items-center justify-center text-xs">1</span>
+            <span>Application</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 text-ink-slate dark:text-slate-400 flex items-center gap-2.5">
+            <span className="h-6 w-6 rounded-xl bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs">2</span>
+            <span>Verification</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 text-ink-slate dark:text-slate-400 flex items-center gap-2.5">
+            <span className="h-6 w-6 rounded-xl bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs">3</span>
+            <span>Approval</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 text-ink-slate dark:text-slate-400 flex items-center gap-2.5">
+            <span className="h-6 w-6 rounded-xl bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs">4</span>
+            <span>Agreement</span>
+          </div>
+          <div className="p-3 rounded-2xl bg-slate-100 dark:bg-white/5 text-ink-slate dark:text-slate-400 flex items-center gap-2.5 col-span-2 sm:col-span-1">
+            <span className="h-6 w-6 rounded-xl bg-slate-200 dark:bg-white/10 flex items-center justify-center text-xs">5</span>
+            <span>Disbursal</span>
+          </div>
         </div>
       </div>
 
       {/* Main Grid Workspace */}
-      <div className="grid md:grid-cols-5 gap-6 items-start">
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
         {/* Form Card */}
-        <Card className="md:col-span-3 p-6 sm:p-7 border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark shadow-card">
-          <CardHeader className="px-0 pt-0 pb-5 border-b border-slate-100 dark:border-surface-border-dark mb-6">
-            <CardTitle className="text-lg font-bold text-ink dark:text-white">Borrowing Parameters</CardTitle>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Specify your required principal amount and choose a repayment plan duration.
+        <Card className="lg:col-span-7 p-7 sm:p-8 space-y-7">
+          <CardHeader className="px-0 pt-0 pb-4 border-b border-slate-100 dark:border-white/5">
+            <CardTitle className="text-xl font-bold text-ink dark:text-white">Loan Parameters</CardTitle>
+            <CardDescription className="text-xs text-ink-slate font-medium">
+              Adjust the slider or enter your principal amount and choose a repayment plan.
             </CardDescription>
           </CardHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Field label="Loan Amount (₹)" htmlFor="amount" hint="Min ₹100 — Subject to organization borrowing limits">
-              <Input
-                id="amount"
-                type="number"
-                min={100}
-                step="100"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 25000"
-                className="text-base font-bold h-12"
-              />
-            </Field>
+          <form onSubmit={handleSubmit} className="space-y-7">
+            {/* Amount Slider + Input Synced */}
+            <div className="space-y-3 p-5 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400 flex items-center gap-1.5">
+                  <Sliders className="h-3.5 w-3.5 text-primary" /> Select Loan Amount
+                </label>
+                <span className="text-2xl font-black text-primary tracking-tight">
+                  {formatINR(numericAmount)}
+                </span>
+              </div>
 
+              <input
+                type="range"
+                min="1000"
+                max="250000"
+                step="1000"
+                value={numericAmount || 1000}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
+                <span>Min ₹1,000</span>
+                <span>Max ₹2,50,000</span>
+              </div>
+
+              <div className="pt-2">
+                <Input
+                  id="amount"
+                  type="number"
+                  min={100}
+                  step="100"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Or enter custom amount in ₹..."
+                  className="text-sm font-bold bg-white dark:bg-surface-dark"
+                />
+              </div>
+            </div>
+
+            {/* Duration Plan Cards */}
             <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+              <label className="block text-xs font-extrabold uppercase tracking-wider text-ink-slate dark:text-slate-400 mb-3">
                 Select Repayment Duration Plan
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {LOAN_PLANS.map((plan) => {
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                {LOAN_PLANS.map((plan, idx) => {
                   const isSelected = selectedPlanId === plan.id;
+                  const isRecommended = idx === 0;
                   return (
                     <button
                       key={plan.id}
                       type="button"
                       onClick={() => setSelectedPlanId(plan.id)}
-                      className={`text-left p-4 rounded-2xl border transition-all relative ${
+                      className={`text-left p-5 rounded-2xl border transition-all duration-200 relative group ${
                         isSelected
-                          ? "border-2 border-signal bg-signal/5 dark:bg-signal/10 shadow-sm"
-                          : "border-slate-200 dark:border-surface-border-dark hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-surface-dark"
+                          ? "border-2 border-primary bg-primary-soft/40 dark:bg-primary/20 shadow-button shadow-primary/10 scale-[1.02]"
+                          : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-white dark:bg-surface-dark hover:-translate-y-0.5"
                       }`}
                     >
+                      {isRecommended && (
+                        <span className="absolute -top-2.5 right-3 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                          Fastest Approval
+                        </span>
+                      )}
+
                       {isSelected && (
-                        <div className="absolute top-3 right-3 h-4 w-4 rounded-full bg-signal text-white flex items-center justify-center">
-                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        <div className="absolute top-4 right-3 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shadow-xs">
+                          <CheckCircle2 className="h-4 w-4" />
                         </div>
                       )}
+
                       <p className="font-extrabold text-sm text-ink dark:text-white">{plan.name}</p>
-                      <p className="text-xs font-semibold text-signal mt-0.5">{plan.days} Days Term</p>
-                      <div className="mt-3 pt-2 border-t border-slate-100 dark:border-surface-border-dark/60 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-400 font-medium">Interest</span>
-                        <span className="font-bold text-amber-600 dark:text-amber-400">{plan.ratePercent}%</span>
+                      <p className="text-xs font-bold text-primary mt-1">{plan.days} Days Term</p>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-between text-xs font-bold">
+                        <span className="text-ink-slate font-medium">Interest</span>
+                        <span className="text-amber-600 dark:text-amber-400 font-extrabold">{plan.ratePercent}%</span>
                       </div>
                     </button>
                   );
@@ -157,34 +239,60 @@ export default function RequestLoanPage() {
               </div>
             </div>
 
-            <Field label="Reason & Purpose for Credit" htmlFor="purpose" hint="Provide a brief explanation for lender records">
+            <Field label="Reason & Purpose for Credit" htmlFor="purpose" hint="Explain the purpose for payroll approval records">
               <Textarea
                 id="purpose"
                 required
                 rows={3}
-                className="resize-none"
+                className="resize-none font-medium"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
-                placeholder="e.g. Medical emergency advance, educational fee payment..."
+                placeholder="e.g. Emergency medical advance, family urgent expenditure..."
               />
             </Field>
 
             <Button
               type="submit"
-              className="w-full py-4 text-sm font-bold rounded-xl shadow-button bg-signal hover:bg-signal-hover text-white transition-all active:scale-[0.99]"
+              variant="primary"
+              className="w-full py-4 text-base font-bold shadow-button"
               loading={submitting}
             >
               Submit Loan Application
+              <ArrowRight className="h-5 w-5" />
             </Button>
           </form>
         </Card>
 
-        {/* Calculator Widget */}
-        <div className="md:col-span-2 md:sticky md:top-24">
+        {/* Live Loan Breakdown & Eligibility Card */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
           <LiveLoanCalculator
-            amount={parseFloat(amount) || 0}
+            amount={numericAmount}
             planId={selectedPlanId}
           />
+
+          {/* Org Borrowing Limit Card */}
+          <div className="card p-6 border border-slate-200/60 dark:border-white/10 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                <Award className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-ink dark:text-white">Borrowing Eligibility</h4>
+                <p className="text-xs text-ink-slate font-medium">Verified Organization Limit</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/5 text-xs font-semibold">
+              <div className="flex justify-between">
+                <span className="text-ink-slate">Maximum Available Credit</span>
+                <span className="font-extrabold text-ink dark:text-white">₹2,50,000</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-ink-slate">Repayment Mode</span>
+                <span className="font-extrabold text-emerald-600 dark:text-emerald-400">Direct Disbursal &amp; Auto-Settlement</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

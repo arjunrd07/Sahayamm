@@ -29,20 +29,20 @@ export function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-md bg-white dark:bg-surface-dark border border-slate-200/90 dark:border-surface-border-dark rounded-3xl p-6 shadow-elevated z-10 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-bold text-ink dark:text-white">{title}</h2>
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-lg bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-white/10 rounded-lg p-7 shadow-elevated animate-in fade-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-ink dark:text-white tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="text-ink-slate hover:text-ink dark:hover:text-white rounded-xl p-1.5 hover:bg-surface-pebble dark:hover:bg-white/10 transition-colors"
+            className="text-ink-slate hover:text-ink dark:hover:text-white rounded-lg p-2 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
             aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4.5 w-4.5" />
           </button>
         </div>
         <div>{children}</div>
-        {footer && <div className="mt-6 flex justify-end gap-3">{footer}</div>}
+        {footer && <div className="mt-7 flex items-center justify-end gap-3">{footer}</div>}
       </div>
     </div>,
     document.body
