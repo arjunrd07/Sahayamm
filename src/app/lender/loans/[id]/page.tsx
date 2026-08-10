@@ -120,7 +120,9 @@ export default function AdminLoanDetailPage() {
       : loan.duration_days === 14
       ? "14 Days Plan (0.8% interest)"
       : loan.duration_days === 21
-      ? "21 Days Plan (1.4% interest)"
+      ? "21 Days Plan (1.2% interest)"
+      : loan.duration_days === 30
+      ? "30 Days Plan (1.5% interest)"
       : `${loan.duration_days} days`;
 
   const facts = [

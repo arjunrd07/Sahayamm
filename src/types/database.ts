@@ -1,4 +1,4 @@
-export type UserRole = "borrower" | "lender" | "superadmin";
+export type UserRole = "borrower" | "lender" | "admin" | "superadmin";
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 export type LoanStatus = "pending" | "approved" | "rejected" | "active" | "completed" | "overdue";
 export type AgreementStatus = "draft" | "sent" | "partially_signed" | "completed";

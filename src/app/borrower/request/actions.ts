@@ -45,7 +45,7 @@ export async function requestLoan(input: RequestLoanInput) {
     dueDate = calc.dueDate;
   } else {
     const days = input.durationDays || 7;
-    if (![7, 14, 21].includes(days)) return { error: "Loan duration must be 7, 14, or 21 days." };
+    if (![7, 14, 21, 30].includes(days)) return { error: "Loan duration must be 7, 14, 21, or 30 days." };
     const rate = input.interestRateAnnual || 0;
     const calc = calculateLoan(input.amount, rate, days);
     durationDays = days;

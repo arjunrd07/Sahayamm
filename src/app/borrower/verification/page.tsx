@@ -58,7 +58,7 @@ export default function CustomerVerificationPage() {
   async function handleSubmit() {
     if (!profile) return;
     if (!idProof || !employmentProof) {
-      push("error", "Please upload both Government ID and Employment Proof documents.");
+      push("error", "Please upload both Government ID and Employee Pay Slip as ID Proof documents.");
       return;
     }
     setSubmitting(true);
@@ -89,13 +89,13 @@ export default function CustomerVerificationPage() {
       await supabase.from("notifications").insert({
         org_id: profile.org_id,
         user_id: profile.id,
-        title: "KYC Documents Submitted",
-        message: "Your identity and employment verification documents are currently under review by organization lenders.",
+        title: "KYC & Pay Slip Documents Submitted",
+        message: "Your Government ID and Employee Pay Slip verification documents are currently under review by organization lenders.",
         type: "verification_decision",
         read: false,
       });
 
-      push("success", "Documents submitted successfully! Your organization admin will review shortly.");
+      push("success", "Documents & Employee Pay Slip submitted successfully! Your organization admin will review shortly.");
       setShowResubmitForm(false);
       refresh();
     } catch (err: any) {
@@ -120,7 +120,7 @@ export default function CustomerVerificationPage() {
             Borrower Identity Verification
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium max-w-xl">
-            Upload your valid identification and employment documents to verify your membership and unlock emergency loan credit lines.
+            Upload your valid Government ID and Employee Pay Slip (Salary Slip) as official ID proof to verify your membership and unlock emergency loan credit lines.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-3">
@@ -137,7 +137,7 @@ export default function CustomerVerificationPage() {
             </div>
             <div>
               <p className="text-xs font-bold text-ink dark:text-white">Submit Proofs</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">ID &amp; Employment docs</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">ID &amp; Employee Pay Slip</p>
             </div>
           </div>
 
@@ -176,7 +176,7 @@ export default function CustomerVerificationPage() {
                   Account Fully Verified
                 </p>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
-                  Your identity &amp; employment records are approved. You are eligible for internal emergency credit up to ₹2,50,000.
+                  Your identity &amp; Employee Pay Slip records are approved. You are eligible for internal emergency credit up to ₹2,50,000.
                 </p>
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function CustomerVerificationPage() {
                 Documents Under Review
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                Your uploaded ID and employment documents are currently being reviewed by your organization admin. Review usually takes 2–4 hours.
+                Your uploaded Government ID and Employee Pay Slip documents are currently being reviewed by your organization admin. Review usually takes 2–4 hours.
               </p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function CustomerVerificationPage() {
                 {profile.rejection_reason || "The uploaded documents were unreadable or invalid."}
               </p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-2 font-bold">
-                Please re-upload clear copies of your Government ID and Employment Proof below.
+                Please re-upload clear copies of your Government ID and Employee Pay Slip (Salary Slip) below.
               </p>
             </div>
           </div>
@@ -248,10 +248,10 @@ export default function CustomerVerificationPage() {
             <Card className="p-6 border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark shadow-card">
               <CardHeader className="px-0 pt-0 pb-4 border-b border-slate-100 dark:border-surface-border-dark mb-6">
                 <CardTitle className="text-lg font-bold text-ink dark:text-white">
-                  Upload Required Documents
+                  Upload Required ID Proofs
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Please upload clear scans or photos of your government identity document and employment verification.
+                  Please upload clear scans or photos of your Government ID and Employee Pay Slip (Salary Slip) as official ID proof.
                 </CardDescription>
               </CardHeader>
 
@@ -263,8 +263,8 @@ export default function CustomerVerificationPage() {
                   onChange={setIdProof}
                 />
                 <FileDropCard
-                  label="2. Employment Proof"
-                  hint="Company ID Badge, Recent Salary Slip, or Offer Letter (PDF, PNG, JPG)"
+                  label="2. Employee Pay Slip (ID & Employment Proof)"
+                  hint="Recent Employee Pay Slip / Salary Slip (PDF, PNG, JPG) as official ID & Employment Proof"
                   file={employmentProof}
                   onChange={setEmploymentProof}
                 />
@@ -285,7 +285,7 @@ export default function CustomerVerificationPage() {
                   onClick={handleSubmit}
                   loading={submitting}
                 >
-                  Submit Documents for Verification
+                  Submit ID &amp; Pay Slip for Verification
                 </Button>
               </div>
             </Card>
@@ -295,7 +295,7 @@ export default function CustomerVerificationPage() {
               <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-white/5">
                 <div className="flex items-center gap-2.5">
                   <FileCheck2 className="h-5 w-5 text-signal" />
-                  <CardTitle className="text-lg">KYC Document Vault</CardTitle>
+                  <CardTitle className="text-lg">KYC &amp; ID Proof Vault</CardTitle>
                 </div>
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                   Encrypted &amp; Verified
@@ -324,9 +324,9 @@ export default function CustomerVerificationPage() {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-ink dark:text-white">Employment Proof</p>
+                      <p className="text-xs font-bold text-ink dark:text-white">Employee Pay Slip (ID Proof)</p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {profile.employment_proof_url ? "Document File Uploaded" : "Verified Record"}
+                        {profile.employment_proof_url ? "Pay Slip / Salary Slip Uploaded" : "Verified Record"}
                       </p>
                     </div>
                   </div>

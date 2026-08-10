@@ -56,14 +56,13 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-merriweather-sans)",
+          "Merriweather Sans",
           "Inter",
           "Manrope",
           "ui-sans-serif",
           "system-ui",
           "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
           "sans-serif",
         ],
       },

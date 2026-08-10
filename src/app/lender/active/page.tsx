@@ -259,7 +259,9 @@ export default function AdminActiveLoansPage() {
                   : loan.duration_days === 14
                   ? "14 Days (0.8%)"
                   : loan.duration_days === 21
-                  ? "21 Days (1.6%)"
+                  ? "21 Days (1.2%)"
+                  : loan.duration_days === 30
+                  ? "30 Days (1.5%)"
                   : `${loan.duration_days} days`;
 
               return (

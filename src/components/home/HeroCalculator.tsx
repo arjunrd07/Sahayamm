@@ -102,7 +102,7 @@ export function HeroCalculator() {
           {/* Repayment Duration Plan Selector */}
           <div className="space-y-1.5">
             <label className="text-[10px] text-ink-slate font-extrabold uppercase tracking-wider block">Select Repayment Duration Plan</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {LOAN_PLANS.map((plan) => {
                 const isSelected = selectedPlanId === plan.id;
                 return (

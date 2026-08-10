@@ -6,6 +6,8 @@ import { Topbar } from "./topbar";
 import { MobileBottomNav } from "./mobile-bottom-nav";
 import type { NavItem } from "@/lib/nav";
 
+import { CommandPalette } from "../ui/command-palette";
+
 export function AppShell({
   navItems,
   children,
@@ -33,6 +35,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen flex flex-col bg-canvas dark:bg-canvas-dark">
+      <CommandPalette />
       {/* Full Width Topbar across screen top */}
       <Topbar items={navItems} />
 

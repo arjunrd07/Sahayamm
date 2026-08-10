@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { FeatureSwitchback } from "@/components/home/FeatureSwitchback";
 import { HeroCalculator } from "@/components/home/HeroCalculator";
+import { LenderWorkingDemo } from "@/components/home/LenderWorkingDemo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export default async function RootPage() {
@@ -84,9 +85,9 @@ export default async function RootPage() {
 
           <nav className="hidden md:flex items-center gap-9 text-sm font-bold text-ink-slate">
             <a href="#features" className="hover:text-signal transition-colors">Features</a>
+            <a href="#lender-demo" className="hover:text-signal transition-colors">Lender Working Demo</a>
             <a href="#integrations" className="hover:text-signal transition-colors">Integrations</a>
             <a href="#pricing" className="hover:text-signal transition-colors">Pricing</a>
-            <a href="#security" className="hover:text-signal transition-colors">Security</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -121,7 +122,7 @@ export default async function RootPage() {
           <div className="lg:col-span-6 text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-signal-soft text-signal-cobalt text-xs font-bold border border-signal/20 shadow-sm">
               <Building2 className="h-4 w-4 text-signal" />
-              <span>Automated Intra-Organization Lending Platform</span>
+              <span>Digital Loan Agreement Platform</span>
             </div>
 
             <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-tight leading-[1.08] text-ink dark:text-white">
@@ -143,12 +144,12 @@ export default async function RootPage() {
                 <ArrowRight className="h-5 w-5 shrink-0" />
               </Link>
 
-              <Link
-                href="/login"
+              <a
+                href="#lender-demo"
                 className="btn-secondary py-3.5 px-7 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 rounded-full transition-all whitespace-nowrap"
               >
-                <span>Log in to workspace</span>
-              </Link>
+                <span>Try Lender Working Demo</span>
+              </a>
             </div>
 
             <p className="text-xs text-ink-slate font-medium">
@@ -163,9 +164,11 @@ export default async function RootPage() {
         </div>
       </section>
 
-
-      {/* 4. Interactive Feature Switchback Section (Calendly Exact System) */}
+      {/* 3. Interactive Feature Switchback Section */}
       <FeatureSwitchback />
+
+      {/* 4. Interactive Lender Working Demo Section */}
+      <LenderWorkingDemo />
 
       {/* 10. Bottom CTA Banner */}
       <section className="py-24 px-6 sm:px-12 bg-white dark:bg-canvas-dark">

@@ -16,7 +16,7 @@ export interface LoanCalculation {
 }
 
 export interface LoanPlan {
-  id: "7_days" | "14_days" | "21_days";
+  id: "7_days" | "14_days" | "21_days" | "30_days";
   name: string;
   days: number;
   ratePercent: number; // Flat interest % for period
@@ -42,8 +42,15 @@ export const LOAN_PLANS: LoanPlan[] = [
     id: "21_days",
     name: "21 Days",
     days: 21,
-    ratePercent: 1.4,
-    description: "21 days at 1.4% interest",
+    ratePercent: 1.2,
+    description: "21 days at 1.2% interest",
+  },
+  {
+    id: "30_days",
+    name: "30 Days",
+    days: 30,
+    ratePercent: 1.5,
+    description: "30 days at 1.5% interest",
   },
 ];
 
@@ -102,4 +109,3 @@ export function calculateLoan(
     dueDate: due.toISOString().slice(0, 10),
   };
 }
-
