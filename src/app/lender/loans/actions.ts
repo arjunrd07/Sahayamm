@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
-import { createLendingAgreement, generateAgreementNumber } from "@/lib/docuseal";
+import { createLendingAgreement, generateAgreementNumber } from "@/lib/agreements";
 import { dispatchNotification } from "@/lib/notify";
 import { formatINR } from "@/lib/utils";
 import { logAuditEntry } from "@/lib/audit";

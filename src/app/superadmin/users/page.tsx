@@ -97,36 +97,43 @@ export default function SuperadminUsersPage() {
 
   async function executeDirectStatusChange(user: UserProfileWithOrg, targetStatus: "verified" | "rejected", reason?: string) {
     setUpdatingId(user.id);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, verification_status: targetStatus } : u))
+    );
     const result = await toggleUserAccess(user.id, targetStatus, reason);
     setUpdatingId(null);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadUsersData();
       return;
     }
 
     const actionText = targetStatus === "verified" ? "Access approved/restored" : "Access revoked";
     push("success", `${actionText} for ${user.full_name || user.email}`);
-    loadUsersData();
   }
 
   async function executeAccessToggle() {
     if (!userForAccessToggle) return;
     const user = userForAccessToggle;
-    setUpdatingId(user.id);
     const targetStatus = user.verification_status === "rejected" ? "verified" : "rejected";
+    setUpdatingId(user.id);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, verification_status: targetStatus } : u))
+    );
+    setAccessModalOpen(false);
+
     const result = await toggleUserAccess(user.id, targetStatus, revocationReason);
     setUpdatingId(null);
-    setAccessModalOpen(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadUsersData();
       return;
     }
 
     const actionText = targetStatus === "verified" ? "Access restored" : "Access revoked";
     push("success", `${actionText} for ${user.full_name || user.email}`);
-    loadUsersData();
   }
 
   function openEditModal(user: UserProfileWithOrg) {
@@ -146,17 +153,31 @@ export default function SuperadminUsersPage() {
     e.preventDefault();
     if (!editingUser) return;
     setSubmitting(true);
+    const targetOrg = organizations.find((o) => o.id === newOrgId);
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.id === editingUser.id
+          ? {
+              ...u,
+              role: newRole,
+              org_id: newOrgId || "",
+              organization_name: targetOrg?.name || "Global / Unassigned",
+            }
+          : u
+      )
+    );
+    setEditModalOpen(false);
+
     const result = await updateUserRoleAndOrg(editingUser.id, newRole, newOrgId);
     setSubmitting(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadUsersData();
       return;
     }
 
     push("success", `Updated role & organization for ${editingUser.full_name || editingUser.email}`);
-    setEditModalOpen(false);
-    loadUsersData();
   }
 
   function openDeleteModal(user: UserProfileWithOrg) {
@@ -167,17 +188,19 @@ export default function SuperadminUsersPage() {
   async function executeDeleteUser() {
     if (!userToDelete) return;
     setDeletingId(userToDelete.id);
+    setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
+    setDeleteModalOpen(false);
+
     const result = await purgeUserAccount(userToDelete.id);
     setDeletingId(null);
-    setDeleteModalOpen(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadUsersData();
       return;
     }
 
     push("success", `Permanently deleted account ${userToDelete.email}`);
-    loadUsersData();
   }
 
   const filtered = users.filter((u) => {

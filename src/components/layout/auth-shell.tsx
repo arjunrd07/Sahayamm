@@ -73,7 +73,7 @@ export function AuthShell({
                 <div className="h-6 w-6 rounded-full bg-signal text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                   <Check className="h-3.5 w-3.5 stroke-[3]" />
                 </div>
-                <span>Digital loan agreement signatures via DocuSeal</span>
+                <span>Digital loan agreement e-signatures with audit logs</span>
               </li>
               <li className="flex items-start gap-3">
                 <div className="h-6 w-6 rounded-full bg-signal text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
@@ -110,7 +110,7 @@ export function AuthShell({
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-100 dark:border-surface-border-dark">
                     <p className="text-xs text-ink-slate font-medium">Agreement</p>
                     <p className="text-xs font-bold text-signal flex items-center gap-1 mt-1">
-                      <FileText className="h-3.5 w-3.5" /> DocuSeal Verified
+                      <FileText className="h-3.5 w-3.5" /> Sahayam E-Sign Verified
                     </p>
                   </div>
                 </div>

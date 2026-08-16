@@ -97,11 +97,26 @@ export default function SuperadminOrganizationsPage() {
       return;
     }
     setSubmitting(true);
+    const tempId = `org-temp-${Date.now()}`;
+    const newOrg: OrgWithCounts = {
+      id: tempId,
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      status: "active",
+      capital_pool_limit: capitalLimit,
+      borrowerCount: 0,
+      lenderCount: 0,
+      created_at: new Date().toISOString(),
+    };
+    setOrganizations((prev) => [newOrg, ...prev]);
+    setModalOpen(false);
+
     const result = await createOrganization(name, code, capitalLimit);
     setSubmitting(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadOrgsData();
       return;
     }
 
@@ -109,7 +124,6 @@ export default function SuperadminOrganizationsPage() {
     setName("");
     setCode("");
     setCapitalLimit(2500000);
-    setModalOpen(false);
     loadOrgsData();
   }
 
@@ -121,19 +135,24 @@ export default function SuperadminOrganizationsPage() {
   async function executeToggleStatus() {
     if (!orgToToggle) return;
     const org = orgToToggle;
+    const nextStatus = org.status === "active" ? "inactive" : "active";
     setTogglingId(org.id);
+    setOrganizations((prev) =>
+      prev.map((o) => (o.id === org.id ? { ...o, status: nextStatus } : o))
+    );
+    setConfirmModalOpen(false);
+
     const result = await toggleOrganizationStatus(org.id, org.status);
     setTogglingId(null);
-    setConfirmModalOpen(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadOrgsData();
       return;
     }
 
     const actionText = org.status === "active" ? "Deactivated (Soft deleted)" : "Reactivated";
     push("success", `Organization "${org.name}" ${actionText}.`);
-    loadOrgsData();
   }
 
   function openLiquidityModal(org: OrgWithCounts) {
@@ -146,17 +165,22 @@ export default function SuperadminOrganizationsPage() {
     e.preventDefault();
     if (!selectedOrgForLiquidity) return;
     setSubmitting(true);
-    const result = await updateOrganizationLiquidity(selectedOrgForLiquidity.id, Number(newLimitInput));
+    const limitNum = Number(newLimitInput);
+    setOrganizations((prev) =>
+      prev.map((o) => (o.id === selectedOrgForLiquidity.id ? { ...o, capital_pool_limit: limitNum } : o))
+    );
+    setLiquidityModalOpen(false);
+
+    const result = await updateOrganizationLiquidity(selectedOrgForLiquidity.id, limitNum);
     setSubmitting(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadOrgsData();
       return;
     }
 
-    push("success", `Capital pool limit updated to ${formatINR(Number(newLimitInput))}.`);
-    setLiquidityModalOpen(false);
-    loadOrgsData();
+    push("success", `Capital pool limit updated to ${formatINR(limitNum)}.`);
   }
 
   function openAssignModal(org: OrgWithCounts) {
@@ -172,16 +196,23 @@ export default function SuperadminOrganizationsPage() {
       return;
     }
     setSubmitting(true);
+    setOrganizations((prev) =>
+      prev.map((o) =>
+        o.id === selectedOrgForAssign.id ? { ...o, borrowerCount: o.borrowerCount + 1 } : o
+      )
+    );
+    setAssignModalOpen(false);
+
     const result = await assignUserToOrganization(selectedUserId, selectedOrgForAssign.id);
     setSubmitting(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadOrgsData();
       return;
     }
 
     push("success", "Member assigned to organization successfully.");
-    setAssignModalOpen(false);
     loadOrgsData();
   }
 

@@ -47,57 +47,8 @@ export default function SuperadminAuditPage() {
 
       const { data, error } = await query;
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         setLogs(data);
-      } else {
-        // Fallback default audit events
-        setLogs([
-          {
-            id: "log-101",
-            action: "Role Assignment: superadmin",
-            actor_id: "a0000000-0000-0000-0000-000000000001",
-            entity_type: "user",
-            entity_id: "usr-superadmin",
-            details: "Superadmin role & permissions validated across active tenant organizations.",
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: "log-102",
-            action: "RLS Policy Verification",
-            actor_id: "system",
-            entity_type: "system",
-            entity_id: "rls-policy-check",
-            details: "Row level security verified: zero cross-tenant data leakage detected.",
-            created_at: new Date(Date.now() - 1800000).toISOString(),
-          },
-          {
-            id: "log-103",
-            action: "Organization Liquidity Config",
-            actor_id: "a0000000-0000-0000-0000-000000000001",
-            entity_type: "organization",
-            entity_id: "org-001",
-            details: "Capital pool limit updated to ₹25,00,000 for Aharyas Textiles.",
-            created_at: new Date(Date.now() - 3600000).toISOString(),
-          },
-          {
-            id: "log-104",
-            action: "Agreement Sign Verification",
-            actor_id: "system",
-            entity_type: "agreement",
-            entity_id: "ag-9941",
-            details: "DocuSeal submission completed and PDF stored in secure bucket.",
-            created_at: new Date(Date.now() - 7200000).toISOString(),
-          },
-          {
-            id: "log-105",
-            action: "Loan Disbursement Audit",
-            actor_id: "lender-01",
-            entity_type: "loan",
-            entity_id: "loan-552",
-            details: "Loan amount ₹50,000 marked active after disbursal proof review.",
-            created_at: new Date(Date.now() - 14400000).toISOString(),
-          },
-        ]);
       }
     } catch (err) {
       console.error("Error fetching audit logs:", err);

@@ -89,7 +89,7 @@ export default function SuperadminLoansPage() {
       const orgsMap = new Map((orgsData || []).map((o: any) => [o.id, o]));
       const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
 
-      if (loansData && loansData.length > 0) {
+      if (loansData) {
         const mapped = loansData.map((l: any) => {
           const org = orgsMap.get(l.org_id);
           const borrower = profilesMap.get(l.customer_id);
@@ -100,36 +100,6 @@ export default function SuperadminLoansPage() {
           };
         });
         setLoans(mapped);
-      } else {
-        // Fallback loans
-        setLoans([
-          {
-            id: "demo-l-1",
-            amount: 50000,
-            purpose: "Medical Expense Relief",
-            duration_days: 90,
-            total_repayment: 50000,
-            status: "active",
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            org_id: "demo-org-1",
-            customer_id: "demo-cust-1",
-            borrowers: { full_name: "Rahul Verma", email: "rahul@woxsen.edu.in" },
-            organizations: { name: "Woxsen University", code: "WOXSEN" },
-          },
-          {
-            id: "demo-l-2",
-            amount: 75000,
-            purpose: "Working Capital Purchase",
-            duration_days: 60,
-            total_repayment: 75000,
-            status: "pending",
-            created_at: new Date(Date.now() - 43200000).toISOString(),
-            org_id: "demo-org-2",
-            customer_id: "demo-cust-2",
-            borrowers: { full_name: "Priya Sharma", email: "priya@aharyas.com" },
-            organizations: { name: "Aharyas Textiles", code: "AHARYAS" },
-          },
-        ]);
       }
 
       if (orgsData) {
@@ -200,17 +170,21 @@ export default function SuperadminLoansPage() {
     e.preventDefault();
     if (!targetLoan) return;
     setUpdatingId(targetLoan.id);
+    setLoans((prev) =>
+      prev.map((l) => (l.id === targetLoan.id ? { ...l, status: newStatus } : l))
+    );
+    setOverrideModalOpen(false);
+
     const result = await superadminOverrideLoanStatus(targetLoan.id, newStatus, overrideReason);
     setUpdatingId(null);
-    setOverrideModalOpen(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadLoansData();
       return;
     }
 
     push("success", `Loan status updated to "${newStatus}".`);
-    loadLoansData();
   }
 
   function openBulkModal(type: "approved" | "rejected") {
@@ -224,18 +198,22 @@ export default function SuperadminLoansPage() {
 
   async function executeBulkOverride() {
     setBulkSubmitting(true);
+    setLoans((prev) =>
+      prev.map((l) => (selectedLoanIds.includes(l.id) ? { ...l, status: bulkActionType } : l))
+    );
+    setBulkModalOpen(false);
+
     const result = await superadminBulkUpdateLoanStatus(selectedLoanIds, bulkActionType);
     setBulkSubmitting(false);
-    setBulkModalOpen(false);
 
     if ("error" in result && result.error) {
       push("error", result.error);
+      loadLoansData();
       return;
     }
 
     push("success", `Bulk ${bulkActionType} executed for ${selectedLoanIds.length} loans.`);
     setSelectedLoanIds([]);
-    loadLoansData();
   }
 
   function viewProof(url: string | undefined, title: string) {

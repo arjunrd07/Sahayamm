@@ -73,7 +73,13 @@ export default function AdminLoanDetailPage() {
   const [approving, setApproving] = useState(false);
   const [disbursalProofUrl, setDisbursalProofUrl] = useState("");
 
-  if (!loan) return null;
+  if (!loan) {
+    return (
+      <div className="max-w-4xl space-y-6 py-12">
+        <div className="h-48 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
 
   async function handleApprove() {
     setSubmitting(true);

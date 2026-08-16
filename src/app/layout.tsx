@@ -14,7 +14,7 @@ const merriweatherSans = Merriweather_Sans({
 
 export const metadata: Metadata = {
   title: "Sahayam — Digital Loan Agreement Platform",
-  description: "Digital loan agreement platform, intra-organization lending, employee credit pools, DocuSeal digital agreements, and automated HRMS verification.",
+  description: "Digital loan agreement platform, intra-organization lending, employee credit pools, native digital agreements, and automated HRMS verification.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

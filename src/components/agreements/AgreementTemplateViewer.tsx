@@ -1,12 +1,15 @@
 "use client";
 
-import { useRef } from "react";
-import { Card, CardTitle } from "@/components/ui/card";
+import { useRef, useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSignature, Printer, Download, CheckCircle2 } from "lucide-react";
-import { formatINR, formatDate } from "@/lib/utils";
+import { FileSignature, Printer, CheckCircle2, ShieldCheck, PenTool } from "lucide-react";
+import { formatINR } from "@/lib/utils";
+import { signLendingAgreement } from "@/app/api/agreements/actions";
+import { useToast } from "@/components/ui/toast";
 
 export interface AgreementData {
+  id?: string;
   agreement_number: string;
   agreement_date: string;
   organization_name: string;
@@ -23,10 +26,20 @@ export interface AgreementData {
   borrower_signed_at?: string;
   lender_signed: boolean;
   lender_signed_at?: string;
+  digital_signature_hash?: string;
 }
 
-export function AgreementTemplateViewer({ agreement }: { agreement: AgreementData }) {
+export function AgreementTemplateViewer({
+  agreement,
+  onSigned,
+}: {
+  agreement: AgreementData;
+  onSigned?: () => void;
+}) {
   const printRef = useRef<HTMLDivElement>(null);
+  const [signatureName, setSignatureName] = useState("");
+  const [signing, setSigning] = useState(false);
+  const { push } = useToast();
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -71,6 +84,28 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
     }, 250);
   };
 
+  async function handleExecuteSignature(e: React.FormEvent) {
+    e.preventDefault();
+    if (!agreement.id) return;
+    if (!signatureName.trim()) {
+      push("error", "Please enter your full legal name to sign.");
+      return;
+    }
+    setSigning(true);
+    const res = await signLendingAgreement(agreement.id, signatureName.trim());
+    setSigning(false);
+
+    if ("error" in res && res.error) {
+      push("error", res.error);
+      return;
+    }
+
+    push("success", `Digital signature recorded for ${agreement.agreement_number}!`);
+    if (onSigned) onSigned();
+  }
+
+  const isFullySigned = agreement.borrower_signed && agreement.lender_signed;
+
   return (
     <Card className="p-6 space-y-6 bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-sm">
       {/* Top Action Bar */}
@@ -81,11 +116,15 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
           </div>
           <div>
             <h3 className="font-extrabold text-base text-ink dark:text-white">Internal Lending Agreement</h3>
-            <p className="text-xs text-ink-slate">Agreement No: {agreement.agreement_number}</p>
+            <p className="text-xs text-ink-slate font-mono">Agreement No: {agreement.agreement_number}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800/40">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Sahayam Native Seal
+          </span>
           <Button variant="secondary" onClick={handlePrint} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5">
             <Printer className="h-4 w-4" />
             Print / Save PDF
@@ -107,6 +146,17 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
             <div><strong>Organization:</strong> {agreement.organization_name}</div>
           </div>
         </div>
+
+        {/* Cryptographic Seal Badge */}
+        {agreement.digital_signature_hash && (
+          <div className="p-3 rounded-xl bg-slate-900 text-white flex items-center justify-between text-xs font-mono">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span>Digital SHA-256 Seal: <strong>{agreement.digital_signature_hash}</strong></span>
+            </div>
+            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Verified Token</span>
+          </div>
+        )}
 
         {/* Parties */}
         <div className="space-y-2">
@@ -168,13 +218,13 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
         {/* Terms */}
         <div className="space-y-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
-            Terms
+            Terms &amp; Statutory Governance
           </h3>
           <ul className="list-disc pl-5 text-xs text-ink-slate space-y-1.5 font-medium leading-relaxed">
-            <li>The Lender agrees to lend the above amount to the Borrower.</li>
-            <li>The Borrower agrees to repay the total repayment amount on or before the due date.</li>
-            <li>Late repayment attracts an additional 2% flat interest on the outstanding amount.</li>
-            <li>Sahayam only manages documentation and workflow. Money transfer occurs outside the platform.</li>
+            <li>The Lender agrees to lend the specified principal amount to the Borrower under organization guidelines.</li>
+            <li>The Borrower agrees to repay the total repayment amount on or before the due date specified above.</li>
+            <li>Late repayment attracts an additional 2% flat interest on the outstanding balance.</li>
+            <li>Sahayam native e-signatures provide legally binding digital audit logs under Indian IT Act Section 10A.</li>
             <li>This Agreement is governed by the laws of India.</li>
           </ul>
         </div>
@@ -182,12 +232,12 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
         {/* Signatures */}
         <div className="space-y-3 pt-2">
           <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
-            Signatures
+            Digital Signatures &amp; Execution Stamping
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
             {/* Borrower Signature */}
             <div className="p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-surface-border-dark bg-white dark:bg-surface-dark space-y-2">
-              <span className="text-xs font-extrabold text-ink dark:text-white block">Borrower</span>
+              <span className="text-xs font-extrabold text-ink dark:text-white block">Borrower Signature</span>
               <div className="h-12 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-canvas-dark px-3">
                 {agreement.borrower_signed ? (
                   <span className="font-serif italic font-bold text-base text-signal flex items-center gap-1.5">
@@ -199,13 +249,13 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
                 )}
               </div>
               <p className="text-[11px] text-ink-slate font-medium">
-                Date: <strong>{agreement.borrower_signed_at || (agreement.borrower_signed ? agreement.agreement_date : "Pending")}</strong>
+                Timestamp: <strong>{agreement.borrower_signed_at || (agreement.borrower_signed ? agreement.agreement_date : "Pending")}</strong>
               </p>
             </div>
 
             {/* Lender Signature */}
             <div className="p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-surface-border-dark bg-white dark:bg-surface-dark space-y-2">
-              <span className="text-xs font-extrabold text-ink dark:text-white block">Lender (Organization Admin)</span>
+              <span className="text-xs font-extrabold text-ink dark:text-white block">Lender (Organization Admin) Signature</span>
               <div className="h-12 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-canvas-dark px-3">
                 {agreement.lender_signed ? (
                   <span className="font-serif italic font-bold text-base text-signal flex items-center gap-1.5">
@@ -217,12 +267,37 @@ export function AgreementTemplateViewer({ agreement }: { agreement: AgreementDat
                 )}
               </div>
               <p className="text-[11px] text-ink-slate font-medium">
-                Date: <strong>{agreement.lender_signed_at || (agreement.lender_signed ? agreement.agreement_date : "Pending")}</strong>
+                Timestamp: <strong>{agreement.lender_signed_at || (agreement.lender_signed ? agreement.agreement_date : "Pending")}</strong>
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Interactive In-App Native E-Sign Drawer if not fully signed */}
+      {!isFullySigned && agreement.id && (
+        <form onSubmit={handleExecuteSignature} className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 space-y-3">
+          <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold text-xs">
+            <PenTool className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span>Sahayam In-App Digital Signature Execution</span>
+          </div>
+          <p className="text-xs text-blue-800 dark:text-blue-300">
+            Type your full legal name below to sign this agreement natively inside Sahayam.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              placeholder="Enter Full Legal Name..."
+              value={signatureName}
+              onChange={(e) => setSignatureName(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-surface-dark border border-slate-300 dark:border-surface-border-dark text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <Button variant="primary" loading={signing} type="submit" className="text-xs font-bold py-2 px-4 bg-blue-600 hover:bg-blue-700">
+              Execute E-Signature
+            </Button>
+          </div>
+        </form>
+      )}
     </Card>
   );
 }

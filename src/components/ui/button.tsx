@@ -13,13 +13,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]",
+    "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 shadow-md active:translate-y-0 active:scale-[0.98]",
   dark:
     "bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 shadow-sm active:scale-[0.98]",
   secondary:
     "bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 border border-slate-200/80 dark:border-white/10 shadow-xs active:scale-[0.98]",
   accent:
-    "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:-translate-y-0.5 active:scale-[0.98]",
+    "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md active:scale-[0.98]",
   danger:
     "bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700 shadow-sm active:scale-[0.98]",
   ghost:

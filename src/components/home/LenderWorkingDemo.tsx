@@ -114,7 +114,7 @@ export function LenderWorkingDemo() {
         setDisbursedPoolTotal((prev) => prev + targetLoan.amount);
       }
       setActionLoading(null);
-      showToast(`🎉 Loan ${id} approved & DocuSeal agreement dispatched! Disbursed to ${targetLoan?.applicant}.`);
+      showToast(`🎉 Loan ${id} approved & digital agreement dispatched! Disbursed to ${targetLoan?.applicant}.`);
 
       // Update selected loan view
       const remainingPending = loans.filter((l) => l.status === "pending" && l.id !== id);
@@ -204,7 +204,7 @@ export function LenderWorkingDemo() {
               <span className="text-xs font-semibold text-ink-slate">Standard Rate Policy</span>
               <p className="text-2xl font-black text-signal">0% Interest</p>
               <div className="flex items-center gap-1 text-[11px] text-signal font-medium">
-                <BadgeCheck className="h-3.5 w-3.5" /> DocuSeal Legal Stamp
+                <BadgeCheck className="h-3.5 w-3.5" /> Native E-Sign Legal Stamp
               </div>
             </div>
           </div>
@@ -387,11 +387,11 @@ export function LenderWorkingDemo() {
                     </div>
                   </div>
 
-                  {/* DocuSeal Integration & Decision Controls */}
+                  {/* Native Digital Agreement Integration & Decision Controls */}
                   <div className="pt-4 border-t border-slate-100 dark:border-surface-border-dark space-y-3">
                     <div className="flex items-center gap-2 text-xs text-ink-slate">
                       <ShieldCheck className="h-4 w-4 text-signal shrink-0" />
-                      <span>Approving triggers automated DocuSeal signature delivery to {selectedLoan.applicant}.</span>
+                      <span>Approving triggers automated digital signature agreement delivery to {selectedLoan.applicant}.</span>
                     </div>
 
                     {selectedLoan.status === "pending" ? (
@@ -430,7 +430,7 @@ export function LenderWorkingDemo() {
           <div className="pt-6 border-t border-slate-200/80 dark:border-surface-border-dark flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-xs text-ink-slate font-medium">
               <Building2 className="h-4 w-4 text-signal" />
-              <span>Want full access to organization settings, HRMS sync, and DocuSeal templates?</span>
+              <span>Want full access to organization settings, HRMS sync, and digital agreement templates?</span>
             </div>
 
             <Link

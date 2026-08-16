@@ -7,80 +7,6 @@ import Link from "next/link";
 import type { Loan, Profile } from "@/types/database";
 import { Users, HandCoins, AlertTriangle, Wallet, Sparkles, Building2, ShieldCheck, CheckCircle2, ArrowRight, Layers } from "lucide-react";
 
-const DEMO_LOANS: Loan[] = [
-  {
-    id: "admin-demo-loan-1",
-    org_id: "demo-org",
-    customer_id: "demo-cust-1",
-    admin_id: null,
-    amount: 75000,
-    purpose: "Higher Education Fee Advance",
-    duration_days: 120,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 75000,
-    due_date: null,
-    status: "pending",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: null,
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: null,
-    late_fee_amount: null,
-    created_at: "2026-07-22T09:15:00Z",
-    approved_at: null,
-    active_at: null,
-    completed_at: null,
-    updated_at: "2026-07-22T09:15:00Z",
-  },
-  {
-    id: "admin-demo-loan-2",
-    org_id: "demo-org",
-    customer_id: "demo-cust-2",
-    admin_id: null,
-    amount: 30000,
-    purpose: "Vehicle Maintenance & Repair",
-    duration_days: 60,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 30000,
-    due_date: null,
-    status: "pending",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: null,
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: null,
-    late_fee_amount: null,
-    created_at: "2026-07-21T14:40:00Z",
-    approved_at: null,
-    active_at: null,
-    completed_at: null,
-    updated_at: "2026-07-21T14:40:00Z",
-  },
-];
-
-const DEMO_PROFILES: Profile[] = [
-  {
-    id: "demo-user-1",
-    org_id: "demo-org",
-    full_name: "Sarah Jenkins",
-    email: "sarah.j@company.com",
-    phone: "+91 98765 43210",
-    role: "borrower",
-    verification_status: "pending",
-    rejection_reason: null,
-    id_proof_url: "verification-docs/id.pdf",
-    employment_proof_url: "verification-docs/letter.pdf",
-    verified_by: null,
-    verified_at: null,
-    created_at: "2026-07-23T11:00:00Z",
-    updated_at: "2026-07-23T11:00:00Z",
-  },
-];
-
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
   const {
@@ -216,7 +142,7 @@ export default async function AdminDashboardPage() {
               <h3 className="text-lg font-bold text-ink dark:text-white tracking-tight">Verification Queue</h3>
               <p className="text-xs text-ink-slate font-medium mt-0.5">Pending identity & KYC verification reviews.</p>
             </div>
-            <Link href="/admin/verifications" className="text-xs font-extrabold text-primary hover:underline shrink-0">
+            <Link href="/lender/verifications" className="text-xs font-extrabold text-primary hover:underline shrink-0">
               View all ({pendingVerifications.length})
             </Link>
           </div>
@@ -228,7 +154,7 @@ export default async function AdminDashboardPage() {
               {pendingVerifications.slice(0, 5).map((p) => (
                 <Link
                   key={p.id}
-                  href={`/admin/verifications`}
+                  href={`/lender/verifications`}
                   className="flex flex-col sm:flex-row sm:items-center justify-between py-4 hover:bg-slate-50/80 dark:hover:bg-white/5 -mx-3 px-4 rounded-2xl transition-all duration-200 gap-3"
                 >
                   <div className="min-w-0">
