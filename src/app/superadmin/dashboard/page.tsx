@@ -82,23 +82,8 @@ export default function SuperadminDashboardPage() {
 
         setOrganizations(mappedOrgs);
 
-        if (logsData && logsData.length > 0) {
+        if (logsData) {
           setAuditLogs(logsData);
-        } else {
-          setAuditLogs([
-            {
-              id: "sys-1",
-              action: "Role Assignment: superadmin",
-              details: "Superadmin role & permissions validated across active tenant organizations.",
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: "sys-2",
-              action: "RLS Policy Multi-Tenant Compliance",
-              details: "All row level security policies validated across active tenant organizations.",
-              created_at: new Date(Date.now() - 3600000).toISOString(),
-            },
-          ]);
         }
       } catch (err) {
         console.error("Error loading superadmin dashboard:", err);
@@ -222,7 +207,7 @@ export default function SuperadminDashboardPage() {
             <FileText className="h-5 w-5" />
           </div>
           <span className="text-xs font-bold text-ink dark:text-white block">Agreements</span>
-          <span className="text-[10px] text-ink-slate block mt-0.5">DocuSeal Signed PDFs</span>
+          <span className="text-[10px] text-ink-slate block mt-0.5">Native Signed Agreements</span>
         </Link>
 
         <Link

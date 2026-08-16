@@ -84,7 +84,7 @@ export function PricingSection() {
               <p className="text-[11px] font-semibold text-slate-400 mb-6">{prices.subtext}</p>
               <ul className="space-y-3 text-xs text-ink-slate font-semibold mb-8">
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Up to 250 active employees</li>
-                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> DocuSeal e-signatures integration</li>
+                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Native digital e-signatures &amp; agreement vault</li>
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Automated repayment due reminders</li>
                 <li className="flex items-center gap-2"><Check className="h-4 w-4 text-signal shrink-0" /> Custom capital pool limit controls</li>
               </ul>

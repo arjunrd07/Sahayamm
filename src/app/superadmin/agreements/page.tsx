@@ -66,7 +66,7 @@ export default function SuperadminAgreementsPage() {
       const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
       const orgsMap = new Map((orgsData || []).map((o: any) => [o.id, o]));
 
-      if (agreementsData && agreementsData.length > 0) {
+      if (agreementsData) {
         const mapped = agreementsData.map((ag: any) => {
           const loan = loansMap.get(ag.loan_id);
           const borrower = loan ? profilesMap.get(loan.customer_id) : undefined;
@@ -82,46 +82,6 @@ export default function SuperadminAgreementsPage() {
           };
         });
         setAgreements(mapped);
-      } else {
-        // Fallback demo agreements
-        setAgreements([
-          {
-            id: "ag-001",
-            agreement_number: "AGR-2026-WOX-001",
-            docuseal_submission_id: "docseal_sub_99410",
-            pdf_url: "#",
-            borrower_signed: true,
-            borrower_signed_at: new Date(Date.now() - 3600000).toISOString(),
-            lender_signed: true,
-            lender_signed_at: new Date(Date.now() - 1800000).toISOString(),
-            status: "completed",
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            loans: {
-              amount: 50000,
-              purpose: "Emergency Family Medical Advance",
-              borrowers: { full_name: "Rahul Verma", email: "rahul@woxsen.edu.in" },
-              organizations: { name: "Woxsen University", code: "WOXSEN" },
-            },
-          },
-          {
-            id: "ag-002",
-            agreement_number: "AGR-2026-AHA-002",
-            docuseal_submission_id: "docseal_sub_99411",
-            pdf_url: "#",
-            borrower_signed: true,
-            borrower_signed_at: new Date(Date.now() - 7200000).toISOString(),
-            lender_signed: true,
-            lender_signed_at: new Date(Date.now() - 3600000).toISOString(),
-            status: "completed",
-            created_at: new Date(Date.now() - 172800000).toISOString(),
-            loans: {
-              amount: 100000,
-              purpose: "Medical Loan Advance",
-              borrowers: { full_name: "Arjun Rao", email: "arjun@sahayamm.org" },
-              organizations: { name: "Sahayam Fintech", code: "SAHAYAM" },
-            },
-          },
-        ]);
       }
     } catch (err) {
       console.error("Error fetching agreements data:", err);
@@ -168,14 +128,14 @@ export default function SuperadminAgreementsPage() {
             Agreements Inspector
           </h1>
           <p className="text-xs sm:text-sm text-ink-slate font-medium mt-1">
-            Inspect cryptographic e-signatures, DocuSeal submission IDs, and legal PDF audit artifacts.
+            Inspect cryptographic e-signatures, native digital agreement hashes, and legal PDF audit artifacts.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800/40">
             <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            DocuSeal Signature Verification
+            Sahayam E-Sign Verification
           </span>
         </div>
       </div>
@@ -185,7 +145,7 @@ export default function SuperadminAgreementsPage() {
         <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
           <span className="text-xs font-bold text-ink-slate">Total Executed Agreements</span>
           <p className="text-2xl font-black text-ink dark:text-white">{agreements.length}</p>
-          <p className="text-[11px] text-ink-slate font-medium">DocuSeal digital contract vault</p>
+          <p className="text-[11px] text-ink-slate font-medium">Native digital contract vault</p>
         </div>
 
         <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
@@ -239,7 +199,7 @@ export default function SuperadminAgreementsPage() {
               <Th>Agreement No.</Th>
               <Th>Borrower &amp; Org</Th>
               <Th>Loan Principal</Th>
-              <Th>DocuSeal Submission</Th>
+              <Th>Agreement Ref Hash</Th>
               <Th>Status</Th>
               <Th>Date</Th>
               <Th className="text-right">Actions</Th>
@@ -273,7 +233,7 @@ export default function SuperadminAgreementsPage() {
                     <div className="text-xs text-ink-slate truncate max-w-[140px] font-medium">{ag.loans?.purpose}</div>
                   </Td>
                   <Td>
-                    <span className="text-xs font-mono text-ink-slate">{ag.docuseal_submission_id || "DocuSeal Sandbox"}</span>
+                    <span className="text-xs font-mono text-ink-slate">{ag.docuseal_submission_id || "SHY-DIGISIGN-SANDBOX"}</span>
                   </Td>
                   <Td>
                     <span
@@ -311,7 +271,7 @@ export default function SuperadminAgreementsPage() {
       </div>
 
       {/* PDF Inspector Modal */}
-      <Modal open={Boolean(viewPdfUrl)} onClose={() => setViewPdfUrl(null)} title="DocuSeal PDF Agreement Artifact">
+      <Modal open={Boolean(viewPdfUrl)} onClose={() => setViewPdfUrl(null)} title="Sahayam Digital Agreement Artifact">
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark space-y-2 text-xs">
             <div className="flex justify-between text-ink-slate">
@@ -320,7 +280,7 @@ export default function SuperadminAgreementsPage() {
             </div>
             <div className="flex justify-between text-ink-slate">
               <span>Audit Trail:</span>
-              <strong className="text-ink dark:text-white font-bold font-mono">Timestamped DocuSeal Envelope</strong>
+              <strong className="text-ink dark:text-white font-bold font-mono">Timestamped Sahayam E-Sign Envelope</strong>
             </div>
           </div>
           <Button variant="secondary" className="w-full" onClick={() => setViewPdfUrl(null)}>

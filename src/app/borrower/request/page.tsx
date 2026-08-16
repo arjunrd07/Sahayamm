@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 export default function RequestLoanPage() {
-  const { profile } = useAuth();
+  const { profile, loading } = useAuth();
   const { push } = useToast();
   const router = useRouter();
 
@@ -41,7 +41,31 @@ export default function RequestLoanPage() {
 
   const { refresh: refreshNotifications } = useNotifications();
 
-  if (!profile) return null;
+  if (loading) {
+    return (
+      <div className="max-w-6xl space-y-8">
+        <div className="h-32 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        <div className="h-96 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center space-y-4">
+        <div className="p-8 rounded-3xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-card space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-signal/10 text-signal flex items-center justify-center mx-auto">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-extrabold text-ink dark:text-white">Authentication Required</h2>
+          <p className="text-xs text-slate-500 font-medium">Please sign in to apply for an emergency loan.</p>
+          <Link href="/login" className="btn-primary inline-flex items-center justify-center w-full py-3 rounded-xl text-xs font-bold shadow-button">
+            Sign In to Sahayam
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -211,7 +235,7 @@ export default function RequestLoanPage() {
                       className={`text-left p-5 rounded-2xl border transition-all duration-200 relative group ${
                         isSelected
                           ? "border-2 border-primary bg-primary-soft/40 dark:bg-primary/20 shadow-button shadow-primary/10 scale-[1.02]"
-                          : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-white dark:bg-surface-dark hover:-translate-y-0.5"
+                          : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-white dark:bg-surface-dark"
                       }`}
                     >
                       {isRecommended && (

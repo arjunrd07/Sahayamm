@@ -22,9 +22,11 @@ export interface SendEmailResult {
  * so notification flows remain fully testable without a live account.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "Sahayam <notifications@sahayam.app>";
   const html = renderEmail(input.subject, input.body);
 
-  if (!RESEND_API_KEY) {
+  if (!apiKey) {
     console.log(`[mock-email] to=${input.to} subject="${input.subject}"\n${input.body}`);
     return { sent: true, mock: true };
   }
@@ -32,11 +34,11 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to: [input.to],
       subject: input.subject,
       html,
@@ -100,7 +102,9 @@ export const notificationCopy: Record<
   }),
   agreement_signed: (p) => ({
     title: "Agreement signed",
-    message: `Agreement ${p.agreementNumber} has been fully signed by both parties.`,
+    message: p.signerRole
+      ? `Agreement ${p.agreementNumber} was signed by ${p.signerRole}.`
+      : `Agreement ${p.agreementNumber} has been fully signed by both parties.`,
   }),
   funds_sent: (p) => ({
     title: "Funds sent",

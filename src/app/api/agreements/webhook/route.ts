@@ -4,10 +4,9 @@ import { dispatchNotification } from "@/lib/notify";
 import { logAuditEntry } from "@/lib/audit";
 
 /**
- * Configure this URL as the DocuSeal webhook endpoint for the template
- * used by createLendingAgreement(). Handles submitter.completed and
- * submission.completed events to keep signature status and the final
- * signed PDF in sync.
+ * Agreement webhook & API sync endpoint.
+ * Handles signature status updates and digital agreement completion events
+ * to keep borrower/lender signatures and audit trails in sync.
  */
 export async function POST(request: Request) {
   const payload = await request.json();

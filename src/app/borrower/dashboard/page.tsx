@@ -7,61 +7,6 @@ import Link from "next/link";
 import type { Loan, Profile } from "@/types/database";
 import { HandCoins, Wallet, Clock, CheckCircle2, ShieldCheck, ArrowRight, Calendar, Sparkles, TrendingUp, Award, Activity, Plus } from "lucide-react";
 
-const DEMO_LOANS: Loan[] = [
-  {
-    id: "demo-loan-1",
-    org_id: "demo-org",
-    customer_id: "demo-cust",
-    admin_id: "demo-admin",
-    amount: 50000,
-    purpose: "Emergency Medical Expenses",
-    duration_days: 90,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 50000,
-    due_date: "2026-10-15",
-    status: "active",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: "2026-07-15T10:00:00Z",
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: null,
-    late_fee_amount: null,
-    created_at: "2026-07-10T14:30:00Z",
-    approved_at: "2026-07-12T09:00:00Z",
-    active_at: "2026-07-15T10:00:00Z",
-    completed_at: null,
-    updated_at: "2026-07-15T10:00:00Z",
-  },
-  {
-    id: "demo-loan-2",
-    org_id: "demo-org",
-    customer_id: "demo-cust",
-    admin_id: null,
-    amount: 25000,
-    purpose: "Home Refurbishment Advance",
-    duration_days: 60,
-    interest_rate_annual: 0,
-    calculated_interest: 0,
-    total_repayment: 25000,
-    due_date: null,
-    status: "pending",
-    rejection_reason: null,
-    disbursal_proof_url: null,
-    disbursed_at: null,
-    repayment_proof_url: null,
-    repayment_submitted_at: null,
-    late_fee_rate: null,
-    late_fee_amount: null,
-    created_at: "2026-07-20T11:15:00Z",
-    approved_at: null,
-    active_at: null,
-    completed_at: null,
-    updated_at: "2026-07-20T11:15:00Z",
-  },
-];
-
 export default async function CustomerDashboardPage() {
   const supabase = await createClient();
   const {

@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { useTheme } from "@/context/theme-context";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
+import { Input, Field } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { Tabs } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/client";
 import {
   Bell,
   Sliders,
@@ -22,33 +24,43 @@ import {
   Smartphone,
   Check,
   ArrowRight,
-  ExternalLink,
+  Landmark,
+  CreditCard,
 } from "lucide-react";
 
 interface SettingsScreenProps {
   role?: "borrower" | "lender" | "superadmin";
 }
 
-type TabValue = "policy" | "notifications" | "appearance" | "security";
+type TabValue = "policy" | "bank" | "notifications" | "appearance" | "security";
 
 export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   const { theme, toggle } = useTheme();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, refresh } = useAuth();
   const { push } = useToast();
+  const supabase = createClient();
 
   const userRole = forcedRole || profile?.role || "borrower";
   const isLender = userRole === "lender" || userRole === "superadmin";
   const profileHref = isLender ? "/lender/profile" : "/borrower/profile";
 
-  const [activeTab, setActiveTab] = useState<TabValue>(isLender ? "policy" : "notifications");
+  const [activeTab, setActiveTab] = useState<TabValue>(isLender ? "policy" : "bank");
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // Lender Policy Form State
-  const [maxLoanLimit, setMaxLoanLimit] = useState("100000");
-  const [annualInterestRate, setAnnualInterestRate] = useState("5.0");
+  const [maxLoanLimit, setMaxLoanLimit] = useState("2500000");
+  const [annualInterestRate, setAnnualInterestRate] = useState("0.0");
   const [autoApproveThreshold, setAutoApproveThreshold] = useState("15000");
-  const [requireDocuseal, setRequireDocuseal] = useState(true);
+  const [requireDigitalSignatures, setRequireDigitalSignatures] = useState(true);
   const [requireHrmsVerification, setRequireHrmsVerification] = useState(true);
+
+  // Bank & Payout Preferences State
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+  const [upiId, setUpiId] = useState("");
 
   // Notification Preferences State
   const [emailLoanUpdates, setEmailLoanUpdates] = useState(true);
@@ -59,21 +71,137 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   // Security State
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
 
+  // Initialize from Profile & LocalStorage
+  useEffect(() => {
+    if (!profile) return;
+
+    setBankName(profile.bank_name || "");
+    setAccountNumber(profile.account_number || "");
+    setIfscCode(profile.ifsc_code || "");
+    setUpiId(profile.upi_id || "");
+
+    // Load org capital limit if lender
+    if (isLender && profile.org_id) {
+      supabase
+        .from("organizations")
+        .select("capital_pool_limit")
+        .eq("id", profile.org_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.capital_pool_limit) {
+            setMaxLoanLimit(String(data.capital_pool_limit));
+          }
+        });
+    }
+
+    // Load local preferences snapshot
+    try {
+      const stored = localStorage.getItem(`sahayam_prefs_${profile.id}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed.emailLoanUpdates === "boolean") setEmailLoanUpdates(parsed.emailLoanUpdates);
+        if (typeof parsed.emailRepaymentReminders === "boolean") setEmailRepaymentReminders(parsed.emailRepaymentReminders);
+        if (typeof parsed.inAppToasts === "boolean") setInAppToasts(parsed.inAppToasts);
+        if (typeof parsed.monthlyStatement === "boolean") setMonthlyStatement(parsed.monthlyStatement);
+        if (typeof parsed.twoFactorAuth === "boolean") setTwoFactorAuth(parsed.twoFactorAuth);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
+  function persistPreferences(key: string, val: boolean) {
+    if (!profile) return;
+    try {
+      const current = {
+        emailLoanUpdates,
+        emailRepaymentReminders,
+        inAppToasts,
+        monthlyStatement,
+        twoFactorAuth,
+        [key]: val,
+      };
+      localStorage.setItem(`sahayam_prefs_${profile.id}`, JSON.stringify(current));
+    } catch {}
+  }
+
   // Tabs Configuration based on Role
   const tabs = [
     ...(isLender ? [{ value: "policy" as TabValue, label: "Lending Policies" }] : []),
+    { value: "bank" as TabValue, label: "Bank & Disbursals" },
     { value: "notifications" as TabValue, label: "Notifications" },
     { value: "appearance" as TabValue, label: "Appearance" },
     { value: "security" as TabValue, label: "Security & Account" },
   ];
 
-  function handleSavePolicy(e: React.FormEvent) {
+  async function handleSaveBankDetails(e: React.FormEvent) {
     e.preventDefault();
+    if (!profile) return;
+
+    if (ifscCode.trim() && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode.trim())) {
+      push("error", "Please enter a valid 11-character Indian IFSC code (e.g. SBIN0001234).");
+      return;
+    }
+
+    setSavingBank(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          bank_name: bankName.trim() || null,
+          account_number: accountNumber.trim() || null,
+          ifsc_code: ifscCode.trim().toUpperCase() || null,
+          upi_id: upiId.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      push("success", "Bank account & payment disbursal details updated successfully!");
+      refresh();
+    } catch (err: any) {
+      push("error", err.message || "Could not save bank details.");
+    } finally {
+      setSavingBank(false);
+    }
+  }
+
+  async function handleSavePolicy(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profile?.org_id) return;
     setSavingPolicy(true);
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({
+          capital_pool_limit: Number(maxLoanLimit) || 2500000,
+        })
+        .eq("id", profile.org_id);
+
+      if (error) throw error;
+
+      push("success", "Organization lending policy & capital pool ceiling updated!");
+    } catch (err: any) {
+      push("error", err.message || "Failed to update lending policy.");
+    } finally {
       setSavingPolicy(false);
-      push("success", "Lending policy guidelines updated successfully!");
-    }, 600);
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!profile?.email) return;
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/login`,
+      });
+      if (error) throw error;
+      push("success", `Password reset link sent to ${profile.email}`);
+    } catch (err: any) {
+      push("error", err.message || "Could not send password reset email.");
+    } finally {
+      setResettingPassword(false);
+    }
   }
 
   function handleExportData() {
@@ -84,6 +212,19 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
         email: profile?.email,
         role: userRole,
         org_id: profile?.org_id,
+        bank_details: {
+          bank_name: bankName,
+          account_number: accountNumber,
+          ifsc_code: ifscCode,
+          upi_id: upiId,
+        },
+        preferences: {
+          emailLoanUpdates,
+          emailRepaymentReminders,
+          inAppToasts,
+          monthlyStatement,
+          twoFactorAuth,
+        },
         exported_at: new Date().toISOString(),
       },
       null,
@@ -109,7 +250,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
             Settings
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-            Manage application preferences, notification channels, and platform guidelines.
+            Manage application preferences, bank accounts, notification channels, and platform guidelines.
           </p>
         </div>
 
@@ -141,16 +282,16 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
               <div>
-                <label className="label">Maximum Credit Ceiling per Employee (₹)</label>
+                <label className="label">Organization Capital Pool Ceiling (₹)</label>
                 <input
                   type="number"
                   className="input"
                   value={maxLoanLimit}
                   onChange={(e) => setMaxLoanLimit(e.target.value)}
-                  step="5000"
+                  step="50000"
                 />
                 <span className="text-[11px] text-slate-400 mt-1 block">
-                  Upper limit for any single active loan request.
+                  Total capital ceiling available for employee emergency credit line.
                 </span>
               </div>
 
@@ -189,22 +330,22 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
                 <div>
                   <p className="text-sm font-medium text-ink dark:text-white">
-                    Require DocuSeal Digital Signatures
+                    Require Digital E-Signatures
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Enforce legally binding digital agreement signatures before disbursal.
+                    Enforce legally binding internal SHA-256 e-signature agreements before disbursal.
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setRequireDocuseal(!requireDocuseal)}
+                  onClick={() => setRequireDigitalSignatures(!requireDigitalSignatures)}
                   className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                    requireDocuseal ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
+                    requireDigitalSignatures ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
                   }`}
                 >
                   <div
                     className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      requireDocuseal ? "translate-x-6" : "translate-x-0"
+                      requireDigitalSignatures ? "translate-x-6" : "translate-x-0"
                     }`}
                   />
                 </button>
@@ -213,10 +354,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
                 <div>
                   <p className="text-sm font-medium text-ink dark:text-white">
-                    Mandatory HRMS Status Checks
+                    Mandatory Employment Checks
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Automatically verify active employment status via organization HR API.
+                    Require employee salary slip / ID verification prior to loan approval.
                   </p>
                 </div>
                 <button
@@ -245,6 +386,71 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
         </form>
       )}
 
+      {/* Bank & Disbursals Tab */}
+      {activeTab === "bank" && (
+        <form onSubmit={handleSaveBankDetails} className="space-y-6 animate-fade-in">
+          <Card className="space-y-5">
+            <div className="flex items-center gap-2 text-signal">
+              <Landmark className="h-5 w-5" />
+              <CardTitle>Bank Account &amp; Disbursal Preferences</CardTitle>
+            </div>
+            <CardDescription>
+              Add or update your primary bank account or UPI ID for direct loan disbursals and repayment settlement.
+            </CardDescription>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <Field label="Bank Name" htmlFor="bank_name">
+                <Input
+                  id="bank_name"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="e.g. State Bank of India, HDFC Bank"
+                  className="rounded-xl"
+                />
+              </Field>
+
+              <Field label="Account Number" htmlFor="account_number">
+                <Input
+                  id="account_number"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  placeholder="e.g. 123456789012"
+                  className="rounded-xl font-mono"
+                />
+              </Field>
+
+              <Field label="IFSC Code" htmlFor="ifsc_code">
+                <Input
+                  id="ifsc_code"
+                  maxLength={11}
+                  value={ifscCode}
+                  onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. SBIN0001234"
+                  className="rounded-xl uppercase font-mono font-bold"
+                />
+              </Field>
+
+              <Field label="UPI ID (VPA)" htmlFor="upi_id">
+                <Input
+                  id="upi_id"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="e.g. user@okaxis, user@upi"
+                  className="rounded-xl font-medium"
+                />
+              </Field>
+            </div>
+          </Card>
+
+          <div className="flex items-center justify-end pt-2">
+            <Button type="submit" variant="primary" loading={savingBank}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Save Bank &amp; Disbursal Details
+            </Button>
+          </div>
+        </form>
+      )}
+
       {/* Notifications Tab */}
       {activeTab === "notifications" && (
         <Card className="space-y-6 animate-fade-in">
@@ -267,8 +473,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setEmailLoanUpdates(!emailLoanUpdates);
-                  push("info", `Email alerts ${!emailLoanUpdates ? "enabled" : "disabled"}.`);
+                  const val = !emailLoanUpdates;
+                  setEmailLoanUpdates(val);
+                  persistPreferences("emailLoanUpdates", val);
+                  push("info", `Email alerts ${val ? "enabled" : "disabled"}.`);
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                   emailLoanUpdates ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
@@ -286,14 +494,16 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <div>
                 <p className="text-sm font-medium text-ink dark:text-white">Repayment Reminders</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Get reminder emails 3 days prior to salary deduction or payment due dates.
+                  Get reminder emails prior to salary deduction or payment due dates.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setEmailRepaymentReminders(!emailRepaymentReminders);
-                  push("info", `Repayment reminders ${!emailRepaymentReminders ? "enabled" : "disabled"}.`);
+                  const val = !emailRepaymentReminders;
+                  setEmailRepaymentReminders(val);
+                  persistPreferences("emailRepaymentReminders", val);
+                  push("info", `Repayment reminders ${val ? "enabled" : "disabled"}.`);
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                   emailRepaymentReminders ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
@@ -317,8 +527,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setInAppToasts(!inAppToasts);
-                  push("info", `In-app toasts ${!inAppToasts ? "enabled" : "disabled"}.`);
+                  const val = !inAppToasts;
+                  setInAppToasts(val);
+                  persistPreferences("inAppToasts", val);
+                  push("info", `In-app toasts ${val ? "enabled" : "disabled"}.`);
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                   inAppToasts ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
@@ -336,14 +548,16 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
               <div>
                 <p className="text-sm font-medium text-ink dark:text-white">Monthly Statement Digest</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Monthly PDF summary of total borrowed, repaid, and active balance.
+                  Monthly summary of total borrowed, repaid, and active balance.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  setMonthlyStatement(!monthlyStatement);
-                  push("info", `Monthly digest ${!monthlyStatement ? "enabled" : "disabled"}.`);
+                  const val = !monthlyStatement;
+                  setMonthlyStatement(val);
+                  persistPreferences("monthlyStatement", val);
+                  push("info", `Monthly digest ${val ? "enabled" : "disabled"}.`);
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                   monthlyStatement ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
@@ -450,8 +664,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    setTwoFactorAuth(!twoFactorAuth);
-                    push("info", `2FA status updated.`);
+                    const val = !twoFactorAuth;
+                    setTwoFactorAuth(val);
+                    persistPreferences("twoFactorAuth", val);
+                    push("info", `2FA status ${val ? "enabled" : "disabled"}.`);
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                     twoFactorAuth ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
@@ -474,7 +690,8 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
                 </div>
                 <Button
                   variant="secondary"
-                  onClick={() => push("info", "Password reset link sent to your registered work email.")}
+                  loading={resettingPassword}
+                  onClick={handleResetPassword}
                   className="text-xs py-1.5 h-auto"
                 >
                   <Lock className="h-3.5 w-3.5 mr-1.5" />

@@ -26,7 +26,7 @@ import {
 import Link from "next/link";
 
 export default function CustomerVerificationPage() {
-  const { profile, refresh } = useAuth();
+  const { profile, loading, refresh } = useAuth();
   const { push } = useToast();
   const supabase = createClient();
 
@@ -35,7 +35,31 @@ export default function CustomerVerificationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showResubmitForm, setShowResubmitForm] = useState(false);
 
-  if (!profile) return null;
+  if (loading) {
+    return (
+      <div className="max-w-5xl space-y-6 pb-16">
+        <div className="h-32 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        <div className="h-64 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center space-y-4">
+        <div className="p-8 rounded-3xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-card space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-signal/10 text-signal flex items-center justify-center mx-auto">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <h2 className="text-xl font-extrabold text-ink dark:text-white">Authentication Required</h2>
+          <p className="text-xs text-slate-500 font-medium">Please sign in to access Borrower Identity Verification.</p>
+          <Link href="/login" className="btn-primary inline-flex items-center justify-center w-full py-3 rounded-xl text-xs font-bold shadow-button">
+            Sign In to Sahayam
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // IMPORTANT FIX: A profile is only truly verified if documents have actually been submitted and approved!
   const hasUploadedDocs = Boolean(profile.id_proof_url || profile.employment_proof_url);

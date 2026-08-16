@@ -86,8 +86,6 @@ export default async function RootPage() {
           <nav className="hidden md:flex items-center gap-9 text-sm font-bold text-ink-slate">
             <a href="#features" className="hover:text-signal transition-colors">Features</a>
             <a href="#lender-demo" className="hover:text-signal transition-colors">Lender Working Demo</a>
-            <a href="#integrations" className="hover:text-signal transition-colors">Integrations</a>
-            <a href="#pricing" className="hover:text-signal transition-colors">Pricing</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -131,7 +129,7 @@ export default async function RootPage() {
             </h1>
 
             <p className="text-lg sm:text-xl text-ink-slate leading-relaxed max-w-xl">
-              Empower your team with 0% interest emergency credit pools, legally binding DocuSeal digital agreements, and automated HRMS workflow approvals.
+              Empower your team with 0% interest emergency credit pools, legally binding digital e-signatures, and automated HRMS workflow approvals.
             </p>
 
             {/* Direct CTA Action Group */}
@@ -153,7 +151,7 @@ export default async function RootPage() {
             </div>
 
             <p className="text-xs text-ink-slate font-medium">
-              Multi-tenant RLS isolation • DocuSeal e-signatures • Resend notifications
+              Multi-tenant RLS isolation • Native e-signatures • Resend notifications
             </p>
           </div>
 
@@ -210,8 +208,6 @@ export default async function RootPage() {
             <h5 className="font-extrabold text-sm text-ink dark:text-white mb-4">Product</h5>
             <ul className="space-y-2.5 text-xs font-semibold">
               <li><a href="#features" className="hover:text-signal transition-colors">Features</a></li>
-              <li><a href="#integrations" className="hover:text-signal transition-colors">Integrations</a></li>
-              <li><a href="#pricing" className="hover:text-signal transition-colors">Pricing</a></li>
             </ul>
           </div>
 
@@ -220,7 +216,7 @@ export default async function RootPage() {
             <ul className="space-y-2.5 text-xs font-semibold">
               <li><Link href="/signup" className="hover:text-signal transition-colors">For Enterprises</Link></li>
               <li><Link href="/signup" className="hover:text-signal transition-colors">For Startups</Link></li>
-              <li><Link href="/signup" className="hover:text-signal transition-colors">DocuSeal Integration</Link></li>
+              <li><Link href="/signup" className="hover:text-signal transition-colors">Digital Agreements</Link></li>
             </ul>
           </div>
 
