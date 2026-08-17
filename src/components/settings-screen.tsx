@@ -52,15 +52,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   // Lender Policy Form State
   const [maxLoanLimit, setMaxLoanLimit] = useState("2500000");
   const [annualInterestRate, setAnnualInterestRate] = useState("0.0");
-  const [autoApproveThreshold, setAutoApproveThreshold] = useState("15000");
-  const [requireDigitalSignatures, setRequireDigitalSignatures] = useState(true);
-  const [requireHrmsVerification, setRequireHrmsVerification] = useState(true);
 
-  // Bank & Payout Preferences State
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [ifscCode, setIfscCode] = useState("");
+  // Payout & Alternative Contact State
   const [upiId, setUpiId] = useState("");
+  const [phone, setPhone] = useState("");
 
   // Notification Preferences State
   const [emailLoanUpdates, setEmailLoanUpdates] = useState(true);
@@ -75,10 +70,8 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   useEffect(() => {
     if (!profile) return;
 
-    setBankName(profile.bank_name || "");
-    setAccountNumber(profile.account_number || "");
-    setIfscCode(profile.ifsc_code || "");
     setUpiId(profile.upi_id || "");
+    setPhone(profile.phone || "");
 
     // Load org capital limit if lender
     if (isLender && profile.org_id) {
@@ -127,7 +120,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   // Tabs Configuration based on Role
   const tabs = [
     ...(isLender ? [{ value: "policy" as TabValue, label: "Lending Policies" }] : []),
-    { value: "bank" as TabValue, label: "UPI & Payment Details" },
+    { value: "bank" as TabValue, label: "Payout & Alternative Contact" },
     { value: "notifications" as TabValue, label: "Notifications" },
     { value: "appearance" as TabValue, label: "Appearance" },
     { value: "security" as TabValue, label: "Security & Account" },
@@ -137,22 +130,34 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
     e.preventDefault();
     if (!profile) return;
 
+    if (!upiId.trim()) {
+      push("error", "Mandatory field missing: Please enter a valid UPI ID (VPA).");
+      return;
+    }
+
+    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, "");
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 13 || !/^\d+$/.test(cleanPhone)) {
+      push("error", "Mandatory field missing: Please enter a valid 10-digit Mobile Phone Number.");
+      return;
+    }
+
     setSavingBank(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
-          upi_id: upiId.trim() || null,
+          upi_id: upiId.trim(),
+          phone: phone.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", profile.id);
 
       if (error) throw error;
 
-      push("success", "UPI payment details updated successfully!");
+      push("success", "Alternative contact & UPI payout details updated successfully!");
       refresh();
     } catch (err: any) {
-      push("error", err.message || "Could not save payment details.");
+      push("error", err.message || "Could not save details.");
     } finally {
       setSavingBank(false);
     }
@@ -204,11 +209,9 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
         email: profile?.email,
         role: userRole,
         org_id: profile?.org_id,
-        bank_details: {
-          bank_name: bankName,
-          account_number: accountNumber,
-          ifsc_code: ifscCode,
-          upi_id: upiId,
+        payout_and_contact_details: {
+          upi_id: upiId || profile?.upi_id || null,
+          phone: phone || profile?.phone || null,
         },
         preferences: {
           emailLoanUpdates,
@@ -301,71 +304,6 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
                 </span>
               </div>
 
-              <div>
-                <label className="label">Auto-Approval Threshold (₹)</label>
-                <input
-                  type="number"
-                  className="input"
-                  value={autoApproveThreshold}
-                  onChange={(e) => setAutoApproveThreshold(e.target.value)}
-                  step="1000"
-                />
-                <span className="text-[11px] text-slate-400 mt-1 block">
-                  Requests below this amount with verified KYC skip manual review.
-                </span>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-200 dark:border-slate-800 pt-4 space-y-4">
-              <h4 className="text-sm font-semibold text-ink dark:text-white">Compliance & Signatures</h4>
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <p className="text-sm font-medium text-ink dark:text-white">
-                    Require Digital E-Signatures
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Enforce legally binding internal SHA-256 e-signature agreements before disbursal.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRequireDigitalSignatures(!requireDigitalSignatures)}
-                  className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                    requireDigitalSignatures ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      requireDigitalSignatures ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
-                <div>
-                  <p className="text-sm font-medium text-ink dark:text-white">
-                    Mandatory Employment Checks
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Require employee salary slip / ID verification prior to loan approval.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRequireHrmsVerification(!requireHrmsVerification)}
-                  className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
-                    requireHrmsVerification ? "bg-signal" : "bg-slate-300 dark:bg-slate-700"
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                      requireHrmsVerification ? "translate-x-6" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-              </div>
             </div>
           </Card>
 
@@ -378,35 +316,71 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
         </form>
       )}
 
-      {/* UPI & Payment Details Tab */}
+      {/* Payout & Alternative Contact Details Tab */}
       {activeTab === "bank" && (
         <form onSubmit={handleSaveBankDetails} className="space-y-6 animate-fade-in">
           <Card className="space-y-5">
-            <div className="flex items-center gap-2 text-signal">
-              <CreditCard className="h-5 w-5" />
-              <CardTitle>UPI Payment Details</CardTitle>
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-surface-border-dark pb-3">
+              <div className="flex items-center gap-2 text-signal">
+                <Smartphone className="h-5 w-5" />
+                <CardTitle>Payout &amp; Alternative Contact Details</CardTitle>
+              </div>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-full border border-amber-200 dark:border-amber-900/50">
+                UPI &amp; Mobile Required
+              </span>
             </div>
             <CardDescription>
-              Add or update your primary UPI ID for quick loan disbursals and instant repayment settlements.
+              Specify mandatory alternative contact and instant UPI settlement parameters. Direct bank transfers occur via user UPI VPA.
             </CardDescription>
 
-            <div className="pt-2">
-              <Field label="UPI ID (VPA)" htmlFor="upi_id">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+              <Field label="UPI ID / VPA *" htmlFor="upi_id">
                 <Input
                   id="upi_id"
+                  required
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
                   placeholder="e.g. user@okaxis, user@upi"
                   className="rounded-xl font-medium"
                 />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Mandatory for instant peer-to-peer credit disbursal and repayment settlement.
+                </span>
               </Field>
+
+              <Field label="Mobile Phone Number *" htmlFor="phone">
+                <Input
+                  id="phone"
+                  required
+                  type="tel"
+                  maxLength={14}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  className="rounded-xl font-medium"
+                />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Mandatory primary contact phone for SMS alerts and identity verification.
+                </span>
+              </Field>
+            </div>
+
+            {/* ID Proof Policy Card Notice */}
+            <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/30 text-xs text-blue-900 dark:text-blue-200 space-y-1">
+              <span className="font-bold flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                Primary ID Proof Standard: Employee Pay Slip (Salary Slip)
+              </span>
+              <p className="text-[11px] text-blue-800 dark:text-blue-300">
+                Per organizational compliance, your Employee Pay Slip serves as the primary official ID Proof for intra-company emergency credit verification.
+              </p>
             </div>
           </Card>
 
           <div className="flex items-center justify-end pt-2">
             <Button type="submit" variant="primary" loading={savingBank}>
               <CreditCard className="h-4 w-4 mr-2" />
-              Save Payment Details
+              Save Payout &amp; Contact Details
             </Button>
           </div>
         </form>

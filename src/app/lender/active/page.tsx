@@ -247,7 +247,7 @@ export default function AdminActiveLoansPage() {
               <Th>Plan / Tenure</Th>
               <Th>Due Date</Th>
               <Th>Status</Th>
-              <Th className="text-right">Action</Th>
+              <Th className="text-center">Action</Th>
             </tr>
           </Thead>
           <tbody>
@@ -306,35 +306,37 @@ export default function AdminActiveLoansPage() {
                       <LoanStatusBadge status={loan.status} />
                     </Link>
                   </Td>
-                  <Td className="text-right">
-                    {loan.status === "approved" && (
-                      <Button 
-                        variant="secondary" 
-                        className="text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDisbursing(loan);
-                        }}
-                      >
-                        <UploadCloud className="h-3.5 w-3.5" /> Disburse
-                      </Button>
-                    )}
-                    {loan.status === "active" && loan.repayment_proof_url && (
-                      <Button 
-                        variant="primary" 
-                        className="text-xs px-3 py-1.5 inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors animate-pulse"
-                        loading={submitting} 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleComplete(loan);
-                        }}
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5" /> Verify &amp; Complete
-                      </Button>
-                    )}
-                    {loan.status === "active" && !loan.repayment_proof_url && (
-                      <span className="text-xs text-slate-400 font-medium px-2">Awaiting Repayment</span>
-                    )}
+                  <Td className="text-center">
+                    <div className="flex justify-center items-center gap-2">
+                      {loan.status === "approved" && (
+                        <Button 
+                          variant="secondary" 
+                          className="text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDisbursing(loan);
+                          }}
+                        >
+                          <UploadCloud className="h-3.5 w-3.5" /> Disburse
+                        </Button>
+                      )}
+                      {loan.status === "active" && loan.repayment_proof_url && (
+                        <Button 
+                          variant="primary" 
+                          className="text-xs px-3 py-1.5 inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors animate-pulse"
+                          loading={submitting} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleComplete(loan);
+                          }}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" /> Verify &amp; Complete
+                        </Button>
+                      )}
+                      {loan.status === "active" && !loan.repayment_proof_url && (
+                        <span className="text-xs text-slate-400 font-medium px-2">Awaiting Repayment</span>
+                      )}
+                    </div>
                   </Td>
                 </Tr>
               );

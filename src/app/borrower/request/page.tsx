@@ -26,7 +26,8 @@ import {
   FileText,
   Sliders,
   Award,
-  Zap
+  Zap,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function RequestLoanPage() {
@@ -274,6 +275,26 @@ export default function RequestLoanPage() {
                 placeholder="e.g. Emergency medical advance, family urgent expenditure..."
               />
             </Field>
+
+            {/* Platform Suggested Disclaimer Box */}
+            <div className="p-4 rounded-2xl border border-amber-500/30 dark:border-amber-400/20 bg-amber-50/70 dark:bg-amber-950/20 text-xs text-amber-950 dark:text-amber-200 space-y-2 shadow-sm relative overflow-hidden">
+              <div className="flex items-center gap-2 pb-1.5 border-b border-amber-200/80 dark:border-amber-900/40">
+                <div className="p-1 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 shrink-0">
+                  <ShieldAlert className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block leading-none">
+                    Legal &amp; Platform Notice
+                  </span>
+                  <span className="font-extrabold text-xs text-ink dark:text-white">
+                    Suggested Disclaimer
+                  </span>
+                </div>
+              </div>
+              <p className="leading-relaxed text-[11px] text-amber-900/90 dark:text-amber-300 font-medium">
+                This platform only facilitates introductions and documentation between employees who voluntarily choose to lend and borrow. It does not hold, transfer, or manage funds, does not guarantee repayment, and is not a bank, NBFC, or financial institution. All loan transactions occur directly between the lender and borrower.
+              </p>
+            </div>
 
             <Button
               type="submit"

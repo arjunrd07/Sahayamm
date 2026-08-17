@@ -96,8 +96,11 @@ export function Topbar({ items }: TopbarProps) {
   const active = items.find((item) => pathname?.startsWith(item.href));
   const title = active?.label ?? "Sahayam";
 
-  // Map real database notifications to UI format
-  const displayNotifications: NotificationItem[] = notifications.slice(0, 8).map((n) => {
+  // Map real database notifications to UI format (Latest on top)
+  const sortedNotifs = [...notifications].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  const displayNotifications: NotificationItem[] = sortedNotifs.slice(0, 8).map((n) => {
     const { icon, color } = getNotificationIconAndColor(n.type);
     return {
       id: n.id,
@@ -241,7 +244,7 @@ export function Topbar({ items }: TopbarProps) {
               {/* Notification Items List */}
               <div className="p-3 max-h-[380px] overflow-y-auto space-y-2">
                 {displayNotifications.length > 0 ? (
-                  <AnimatedList delay={1000}>
+                  <AnimatedList delay={500} reverse={false}>
                     {displayNotifications.map((item, idx) => (
                       <NotificationCard key={item.id ?? idx} {...item} />
                     ))}

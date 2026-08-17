@@ -30,6 +30,9 @@ export interface ThProps extends ThHTMLAttributes<HTMLTableCellElement> {
 }
 
 export function Th({ className, sortable, onSort, children, ...props }: ThProps) {
+  const isCenter = className?.includes("text-center");
+  const isRight = className?.includes("text-right");
+
   return (
     <th
       className={cn(
@@ -40,7 +43,12 @@ export function Th({ className, sortable, onSort, children, ...props }: ThProps)
       onClick={sortable ? onSort : undefined}
       {...props}
     >
-      <div className="flex items-center gap-1.5">
+      <div
+        className={cn(
+          "flex items-center gap-1.5",
+          isCenter ? "justify-center" : isRight ? "justify-end" : "justify-start"
+        )}
+      >
         <span>{children}</span>
         {sortable && <ArrowUpDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />}
       </div>

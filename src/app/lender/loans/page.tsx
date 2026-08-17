@@ -222,7 +222,7 @@ export default function AdminLoanRequestsPage() {
               <Th>Plan / Tenure</Th>
               <Th>Requested Date</Th>
               <Th>Status</Th>
-              <Th className="text-right">Action</Th>
+              <Th className="text-center">Action</Th>
             </tr>
           </Thead>
           <tbody>
@@ -295,16 +295,18 @@ export default function AdminLoanRequestsPage() {
                   </Td>
 
                   {/* Column 7: Action */}
-                  <Td className="text-right">
-                    <Link
-                      href={loanUrl}
-                      className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      Review Request
-                    </Link>
+                  <Td className="text-center">
+                    <div className="flex justify-center">
+                      <Link
+                        href={loanUrl}
+                        className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        Review Request
+                      </Link>
+                    </div>
                   </Td>
                 </Tr>
               );

@@ -489,6 +489,16 @@ export default function CustomerVerificationPage() {
               <li>Protects both lenders and borrowers with legal lending agreements</li>
             </ul>
           </Card>
+
+          {/* Platform Disclaimer Card */}
+          <Card className="p-5 border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/60 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <span className="font-extrabold text-ink dark:text-white uppercase tracking-wider text-[11px] block">
+              Disclaimer
+            </span>
+            <p className="leading-relaxed text-[11px]">
+              This platform only facilitates introductions and documentation between employees who voluntarily choose to lend and borrow. It does not hold, transfer, or manage funds, does not guarantee repayment, and is not a bank, NBFC, or financial institution. All loan transactions occur directly between the lender and borrower.
+            </p>
+          </Card>
         </div>
       </div>
     </div>

@@ -358,7 +358,7 @@ export default function SuperadminLoansPage() {
               <Th>Amount &amp; Purpose</Th>
               <Th>Status</Th>
               <Th>Date</Th>
-              <Th className="text-right">Actions</Th>
+              <Th className="text-center">Actions</Th>
             </Tr>
           </Thead>
           <tbody>
@@ -414,8 +414,8 @@ export default function SuperadminLoansPage() {
                       </span>
                     </Td>
                     <Td className="text-xs text-ink-slate font-medium">{formatDate(l.created_at)}</Td>
-                    <Td className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <Td className="text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         {(l.disbursal_proof_url || l.repayment_proof_url) && (
                           <Button
                             variant="secondary"

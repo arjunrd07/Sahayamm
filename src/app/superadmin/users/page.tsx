@@ -317,7 +317,7 @@ export default function SuperadminUsersPage() {
                   <th className="pb-3 font-bold">Role</th>
                   <th className="pb-3 font-bold">Verification</th>
                   <th className="pb-3 font-bold">Joined</th>
-                  <th className="pb-3 font-bold text-right">Actions</th>
+                  <th className="pb-3 font-bold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-border dark:divide-surface-border-dark">
@@ -364,8 +364,8 @@ export default function SuperadminUsersPage() {
                         </span>
                       </td>
                       <td className="py-3.5 text-xs text-ink-slate">{formatDate(u.created_at)}</td>
-                      <td className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           {/* View Details */}
                           <button
                             onClick={() => setSelectedUserDetail(u)}

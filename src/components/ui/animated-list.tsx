@@ -7,10 +7,11 @@ export interface AnimatedListProps {
   className?: string;
   children: React.ReactNode;
   delay?: number;
+  reverse?: boolean;
 }
 
 export const AnimatedList = React.memo(
-  ({ className, children, delay = 1500 }: AnimatedListProps) => {
+  ({ className, children, delay = 1500, reverse = true }: AnimatedListProps) => {
     const [index, setIndex] = useState(0);
     const childrenArray = useMemo(
       () => React.Children.toArray(children),
@@ -27,8 +28,9 @@ export const AnimatedList = React.memo(
     }, [index, delay, childrenArray.length]);
 
     const itemsToShow = useMemo(() => {
-      return childrenArray.slice(0, index + 1).reverse();
-    }, [index, childrenArray]);
+      const sliced = childrenArray.slice(0, index + 1);
+      return reverse ? sliced.reverse() : sliced;
+    }, [index, childrenArray, reverse]);
 
     return (
       <div className={cn("flex flex-col items-center gap-3", className)}>
