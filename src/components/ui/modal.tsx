@@ -56,16 +56,16 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative w-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl p-6 sm:p-7 shadow-elevated z-10 animate-in fade-in zoom-in-95 duration-200 my-8",
+          "relative w-full bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 sm:p-7 shadow-elevated z-10 animate-in fade-in zoom-in-95 duration-200 my-auto max-h-[90vh] flex flex-col overflow-hidden",
           sizeClasses[size]
         )}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <div className="flex items-start justify-between gap-4 mb-5 pb-3 border-b border-slate-100 dark:border-white/5">
+        <div className="flex items-start justify-between gap-4 mb-4 pb-3 border-b border-slate-100 dark:border-white/5 shrink-0">
           <div>
-            <h2 id="modal-title" className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            <h2 id="modal-title" className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               {title}
             </h2>
             {description && <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{description}</p>}
@@ -78,8 +78,8 @@ export function Modal({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div>{children}</div>
-        {footer && <div className="mt-6 pt-4 border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-3">{footer}</div>}
+        <div className="overflow-y-auto flex-1 pr-1">{children}</div>
+        {footer && <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 shrink-0">{footer}</div>}
       </div>
     </div>,
     document.body

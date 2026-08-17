@@ -118,9 +118,9 @@ export default function LoginPage() {
           .eq("id", authResponse.data.user.id)
           .maybeSingle();
 
-        // Enforce mandatory KYC details requirement for regular users
+        // Enforce mandatory profile details requirement for regular users
         if (profile && profile.role !== "superadmin" && (!profile.pan_number || !profile.cibil_score || !profile.address || !profile.phone)) {
-          push("error", "Mandatory KYC details (PAN, CIBIL Score, Address, Phone) not completed. Please complete registration step 2.");
+          push("error", "Mandatory profile details (PAN, CIBIL Score, Address, Phone) not completed. Please complete registration step 3.");
           router.push("/signup");
           return;
         }
@@ -201,7 +201,15 @@ export default function LoginPage() {
           />
         </Field>
 
-        <Field label="Password" htmlFor="password">
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
+              Password
+            </label>
+            <Link href="/forgot-password" className="text-xs font-bold text-signal hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <Input
             id="password"
             type="password"
@@ -210,7 +218,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
           />
-        </Field>
+        </div>
 
         <Button type="submit" variant="primary" className="w-full py-3.5 text-base font-bold rounded-full shadow-button" loading={loading}>
           Log In To Workspace
@@ -220,7 +228,7 @@ export default function LoginPage() {
       <p className="text-sm text-ink-slate text-center mt-6 font-semibold">
         New to Sahayam?{" "}
         <Link href="/signup" className="text-signal font-bold hover:underline">
-          Create account & complete mandatory KYC
+          Create account & complete profile setup
         </Link>
       </p>
     </AuthShell>

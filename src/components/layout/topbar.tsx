@@ -204,7 +204,7 @@ export function Topbar({ items }: TopbarProps) {
 
           {/* Animated Glass Notification Dropdown Popover */}
           {notifOpen && (
-            <div className="absolute right-0 top-12 w-80 sm:w-96 rounded-2xl bg-white/95 dark:bg-surface-dark/95 backdrop-blur-2xl border border-slate-200 dark:border-surface-border-dark shadow-elevated z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute right-[-8px] sm:right-0 top-12 w-[calc(100vw-32px)] max-w-sm sm:w-96 rounded-2xl bg-white/95 dark:bg-surface-dark/95 backdrop-blur-2xl border border-slate-200 dark:border-surface-border-dark shadow-elevated z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               <div className="p-4 border-b border-slate-100 dark:border-surface-border-dark flex items-center justify-between bg-slate-50/60 dark:bg-white/5">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-ink dark:text-white">Notifications</h3>

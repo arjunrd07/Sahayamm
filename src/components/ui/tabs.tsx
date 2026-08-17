@@ -12,13 +12,13 @@ export function Tabs<T extends string>({
   tabs: { value: T; label: string; count?: number }[];
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-surface-border dark:border-surface-border-dark overflow-x-auto no-scrollbar">
+    <div className="flex flex-nowrap items-center gap-1 border-b border-surface-border dark:border-surface-border-dark overflow-x-auto no-scrollbar pb-0.5 max-w-full">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           onClick={() => onChange(tab.value)}
           className={cn(
-            "px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer",
+            "px-3.5 sm:px-4 py-2.5 text-xs sm:text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer shrink-0",
             value === tab.value
               ? "border-ink dark:border-white text-ink dark:text-white"
               : "border-transparent text-muted hover:text-ink dark:hover:text-white"

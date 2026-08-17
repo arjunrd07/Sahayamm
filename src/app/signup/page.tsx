@@ -10,11 +10,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import type { Organization } from "@/types/database";
 import { createUserProfile } from "./actions";
+import { sendEmailOtp, verifyEmailOtp } from "../actions/otp";
 
 const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 export default function SignupPage() {
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [existingOrgs, setExistingOrgs] = useState<Organization[]>([]);
   const [selectedRole, setSelectedRole] = useState<"borrower" | "lender">("borrower");
 
@@ -25,7 +26,12 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Step 2 Mandatory Verification Details State
+  // Step 2 OTP State
+  const [signupOtpCode, setSignupOtpCode] = useState("");
+  const [resendTimer, setResendTimer] = useState(120); // 2 minutes (120s) countdown
+  const [timerActive, setTimerActive] = useState(false);
+
+  // Step 3 Mandatory Verification Details State
   const [panNumber, setPanNumber] = useState("");
   const [cibilScore, setCibilScore] = useState("750");
   const [address, setAddress] = useState("");
@@ -53,6 +59,27 @@ export default function SignupPage() {
     loadOrgs();
   }, []);
 
+  // 2-minute countdown timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (timerActive && resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (resendTimer === 0) {
+      setTimerActive(false);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timerActive, resendTimer]);
+
+  function formatTime(seconds: number) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }
+
   async function handleGoogleSignUp() {
     setLoading(true);
     try {
@@ -72,23 +99,108 @@ export default function SignupPage() {
     }
   }
 
-  function handleProceedToStep2(e: React.FormEvent) {
+  // Handle Step 1: Submit Account Info & Trigger Email OTP
+  async function handleProceedToStep2(e: React.FormEvent) {
     e.preventDefault();
-    if (!fullName.trim()) {
+
+    const cleanFullName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanFullName) {
       push("error", "Full name is required.");
       return;
     }
-    if (!email.trim()) {
-      push("error", "Email is required.");
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      push("error", "Valid email address is required.");
       return;
     }
     if (!password || password.length < 6) {
       push("error", "Password must be at least 6 characters.");
       return;
     }
-    setStep(2);
+
+    setLoading(true);
+
+    try {
+      // Send OTP code to user's email
+      const res = await sendEmailOtp(cleanEmail, "signup");
+
+      if (!res.success) {
+        push("error", res.error || "Failed to send verification OTP code.");
+        setLoading(false);
+        return;
+      }
+
+      push("success", res.message || `Verification OTP code sent to ${cleanEmail}!`);
+      if (res.mockCode) {
+        push("info", `[DEV MODE] Signup OTP code is: ${res.mockCode}`);
+      }
+
+      setStep(2);
+      setResendTimer(res.resendCooldown || 120);
+      setTimerActive(true);
+    } catch {
+      push("error", "An error occurred while dispatching verification OTP.");
+    } finally {
+      setLoading(false);
+    }
   }
 
+  // Handle Resend Signup OTP (after 2-minute countdown)
+  async function handleResendSignupOtp() {
+    if (resendTimer > 0) return;
+
+    setLoading(true);
+    try {
+      const res = await sendEmailOtp(email, "signup");
+      if (!res.success) {
+        push("error", res.error || "Failed to resend OTP code.");
+      } else {
+        push("success", "A new OTP verification code has been sent to your email!");
+        if (res.mockCode) {
+          push("info", `[DEV MODE] New Signup OTP code: ${res.mockCode}`);
+        }
+        setResendTimer(120);
+        setTimerActive(true);
+      }
+    } catch {
+      push("error", "Failed to resend verification OTP.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Handle Step 2: Verify Email OTP Code
+  async function handleVerifyOtpStep(e: React.FormEvent) {
+    e.preventDefault();
+
+    const cleanCode = signupOtpCode.trim();
+    if (!cleanCode || cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
+      push("error", "Please enter a valid 6-digit OTP verification code.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await verifyEmailOtp(email, cleanCode, "signup");
+
+      if (!res.success) {
+        push("error", res.error || "Invalid or expired OTP code.");
+        setLoading(false);
+        return;
+      }
+
+      push("success", "Email address verified successfully! Please complete your financial profile details.");
+      setStep(3);
+    } catch {
+      push("error", "An error occurred during OTP verification.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Handle Step 3: Final Submission & Account Creation
   async function handleFinalSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -121,7 +233,10 @@ export default function SignupPage() {
     // Handle new organization creation if specified
     if (selectedOrgId === "new" && customOrgName.trim()) {
       try {
-        const generatedCode = customOrgName.trim().toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + Math.random().toString(36).substring(2, 6);
+        const generatedCode =
+          customOrgName.trim().toLowerCase().replace(/[^a-z0-9]/g, "-") +
+          "-" +
+          Math.random().toString(36).substring(2, 6);
         const { data: newOrg } = await supabase
           .from("organizations")
           .insert({
@@ -170,49 +285,94 @@ export default function SignupPage() {
       setLoading(false);
 
       if (selectedRole === "borrower") {
-        push("success", "Borrower details saved & sent to lender dashboard for verification!");
+        push("success", "Borrower account verified & sent to lender dashboard for review!");
         router.push("/lender/verifications");
       } else if (selectedRole === "lender") {
-        push("success", "Lender account created! Redirecting to lender dashboard...");
+        push("success", "Lender account verified! Redirecting to lender dashboard...");
         router.push("/lender/dashboard");
       } else {
         router.push("/borrower/dashboard");
       }
     } else {
       setLoading(false);
-      push("success", "Account created & details submitted! Sent to lender dashboard for verification.");
+      push("success", "Account created & email verified! Redirecting...");
       router.push("/lender/verifications");
     }
   }
 
   return (
     <AuthShell
-      title={step === 1 ? "Create your account" : "Mandatory Verification Details"}
+      title={
+        step === 1
+          ? "Create your account"
+          : step === 2
+          ? "Verify Email OTP"
+          : "Financial & Identity Details"
+      }
       subtitle={
         step === 1
           ? "Enter your details and select your organization to get started."
+          : step === 2
+          ? `Enter the 6-digit OTP code sent to ${email}`
           : "Provide required financial details to complete account creation."
       }
     >
+      {/* 3-Step Header Navigation */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-surface-border-dark">
-        <div className="flex items-center gap-2">
-          <span className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${step === 1 ? "bg-signal text-white shadow-sm" : "bg-emerald-500 text-white"}`}>
-            {step === 1 ? "1" : "✓"}
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`h-5 w-5 rounded-full font-bold text-[11px] flex items-center justify-center transition-all ${
+              step > 1 ? "bg-emerald-500 text-white" : "bg-signal text-white shadow-sm"
+            }`}
+          >
+            {step > 1 ? "✓" : "1"}
           </span>
           <span className="text-xs font-bold text-ink dark:text-white">Account Info</span>
         </div>
-        <div className="h-0.5 w-16 bg-slate-100 dark:bg-surface-border-dark" />
-        <div className="flex items-center gap-2">
-          <span className={`h-6 w-6 rounded-full font-bold text-xs flex items-center justify-center transition-all ${step === 2 ? "bg-signal text-white shadow-sm" : "bg-slate-200 dark:bg-white/10 text-ink-slate"}`}>
-            2
+        <div className="h-0.5 w-8 bg-slate-100 dark:bg-surface-border-dark" />
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`h-5 w-5 rounded-full font-bold text-[11px] flex items-center justify-center transition-all ${
+              step === 2
+                ? "bg-signal text-white shadow-sm"
+                : step > 2
+                ? "bg-emerald-500 text-white"
+                : "bg-slate-200 dark:bg-white/10 text-ink-slate"
+            }`}
+          >
+            {step > 2 ? "✓" : "2"}
           </span>
-          <span className={`text-xs font-bold ${step === 2 ? "text-ink dark:text-white" : "text-ink-slate"}`}>
-            KYC Verification
+          <span
+            className={`text-xs font-bold ${
+              step >= 2 ? "text-ink dark:text-white" : "text-ink-slate"
+            }`}
+          >
+            Email OTP
+          </span>
+        </div>
+        <div className="h-0.5 w-8 bg-slate-100 dark:bg-surface-border-dark" />
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`h-5 w-5 rounded-full font-bold text-[11px] flex items-center justify-center transition-all ${
+              step === 3
+                ? "bg-signal text-white shadow-sm"
+                : "bg-slate-200 dark:bg-white/10 text-ink-slate"
+            }`}
+          >
+            3
+          </span>
+          <span
+            className={`text-xs font-bold ${
+              step === 3 ? "text-ink dark:text-white" : "text-ink-slate"
+            }`}
+          >
+            Profile
           </span>
         </div>
       </div>
 
-      {step === 1 ? (
+      {/* STEP 1: Account Info */}
+      {step === 1 && (
         <form onSubmit={handleProceedToStep2} className="space-y-4">
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
@@ -276,7 +436,13 @@ export default function SignupPage() {
           )}
 
           <Field label="Full name" htmlFor="full_name">
-            <Input id="full_name" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" />
+            <Input
+              id="full_name"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="John Doe"
+            />
           </Field>
 
           <Field label="Work Email" htmlFor="email">
@@ -302,14 +468,21 @@ export default function SignupPage() {
             />
           </Field>
 
-          <Button type="submit" variant="primary" className="w-full py-3.5 text-base font-bold rounded-full shadow-button">
-            Continue
+          <Button
+            type="submit"
+            variant="primary"
+            className="w-full py-3.5 text-base font-bold rounded-full shadow-button"
+            loading={loading}
+          >
+            Continue & Send Email OTP
           </Button>
 
           <div className="pt-4">
             <div className="relative flex py-2 items-center mb-3">
               <div className="flex-grow border-t border-slate-200 dark:border-surface-border-dark"></div>
-              <span className="flex-shrink mx-4 text-[11px] font-semibold text-ink-slate uppercase">Or sign up with</span>
+              <span className="flex-shrink mx-4 text-[11px] font-semibold text-ink-slate uppercase">
+                Or sign up with
+              </span>
               <div className="flex-grow border-t border-slate-200 dark:border-surface-border-dark"></div>
             </div>
 
@@ -340,10 +513,82 @@ export default function SignupPage() {
             </button>
           </div>
         </form>
-      ) : (
+      )}
+
+      {/* STEP 2: Email OTP Verification */}
+      {step === 2 && (
+        <form onSubmit={handleVerifyOtpStep} className="space-y-4">
+          <div className="p-3.5 bg-signal-soft/20 dark:bg-signal/10 border border-signal/30 rounded-xl text-xs text-ink dark:text-white">
+            <p className="font-semibold mb-0.5">Verification Code Sent</p>
+            <p>
+              We sent a 6-digit OTP verification code to <span className="font-bold underline">{email}</span>. Please enter it below to verify your email.
+            </p>
+          </div>
+
+          <Field label="6-Digit Signup OTP Code" htmlFor="signupOtpCode">
+            <Input
+              id="signupOtpCode"
+              type="text"
+              required
+              maxLength={6}
+              value={signupOtpCode}
+              onChange={(e) => setSignupOtpCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="123456"
+              className="text-center tracking-widest text-lg font-mono font-bold"
+            />
+          </Field>
+
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-ink-slate font-medium">
+              {timerActive ? (
+                <>Resend available in <span className="font-bold text-signal font-mono">{formatTime(resendTimer)}</span></>
+              ) : (
+                "Didn't receive the OTP code?"
+              )}
+            </span>
+
+            <button
+              type="button"
+              disabled={timerActive || loading}
+              onClick={handleResendSignupOtp}
+              className={`font-bold transition-all ${
+                timerActive || loading
+                  ? "text-slate-400 dark:text-slate-600 cursor-not-allowed"
+                  : "text-signal hover:underline cursor-pointer"
+              }`}
+            >
+              Resend OTP
+            </button>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setStep(1)}
+              className="w-1/3 py-3 font-semibold rounded-full"
+            >
+              Back
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-2/3 py-3.5 text-base font-bold rounded-full shadow-button"
+              loading={loading}
+            >
+              Verify & Continue
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {/* STEP 3: Financial & Profile Details */}
+      {step === 3 && (
         <form onSubmit={handleFinalSubmit} className="space-y-4">
           <div className="p-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-surface-border-dark rounded-xl text-xs text-ink-slate dark:text-slate-300">
-            <p className="font-semibold text-ink dark:text-white mb-0.5">Mandatory Verification Required</p>
+            <p className="font-semibold text-ink dark:text-white mb-0.5">
+              Email Verified ✓ — Financial & Profile Details
+            </p>
             <p>Please complete valid PAN, CIBIL score, address, and mobile number to issue workspace access.</p>
           </div>
 
@@ -396,7 +641,7 @@ export default function SignupPage() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => setStep(1)}
+              onClick={() => setStep(2)}
               className="w-1/3 py-3 font-semibold rounded-full"
             >
               Back

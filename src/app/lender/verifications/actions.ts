@@ -30,7 +30,7 @@ export async function decideVerification(
 
   const newStatus = approve ? "verified" : "rejected";
 
-  const { data: target, error } = await supabase
+  let query = supabase
     .from("profiles")
     .update({
       verification_status: newStatus,
@@ -38,10 +38,13 @@ export async function decideVerification(
       verified_by: lender.id,
       verified_at: new Date().toISOString(),
     })
-    .eq("id", profileId)
-    .eq("org_id", lender.org_id)
-    .select()
-    .maybeSingle();
+    .eq("id", profileId);
+
+  if (lender.role !== "superadmin") {
+    query = query.eq("org_id", lender.org_id);
+  }
+
+  const { data: target, error } = await query.select().maybeSingle();
 
   if (error || !target) return { error: error?.message || "Could not update verification." };
 
