@@ -82,7 +82,7 @@ export default function CustomerVerificationPage() {
   async function handleSubmit() {
     if (!profile) return;
     if (!idProof || !employmentProof) {
-      push("error", "Please upload both Government ID and Employee Pay Slip as ID Proof documents.");
+      push("error", "Please upload both PAN Card and Employee Pay Slip as proof documents.");
       return;
     }
     setSubmitting(true);
@@ -113,13 +113,13 @@ export default function CustomerVerificationPage() {
       await supabase.from("notifications").insert({
         org_id: profile.org_id,
         user_id: profile.id,
-        title: "KYC & Pay Slip Documents Submitted",
-        message: "Your Government ID and Employee Pay Slip verification documents are currently under review by organization lenders.",
+        title: "PAN Card & Pay Slip Submitted",
+        message: "Your PAN Card and Employee Pay Slip verification documents are currently under review by organization lenders.",
         type: "verification_decision",
         read: false,
       });
 
-      push("success", "Documents & Employee Pay Slip submitted successfully! Your organization admin will review shortly.");
+      push("success", "PAN Card & Employee Pay Slip submitted successfully! Your organization admin will review shortly.");
       setShowResubmitForm(false);
       refresh();
     } catch (err: any) {
@@ -144,7 +144,7 @@ export default function CustomerVerificationPage() {
             Borrower Identity Verification
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium max-w-xl">
-            Upload your valid Government ID and Employee Pay Slip (Salary Slip) as official ID proof to verify your membership and unlock emergency loan credit lines.
+            Upload your valid PAN Card and Employee Pay Slip (Salary Slip) as official proof to verify your membership and unlock emergency loan credit lines.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-3">
@@ -236,7 +236,7 @@ export default function CustomerVerificationPage() {
                 Documents Under Review
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                Your uploaded Government ID and Employee Pay Slip documents are currently being reviewed by your organization admin. Review usually takes 2–4 hours.
+                Your uploaded PAN Card and Employee Pay Slip documents are currently being reviewed by your organization admin. Review usually takes 2–4 hours.
               </p>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function CustomerVerificationPage() {
                 {profile.rejection_reason || "The uploaded documents were unreadable or invalid."}
               </p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-2 font-bold">
-                Please re-upload clear copies of your Government ID and Employee Pay Slip (Salary Slip) below.
+                Please re-upload clear copies of your PAN Card and Employee Pay Slip (Salary Slip) below.
               </p>
             </div>
           </div>
@@ -272,23 +272,23 @@ export default function CustomerVerificationPage() {
             <Card className="p-6 border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark shadow-card">
               <CardHeader className="px-0 pt-0 pb-4 border-b border-slate-100 dark:border-surface-border-dark mb-6">
                 <CardTitle className="text-lg font-bold text-ink dark:text-white">
-                  Upload Required ID Proofs
+                  Upload Required Proofs
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Please upload clear scans or photos of your Government ID and Employee Pay Slip (Salary Slip) as official ID proof.
+                  Please upload clear scans or photos of your PAN Card and Employee Pay Slip (Salary Slip) as official proof.
                 </CardDescription>
               </CardHeader>
 
               <div className="space-y-4">
                 <FileDropCard
-                  label="1. Government ID Proof"
-                  hint="Aadhaar Card, PAN Card, or Driving License (PDF, PNG, JPG)"
+                  label="1. PAN Card"
+                  hint="Click to select file (PAN Card - PDF, PNG, JPG)"
                   file={idProof}
                   onChange={setIdProof}
                 />
                 <FileDropCard
-                  label="2. Employee Pay Slip (ID & Employment Proof)"
-                  hint="Recent Employee Pay Slip / Salary Slip (PDF, PNG, JPG) as official ID & Employment Proof"
+                  label="2. Employee Pay Slip (Employment Proof)"
+                  hint="Recent Employee Pay Slip / Salary Slip (PDF, PNG, JPG)"
                   file={employmentProof}
                   onChange={setEmploymentProof}
                 />
@@ -309,7 +309,7 @@ export default function CustomerVerificationPage() {
                   onClick={handleSubmit}
                   loading={submitting}
                 >
-                  Submit ID &amp; Pay Slip for Verification
+                  Submit PAN Card &amp; Pay Slip for Verification
                 </Button>
               </div>
             </Card>
@@ -319,7 +319,7 @@ export default function CustomerVerificationPage() {
               <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-white/5">
                 <div className="flex items-center gap-2.5">
                   <FileCheck2 className="h-5 w-5 text-signal" />
-                  <CardTitle className="text-lg">KYC &amp; ID Proof Vault</CardTitle>
+                  <CardTitle className="text-lg">Document Vault</CardTitle>
                 </div>
                 <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
                   Encrypted &amp; Verified
@@ -333,7 +333,7 @@ export default function CustomerVerificationPage() {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-ink dark:text-white">Government ID Proof</p>
+                      <p className="text-xs font-bold text-ink dark:text-white">PAN Card</p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {profile.id_proof_url ? "Document File Uploaded" : "Verified Record"}
                       </p>

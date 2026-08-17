@@ -141,24 +141,23 @@ export default function AdminLoanDetailPage() {
 
   return (
     <div className="space-y-6 max-w-4xl pb-12">
-      {/* Header with Inline Back Arrow */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
             href="/lender/loans"
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-colors shrink-0"
             title="Back to Loan Requests"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-ink dark:text-white">{loan.purpose}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-ink dark:text-white leading-tight">{loan.purpose}</h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
               Requested on {formatDate(loan.created_at)}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           {loan.status === "active" && (
             <Button
               variant="secondary"
@@ -178,16 +177,18 @@ export default function AdminLoanDetailPage() {
           {customer && (
             <Card>
               <div className="flex items-center justify-between mb-3">
-                <CardTitle>Applicant</CardTitle>
+                <CardTitle>Applicant Profile</CardTitle>
                 <VerificationBadge status={customer.verification_status} />
               </div>
               <div className="text-sm space-y-1.5">
                 <p className="font-bold text-ink dark:text-white">{customer.full_name}</p>
-                <p className="text-muted">{customer.email}</p>
+                <p className="text-muted break-all">{customer.email}</p>
                 {customer.phone && <p className="text-muted">{customer.phone}</p>}
-                <p className="text-[11px] text-slate-400 italic mt-1">
-                  🔒 Sensitive PAN/CIBIL details masked for compliance.
-                </p>
+                {customer.pan_number && (
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 font-mono">
+                    PAN: {customer.pan_number.toUpperCase()}
+                  </p>
+                )}
               </div>
             </Card>
           )}
@@ -196,9 +197,9 @@ export default function AdminLoanDetailPage() {
             <CardTitle className="mb-4">Loan details</CardTitle>
             <div className="space-y-2.5">
               {facts.map((f) => (
-                <div key={f.label} className="flex items-center justify-between text-sm">
+                <div key={f.label} className="flex items-center justify-between text-xs sm:text-sm gap-2">
                   <span className="text-muted">{f.label}</span>
-                  <span className="font-medium">{f.value}</span>
+                  <span className="font-medium text-right">{f.value}</span>
                 </div>
               ))}
             </div>
@@ -239,13 +240,13 @@ export default function AdminLoanDetailPage() {
                     onUploadComplete={(url) => setDisbursalProofUrl(url)}
                   />
 
-                  <div className="flex gap-2 pt-2">
-                    <Button variant="secondary" className="flex-1 text-xs" onClick={() => setApproving(false)}>
+                  <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                    <Button variant="secondary" className="w-full sm:flex-1 text-xs" onClick={() => setApproving(false)}>
                       Back
                     </Button>
                     <Button
                       variant="primary"
-                      className="flex-1 text-xs font-bold"
+                      className="w-full sm:flex-1 text-xs font-bold"
                       loading={submitting}
                       onClick={handleApprove}
                     >
@@ -261,21 +262,21 @@ export default function AdminLoanDetailPage() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                   />
-                  <div className="flex gap-2">
-                    <Button variant="secondary" className="flex-1 text-xs" onClick={() => setRejecting(false)}>
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <Button variant="secondary" className="w-full sm:flex-1 text-xs" onClick={() => setRejecting(false)}>
                       Cancel
                     </Button>
-                    <Button variant="danger" className="flex-1 text-xs" loading={submitting} onClick={handleReject}>
-                      Confirm Reject
+                    <Button variant="danger" className="w-full sm:flex-1 text-xs font-bold" loading={submitting} onClick={handleReject}>
+                      Confirm Rejection
                     </Button>
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-3">
-                  <Button variant="danger" className="flex-1" onClick={() => setRejecting(true)}>
-                    Disapprove / Reject
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <Button variant="danger" className="w-full sm:flex-1 text-xs font-bold" onClick={() => setRejecting(true)}>
+                    Reject Loan Request
                   </Button>
-                  <Button variant="primary" className="flex-1" onClick={() => setApproving(true)}>
+                  <Button variant="primary" className="w-full sm:flex-1 text-xs font-bold" onClick={() => setApproving(true)}>
                     Approve Loan
                   </Button>
                 </div>

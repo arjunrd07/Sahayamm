@@ -127,7 +127,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   // Tabs Configuration based on Role
   const tabs = [
     ...(isLender ? [{ value: "policy" as TabValue, label: "Lending Policies" }] : []),
-    { value: "bank" as TabValue, label: "Bank & Disbursals" },
+    { value: "bank" as TabValue, label: "UPI & Payment Details" },
     { value: "notifications" as TabValue, label: "Notifications" },
     { value: "appearance" as TabValue, label: "Appearance" },
     { value: "security" as TabValue, label: "Security & Account" },
@@ -137,19 +137,11 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
     e.preventDefault();
     if (!profile) return;
 
-    if (ifscCode.trim() && !/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode.trim())) {
-      push("error", "Please enter a valid 11-character Indian IFSC code (e.g. SBIN0001234).");
-      return;
-    }
-
     setSavingBank(true);
     try {
       const { error } = await supabase
         .from("profiles")
         .update({
-          bank_name: bankName.trim() || null,
-          account_number: accountNumber.trim() || null,
-          ifsc_code: ifscCode.trim().toUpperCase() || null,
           upi_id: upiId.trim() || null,
           updated_at: new Date().toISOString(),
         })
@@ -157,10 +149,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
 
       if (error) throw error;
 
-      push("success", "Bank account & payment disbursal details updated successfully!");
+      push("success", "UPI payment details updated successfully!");
       refresh();
     } catch (err: any) {
-      push("error", err.message || "Could not save bank details.");
+      push("error", err.message || "Could not save payment details.");
     } finally {
       setSavingBank(false);
     }
@@ -386,50 +378,19 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
         </form>
       )}
 
-      {/* Bank & Disbursals Tab */}
+      {/* UPI & Payment Details Tab */}
       {activeTab === "bank" && (
         <form onSubmit={handleSaveBankDetails} className="space-y-6 animate-fade-in">
           <Card className="space-y-5">
             <div className="flex items-center gap-2 text-signal">
-              <Landmark className="h-5 w-5" />
-              <CardTitle>Bank Account &amp; Disbursal Preferences</CardTitle>
+              <CreditCard className="h-5 w-5" />
+              <CardTitle>UPI Payment Details</CardTitle>
             </div>
             <CardDescription>
-              Add or update your primary bank account or UPI ID for direct loan disbursals and repayment settlement.
+              Add or update your primary UPI ID for quick loan disbursals and instant repayment settlements.
             </CardDescription>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
-              <Field label="Bank Name" htmlFor="bank_name">
-                <Input
-                  id="bank_name"
-                  value={bankName}
-                  onChange={(e) => setBankName(e.target.value)}
-                  placeholder="e.g. State Bank of India, HDFC Bank"
-                  className="rounded-xl"
-                />
-              </Field>
-
-              <Field label="Account Number" htmlFor="account_number">
-                <Input
-                  id="account_number"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  placeholder="e.g. 123456789012"
-                  className="rounded-xl font-mono"
-                />
-              </Field>
-
-              <Field label="IFSC Code" htmlFor="ifsc_code">
-                <Input
-                  id="ifsc_code"
-                  maxLength={11}
-                  value={ifscCode}
-                  onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SBIN0001234"
-                  className="rounded-xl uppercase font-mono font-bold"
-                />
-              </Field>
-
+            <div className="pt-2">
               <Field label="UPI ID (VPA)" htmlFor="upi_id">
                 <Input
                   id="upi_id"
@@ -445,7 +406,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
           <div className="flex items-center justify-end pt-2">
             <Button type="submit" variant="primary" loading={savingBank}>
               <CreditCard className="h-4 w-4 mr-2" />
-              Save Bank &amp; Disbursal Details
+              Save Payment Details
             </Button>
           </div>
         </form>

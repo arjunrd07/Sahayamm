@@ -39,8 +39,8 @@ export function AuthShell({
           </div>
         </div>
 
-        {/* Right Column: Feature List & Calendly-Inspired Floating Preview Panel */}
-        <div className="w-full lg:w-1/2 bg-[#f8fafc] dark:bg-surface-dark/70 border-t lg:border-t-0 lg:border-l border-slate-200/80 dark:border-surface-border-dark px-8 sm:px-12 lg:px-16 py-12 flex flex-col justify-center relative overflow-hidden">
+        {/* Right Column: Feature List & Preview Panel (Desktop Only) */}
+        <div className="hidden lg:flex lg:w-1/2 bg-[#f8fafc] dark:bg-surface-dark/70 border-t lg:border-t-0 lg:border-l border-slate-200/80 dark:border-surface-border-dark px-8 sm:px-12 lg:px-16 py-12 flex-col justify-center relative overflow-hidden">
           {/* Accent Blobs */}
           <div className="absolute top-1/4 right-1/4 w-[350px] h-[350px] bg-purple-500/15 rounded-full blur-3xl -z-10 pointer-events-none" />
           <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-cyan-500/15 rounded-full blur-3xl -z-10 pointer-events-none" />

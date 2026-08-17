@@ -40,32 +40,33 @@ export default async function RootPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-canvas-dark text-ink dark:text-white flex flex-col font-sans selection:bg-signal-soft selection:text-signal">
       {/* 0. Top Interactive Evaluator Demo Banner - Classic White & Blue Theme */}
-      <div className="bg-slate-900 text-white text-xs py-2 px-4 border-b border-blue-900/50 shadow-sm">
-        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 font-semibold">
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-            <span className="font-extrabold uppercase tracking-wide text-[11px] bg-blue-600/30 text-blue-200 border border-blue-400/30 px-2.5 py-0.5 rounded-full">
+      {/* 0. Top Interactive Evaluator Demo Banner - Classic White & Blue Theme */}
+      <div className="bg-slate-900 text-white text-xs py-2 px-3 sm:px-4 border-b border-blue-900/50 shadow-sm overflow-hidden">
+        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-semibold">
+            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
+            <span className="font-extrabold uppercase tracking-wide text-[10px] sm:text-[11px] bg-blue-600/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full">
               Demo Switcher
             </span>
-            <span className="text-slate-300">Test Sahayam roles out-of-the-box:</span>
+            <span className="text-slate-300 text-[11px]">Test Sahayam roles out-of-the-box:</span>
           </div>
 
-          <div className="flex items-center gap-2 text-[11px] font-semibold">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] font-semibold">
             <Link
               href="/borrower/dashboard"
-              className="px-3 py-1 bg-white text-slate-900 hover:bg-blue-50 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors border border-slate-200"
+              className="px-2.5 py-1 bg-white text-slate-900 hover:bg-blue-50 rounded-lg shadow-sm flex items-center gap-1 transition-colors border border-slate-200 shrink-0"
             >
               <UserCheck className="h-3.5 w-3.5 text-blue-600" /> Borrower
             </Link>
             <Link
               href="/lender/dashboard"
-              className="px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
+              className="px-2.5 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1 transition-colors shrink-0"
             >
               <Shield className="h-3.5 w-3.5 text-blue-200" /> Lender
             </Link>
             <Link
               href="/superadmin/dashboard"
-              className="px-3 py-1 bg-slate-800 text-slate-100 hover:bg-slate-700 rounded-lg shadow-sm flex items-center gap-1.5 transition-colors border border-slate-700"
+              className="px-2.5 py-1 bg-slate-800 text-slate-100 hover:bg-slate-700 rounded-lg shadow-sm flex items-center gap-1 transition-colors border border-slate-700 shrink-0"
             >
               <LayoutDashboard className="h-3.5 w-3.5 text-emerald-400" /> Superadmin
             </Link>
@@ -74,13 +75,13 @@ export default async function RootPage() {
       </div>
 
       {/* 1. Header Navigation */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-canvas-dark border-b border-slate-200 dark:border-surface-border-dark px-6 sm:px-12 py-4">
-        <div className="max-w-[1240px] mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-xl bg-signal flex items-center justify-center shadow-button transition-transform group-hover:scale-105">
-              <span className="text-white text-lg font-black">S</span>
+      <header className="sticky top-0 z-50 bg-white dark:bg-canvas-dark border-b border-slate-200 dark:border-surface-border-dark px-4 sm:px-8 lg:px-12 py-3.5">
+        <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-2">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+            <div className="h-8 sm:h-9 w-8 sm:w-9 rounded-xl bg-signal flex items-center justify-center shadow-button transition-transform group-hover:scale-105">
+              <span className="text-white text-base sm:text-lg font-black">S</span>
             </div>
-            <span className="font-extrabold text-2xl text-ink dark:text-white tracking-tight">Sahayam</span>
+            <span className="font-extrabold text-xl sm:text-2xl text-ink dark:text-white tracking-tight">Sahayam</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-9 text-sm font-bold text-ink-slate">
@@ -88,12 +89,12 @@ export default async function RootPage() {
             <a href="#lender-demo" className="hover:text-signal transition-colors">Lender Working Demo</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <ThemeToggle />
             {user ? (
-              <Link href={dashboardUrl} className="btn-primary text-sm font-bold px-6 py-2.5 rounded-full flex items-center gap-2 shadow-button">
-                Go to Dashboard
-                <ArrowRight className="h-4 w-4" />
+              <Link href={dashboardUrl} className="btn-primary text-xs sm:text-sm font-bold px-3.5 sm:px-6 py-2 sm:py-2.5 rounded-full flex items-center gap-1.5 shadow-button shrink-0">
+                <span>Dashboard</span>
+                <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Link>
             ) : (
               <>

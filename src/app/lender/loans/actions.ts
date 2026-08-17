@@ -42,14 +42,17 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     updateData.active_at = now;
   }
 
-  const { data: loan, error } = await supabase
+  let query = supabase
     .from("loans")
     .update(updateData)
     .eq("id", loanId)
-    .eq("org_id", lender.org_id)
-    .eq("status", "pending")
-    .select()
-    .maybeSingle();
+    .eq("status", "pending");
+
+  if (lender.role !== "superadmin") {
+    query = query.eq("org_id", lender.org_id);
+  }
+
+  const { data: loan, error } = await query.select().maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not approve loan." };
 
@@ -162,7 +165,7 @@ export async function rejectLoan(loanId: string, reason: string) {
   const { supabase, lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
 
-  const { data: loan, error } = await supabase
+  let query = supabase
     .from("loans")
     .update({
       status: "rejected",
@@ -171,10 +174,13 @@ export async function rejectLoan(loanId: string, reason: string) {
       approved_at: new Date().toISOString(),
     })
     .eq("id", loanId)
-    .eq("org_id", lender.org_id)
-    .eq("status", "pending")
-    .select()
-    .maybeSingle();
+    .eq("status", "pending");
+
+  if (lender.role !== "superadmin") {
+    query = query.eq("org_id", lender.org_id);
+  }
+
+  const { data: loan, error } = await query.select().maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not reject loan." };
 
