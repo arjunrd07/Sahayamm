@@ -31,7 +31,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (error) {
       console.error("Failed to fetch notifications:", error.message);
     }
-    setNotifications((data as AppNotification[]) || []);
+    const raw = (data as AppNotification[]) || [];
+    const sorted = [...raw].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setNotifications(sorted);
   }
 
   useEffect(() => {
@@ -43,7 +45,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${profile.id}` },
-        (payload) => setNotifications((cur) => [payload.new as AppNotification, ...cur])
+        (payload) =>
+          setNotifications((cur) => {
+            const newItem = payload.new as AppNotification;
+            const updated = [newItem, ...cur.filter((n) => n.id !== newItem.id)];
+            return updated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          })
       )
       .subscribe();
 

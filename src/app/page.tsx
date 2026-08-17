@@ -39,41 +39,6 @@ export default async function RootPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-canvas-dark text-ink dark:text-white flex flex-col font-sans selection:bg-signal-soft selection:text-signal">
-      {/* 0. Top Interactive Evaluator Demo Banner - Classic White & Blue Theme */}
-      {/* 0. Top Interactive Evaluator Demo Banner - Classic White & Blue Theme */}
-      <div className="bg-slate-900 text-white text-xs py-2 px-3 sm:px-4 border-b border-blue-900/50 shadow-sm overflow-hidden">
-        <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-semibold">
-            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
-            <span className="font-extrabold uppercase tracking-wide text-[10px] sm:text-[11px] bg-blue-600/30 text-blue-200 border border-blue-400/30 px-2 py-0.5 rounded-full">
-              Demo Switcher
-            </span>
-            <span className="text-slate-300 text-[11px]">Test Sahayam roles out-of-the-box:</span>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] font-semibold">
-            <Link
-              href="/borrower/dashboard"
-              className="px-2.5 py-1 bg-white text-slate-900 hover:bg-blue-50 rounded-lg shadow-sm flex items-center gap-1 transition-colors border border-slate-200 shrink-0"
-            >
-              <UserCheck className="h-3.5 w-3.5 text-blue-600" /> Borrower
-            </Link>
-            <Link
-              href="/lender/dashboard"
-              className="px-2.5 py-1 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-sm flex items-center gap-1 transition-colors shrink-0"
-            >
-              <Shield className="h-3.5 w-3.5 text-blue-200" /> Lender
-            </Link>
-            <Link
-              href="/superadmin/dashboard"
-              className="px-2.5 py-1 bg-slate-800 text-slate-100 hover:bg-slate-700 rounded-lg shadow-sm flex items-center gap-1 transition-colors border border-slate-700 shrink-0"
-            >
-              <LayoutDashboard className="h-3.5 w-3.5 text-emerald-400" /> Superadmin
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* 1. Header Navigation */}
       <header className="sticky top-0 z-50 bg-white dark:bg-canvas-dark border-b border-slate-200 dark:border-surface-border-dark px-4 sm:px-8 lg:px-12 py-3.5">
         <div className="max-w-[1240px] mx-auto flex items-center justify-between gap-2">
@@ -229,6 +194,16 @@ export default async function RootPage() {
               <li><Link href={dashboardUrl} className="hover:text-signal transition-colors">Dashboard</Link></li>
             </ul>
           </div>
+        </div>
+
+        {/* Platform Disclaimer Box */}
+        <div className="max-w-[1240px] mx-auto mb-10 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-surface-dark text-xs text-slate-600 dark:text-slate-400 space-y-1 shadow-sm">
+          <span className="font-extrabold text-ink dark:text-white uppercase tracking-wider text-[11px] block">
+            Disclaimer
+          </span>
+          <p className="leading-relaxed text-[11px]">
+            This platform only facilitates introductions and documentation between employees who voluntarily choose to lend and borrow. It does not hold, transfer, or manage funds, does not guarantee repayment, and is not a bank, NBFC, or financial institution. All loan transactions occur directly between the lender and borrower.
+          </p>
         </div>
 
         <div className="max-w-[1240px] mx-auto pt-8 border-t border-slate-200/80 dark:border-surface-border-dark flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold">

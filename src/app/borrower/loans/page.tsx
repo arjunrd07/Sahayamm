@@ -188,7 +188,7 @@ export default function BorrowerLoansPage() {
               <Th>Plan / Tenure</Th>
               <Th>Due Date</Th>
               <Th>Status</Th>
-              <Th className="text-right">Action</Th>
+              <Th className="text-center">Action</Th>
             </tr>
           </Thead>
           <tbody>
@@ -236,16 +236,18 @@ export default function BorrowerLoansPage() {
                   </Td>
 
                   {/* Column 6: Action */}
-                  <Td className="text-right">
-                    <Link
-                      href={loanUrl}
-                      className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      View Details
-                    </Link>
+                  <Td className="text-center">
+                    <div className="flex justify-center">
+                      <Link
+                        href={loanUrl}
+                        className="btn btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1 hover:bg-signal hover:text-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        View Details
+                      </Link>
+                    </div>
                   </Td>
                 </Tr>
               );

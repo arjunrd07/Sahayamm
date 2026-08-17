@@ -76,7 +76,50 @@ export async function requestLoan(input: RequestLoanInput) {
 
   const customerName = profile.full_name || profile.email || "Borrower";
 
-  // 1. Notify Borrower Confirmation
+  // 1. Generate & Insert Digital Agreement for this loan submission
+  const admin = createServiceRoleClient();
+  let agreementNumber = "";
+  try {
+    const { count } = await admin
+      .from("agreements")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", profile.org_id);
+
+    const year = new Date().getFullYear();
+    const seq = (count || 0) + 1;
+    agreementNumber = `SHY-${year}-${String(seq).padStart(6, "0")}`;
+
+    const seed = `${agreementNumber}:${profile.id}:${profile.org_id}:${loan.amount}:${Date.now()}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const hexHex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
+    const signatureHash = `SHY-SEAL-${hexHex}-${Date.now().toString(36).toUpperCase()}`;
+
+    await admin.from("agreements").insert({
+      org_id: profile.org_id,
+      loan_id: loan.id,
+      agreement_number: agreementNumber,
+      docuseal_submission_id: signatureHash,
+      borrower_signed: true,
+      borrower_signed_at: new Date().toISOString(),
+      status: "partially_signed",
+    });
+
+    await logAuditEntry({
+      action: "Create Digital Agreement",
+      actor_id: profile.id,
+      entity_type: "agreement",
+      entity_id: loan.id,
+      details: `Digital Agreement ${agreementNumber} generated automatically upon loan application submission by ${customerName}.`,
+    });
+  } catch (agErr) {
+    console.warn("Digital agreement auto-generation notice:", agErr);
+  }
+
+  // 2. Notify Borrower Confirmation
   await dispatchNotification({
     orgId: profile.org_id,
     userId: profile.id,
@@ -91,8 +134,7 @@ export async function requestLoan(input: RequestLoanInput) {
     },
   });
 
-  // 2. Notify Lenders in the Organization
-  const admin = createServiceRoleClient();
+  // 3. Notify Lenders in the Organization
   const { data: lenders } = await admin
     .from("profiles")
     .select("id, email")

@@ -43,9 +43,10 @@ export default function BorrowerProfilePage() {
   const { push } = useToast();
   const supabase = createClient();
 
-  // Primary Personal State
+  // Primary Personal & Payout State
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  const [upiId, setUpiId] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [cibilScore, setCibilScore] = useState("");
   const [address, setAddress] = useState("");
@@ -59,6 +60,7 @@ export default function BorrowerProfilePage() {
     if (!profile) return;
     setFullName(profile.full_name || "");
     setPhone(profile.phone || "");
+    setUpiId(profile.upi_id || "");
     setPanNumber(profile.pan_number || "");
     setCibilScore(profile.cibil_score ? String(profile.cibil_score) : "");
     setAddress(profile.address || "");
@@ -103,13 +105,17 @@ export default function BorrowerProfilePage() {
       return;
     }
 
-    // Phone Number Validation (Standard 10-digit check)
-    if (phone.trim()) {
-      const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, "");
-      if (cleanPhone.length < 10 || cleanPhone.length > 13 || !/^\d+$/.test(cleanPhone)) {
-        push("error", "Please enter a valid 10-digit mobile phone number.");
-        return;
-      }
+    // Mandate Mobile Phone Number
+    const cleanPhone = phone.replace(/[\s\-\+\(\)]/g, "");
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 13 || !/^\d+$/.test(cleanPhone)) {
+      push("error", "Mandatory field missing: Please enter a valid 10-digit Mobile Phone Number.");
+      return;
+    }
+
+    // Mandate UPI ID
+    if (!upiId.trim()) {
+      push("error", "Mandatory field missing: Please enter your UPI ID (VPA).");
+      return;
     }
 
     // Emergency Contact Phone Validation
@@ -139,14 +145,15 @@ export default function BorrowerProfilePage() {
         .from("profiles")
         .update({
           full_name: fullName.trim(),
-          phone: phone.trim() || null,
+          phone: phone.trim(),
+          upi_id: upiId.trim(),
           pan_number: cleanPan || null,
           cibil_score: parsedCibil,
           address: address.trim() || null,
           emergency_name: emergencyName.trim() || null,
           emergency_phone: emergencyPhone.trim() || null,
           emergency_relation: emergencyRelation || null,
-          kyc_completed: Boolean(cleanPan && address.trim() && phone.trim()),
+          kyc_completed: Boolean(cleanPan && address.trim() && phone.trim() && upiId.trim()),
         })
         .eq("id", profile.id);
 
@@ -348,15 +355,27 @@ export default function BorrowerProfilePage() {
                   />
                 </Field>
 
-                <Field label="Mobile Phone Number (10 Digits)" htmlFor="edit_phone">
+                <Field label="Mobile Phone Number * (10 Digits)" htmlFor="edit_phone">
                   <Input
                     id="edit_phone"
+                    required
                     type="tel"
                     maxLength={14}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. 9876543210"
                     className="rounded-xl"
+                  />
+                </Field>
+
+                <Field label="UPI ID / VPA *" htmlFor="edit_upi">
+                  <Input
+                    id="edit_upi"
+                    required
+                    value={upiId}
+                    onChange={(e) => setUpiId(e.target.value)}
+                    placeholder="e.g. user@okaxis, user@upi"
+                    className="rounded-xl font-medium"
                   />
                 </Field>
               </div>

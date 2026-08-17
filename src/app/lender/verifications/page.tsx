@@ -144,7 +144,7 @@ export default function AdminVerificationsPage() {
               <Th>PAN Number</Th>
               <Th>Submitted</Th>
               <Th>Status</Th>
-              <Th></Th>
+              <Th className="text-center">Action</Th>
             </tr>
           </Thead>
           <tbody>
@@ -158,10 +158,12 @@ export default function AdminVerificationsPage() {
                 <Td>
                   <VerificationBadge status={p.verification_status} />
                 </Td>
-                <Td>
-                  <Button variant="secondary" onClick={() => openApplicant(p)}>
-                    Review Documents
-                  </Button>
+                <Td className="text-center">
+                  <div className="flex justify-center">
+                    <Button variant="secondary" onClick={() => openApplicant(p)}>
+                      Review Documents
+                    </Button>
+                  </div>
                 </Td>
               </Tr>
             ))}

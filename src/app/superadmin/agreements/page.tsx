@@ -18,6 +18,8 @@ import {
   Eye,
 } from "lucide-react";
 
+import { DocumentGenerator } from "@/components/agreements/document-generator";
+
 interface AgreementItem {
   id: string;
   agreement_number: string;
@@ -44,6 +46,7 @@ export default function SuperadminAgreementsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [viewPdfUrl, setViewPdfUrl] = useState<string | null>(null);
+  const [showGenerator, setShowGenerator] = useState(false);
   const itemsPerPage = 8;
   const supabase = createClient();
 
@@ -133,6 +136,16 @@ export default function SuperadminAgreementsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant={showGenerator ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => setShowGenerator(!showGenerator)}
+            className="text-xs font-bold"
+          >
+            <FileText className="h-4 w-4 mr-1.5" />
+            {showGenerator ? "View Executed Agreements" : "Document Template Studio"}
+          </Button>
+
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800/40">
             <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             Sahayam E-Sign Verification
@@ -140,135 +153,143 @@ export default function SuperadminAgreementsPage() {
         </div>
       </div>
 
-      {/* KPI Metric Overview Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
-          <span className="text-xs font-bold text-ink-slate">Total Executed Agreements</span>
-          <p className="text-2xl font-black text-ink dark:text-white">{agreements.length}</p>
-          <p className="text-[11px] text-ink-slate font-medium">Native digital contract vault</p>
-        </div>
-
-        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
-          <span className="text-xs font-bold text-ink-slate">Fully Signed Contracts</span>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedCount}</p>
-          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">Dual e-signature verified</p>
-        </div>
-
-        <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
-          <span className="text-xs font-bold text-ink-slate">Pending Signatures</span>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingCount}</p>
-          <p className="text-[11px] text-amber-600 dark:text-amber-300 font-bold">Awaiting counter-signature</p>
-        </div>
-      </div>
-
-      {/* Agreements Table */}
-      <div className="space-y-4">
-        <TableToolbar
-          searchQuery={search}
-          onSearchChange={(q) => {
-            setSearch(q);
-            setCurrentPage(1);
-          }}
-          searchPlaceholder="Search agreement number, borrower, or organization..."
-          filters={
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-slate flex-wrap">
-              <Filter className="h-3.5 w-3.5" /> Status:
-              {["all", "completed", "partially_signed", "sent"].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => {
-                    setStatusFilter(st);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 py-1 rounded-lg capitalize transition-all ${
-                    statusFilter === st
-                      ? "bg-primary text-white font-bold shadow-xs"
-                      : "bg-slate-100 dark:bg-white/5 text-ink-slate hover:text-ink dark:hover:text-white"
-                  }`}
-                >
-                  {st.replace("_", " ")}
-                </button>
-              ))}
+      {showGenerator ? (
+        <DocumentGenerator />
+      ) : (
+        <>
+          {/* KPI Metric Overview Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+              <span className="text-xs font-bold text-ink-slate">Total Executed Agreements</span>
+              <p className="text-2xl font-black text-ink dark:text-white">{agreements.length}</p>
+              <p className="text-[11px] text-ink-slate font-medium">Native digital contract vault</p>
             </div>
-          }
-        />
 
-        <Table>
-          <Thead>
-            <Tr>
-              <Th>Agreement No.</Th>
-              <Th>Borrower &amp; Org</Th>
-              <Th>Loan Principal</Th>
-              <Th>Agreement Ref Hash</Th>
-              <Th>Status</Th>
-              <Th>Date</Th>
-              <Th className="text-right">Actions</Th>
-            </Tr>
-          </Thead>
-          <tbody>
-            {loading ? (
-              <Tr>
-                <Td colSpan={7} className="py-12 text-center text-slate-400">
-                  Loading platform agreements...
-                </Td>
-              </Tr>
-            ) : paginatedAgreements.length === 0 ? (
-              <Tr>
-                <Td colSpan={7}>
-                  <EmptyState title="No agreements found" description="Try adjusting search or status filters." />
-                </Td>
-              </Tr>
-            ) : (
-              paginatedAgreements.map((ag) => (
-                <Tr key={ag.id}>
-                  <Td>
-                    <div className="font-bold font-mono text-xs text-primary">{ag.agreement_number}</div>
-                  </Td>
-                  <Td>
-                    <div className="font-bold text-ink dark:text-white">{ag.loans?.borrowers?.full_name || "Borrower"}</div>
-                    <div className="text-xs text-ink-slate font-medium">{ag.loans?.organizations?.name}</div>
-                  </Td>
-                  <Td>
-                    <div className="font-extrabold text-ink dark:text-white">{formatINR(ag.loans?.amount || 0)}</div>
-                    <div className="text-xs text-ink-slate truncate max-w-[140px] font-medium">{ag.loans?.purpose}</div>
-                  </Td>
-                  <Td>
-                    <span className="text-xs font-mono text-ink-slate">{ag.docuseal_submission_id || "SHY-DIGISIGN-SANDBOX"}</span>
-                  </Td>
-                  <Td>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${
-                        ag.status === "completed"
-                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
-                          : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40"
+            <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+              <span className="text-xs font-bold text-ink-slate">Fully Signed Contracts</span>
+              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedCount}</p>
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">Dual e-signature verified</p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-white dark:bg-canvas-dark border border-slate-200/80 dark:border-surface-border-dark shadow-xs space-y-1">
+              <span className="text-xs font-bold text-ink-slate">Pending Signatures</span>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400">{pendingCount}</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-300 font-bold">Awaiting counter-signature</p>
+            </div>
+          </div>
+
+          {/* Agreements Table */}
+          <div className="space-y-4">
+            <TableToolbar
+              searchQuery={search}
+              onSearchChange={(q) => {
+                setSearch(q);
+                setCurrentPage(1);
+              }}
+              searchPlaceholder="Search agreement number, borrower, or organization..."
+              filters={
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-slate flex-wrap">
+                  <Filter className="h-3.5 w-3.5" /> Status:
+                  {["all", "completed", "partially_signed", "sent"].map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => {
+                        setStatusFilter(st);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 rounded-lg capitalize transition-all ${
+                        statusFilter === st
+                          ? "bg-primary text-white font-bold shadow-xs"
+                          : "bg-slate-100 dark:bg-white/5 text-ink-slate hover:text-ink dark:hover:text-white"
                       }`}
                     >
-                      {ag.status.replace("_", " ")}
-                    </span>
-                  </Td>
-                  <Td className="text-xs text-ink-slate font-medium">{formatDate(ag.created_at)}</Td>
-                  <Td className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setViewPdfUrl(ag.pdf_url || "#")}
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Inspect PDF
-                    </Button>
-                  </Td>
-                </Tr>
-              ))
-            )}
-          </tbody>
-        </Table>
+                      {st.replace("_", " ")}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
 
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalRecords={filteredAgreements.length}
-          onPageChange={setCurrentPage}
-        />
-      </div>
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>Agreement No.</Th>
+                  <Th>Borrower &amp; Org</Th>
+                  <Th>Loan Principal</Th>
+                  <Th>Agreement Ref Hash</Th>
+                  <Th>Status</Th>
+                  <Th>Date</Th>
+                  <Th className="text-center">Actions</Th>
+                </Tr>
+              </Thead>
+              <tbody>
+                {loading ? (
+                  <Tr>
+                    <Td colSpan={7} className="py-12 text-center text-slate-400">
+                      Loading platform agreements...
+                    </Td>
+                  </Tr>
+                ) : paginatedAgreements.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={7}>
+                      <EmptyState title="No agreements found" description="Try adjusting search or status filters." />
+                    </Td>
+                  </Tr>
+                ) : (
+                  paginatedAgreements.map((ag) => (
+                    <Tr key={ag.id}>
+                      <Td>
+                        <div className="font-bold font-mono text-xs text-primary">{ag.agreement_number}</div>
+                      </Td>
+                      <Td>
+                        <div className="font-bold text-ink dark:text-white">{ag.loans?.borrowers?.full_name || "Borrower"}</div>
+                        <div className="text-xs text-ink-slate font-medium">{ag.loans?.organizations?.name}</div>
+                      </Td>
+                      <Td>
+                        <div className="font-extrabold text-ink dark:text-white">{formatINR(ag.loans?.amount || 0)}</div>
+                        <div className="text-xs text-ink-slate truncate max-w-[140px] font-medium">{ag.loans?.purpose}</div>
+                      </Td>
+                      <Td>
+                        <span className="text-xs font-mono text-ink-slate">{ag.docuseal_submission_id || "SHY-DIGISIGN-SANDBOX"}</span>
+                      </Td>
+                      <Td>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${
+                            ag.status === "completed"
+                              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40"
+                              : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40"
+                          }`}
+                        >
+                          {ag.status.replace("_", " ")}
+                        </span>
+                      </Td>
+                      <Td className="text-xs text-ink-slate font-medium">{formatDate(ag.created_at)}</Td>
+                      <Td className="text-center">
+                        <div className="flex justify-center">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setViewPdfUrl(ag.pdf_url || "#")}
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Inspect PDF
+                          </Button>
+                        </div>
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </tbody>
+            </Table>
+
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalRecords={filteredAgreements.length}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        </>
+      )}
 
       {/* PDF Inspector Modal */}
       <Modal open={Boolean(viewPdfUrl)} onClose={() => setViewPdfUrl(null)} title="Sahayam Digital Agreement Artifact">

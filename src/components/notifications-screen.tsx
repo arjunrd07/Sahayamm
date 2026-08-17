@@ -61,6 +61,10 @@ export function NotificationsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadCount]);
 
+  const sortedNotifications = [...notifications].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   return (
     <div className="max-w-3xl space-y-5">
       <div className="flex items-center justify-between">
@@ -77,7 +81,7 @@ export function NotificationsScreen() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {sortedNotifications.length === 0 ? (
         <div className="p-12 text-center rounded-3xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark shadow-card space-y-3">
           <div className="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-signal flex items-center justify-center mx-auto">
             <Bell className="h-6 w-6" />
@@ -89,7 +93,7 @@ export function NotificationsScreen() {
         </div>
       ) : (
         <div className="space-y-3">
-          {notifications.map((n) => {
+          {sortedNotifications.map((n) => {
             const badge = getNotificationBadge(n.type);
             const Icon = badge.icon;
             return (

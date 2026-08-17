@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSignature, Printer, CheckCircle2, ShieldCheck, PenTool } from "lucide-react";
+import { FileSignature, Printer, CheckCircle2, ShieldCheck, PenTool, ShieldAlert, FileCheck2 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
 import { signLendingAgreement } from "@/app/api/agreements/actions";
 import { useToast } from "@/components/ui/toast";
@@ -227,6 +227,49 @@ export function AgreementTemplateViewer({
             <li>Sahayam native e-signatures provide legally binding digital audit logs under Indian IT Act Section 10A.</li>
             <li>This Agreement is governed by the laws of India.</li>
           </ul>
+        </div>
+
+        {/* Premium Redesigned Legal Disclaimer & Acknowledgement Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+          {/* Platform Scope Suggested Disclaimer Card */}
+          <div className="p-4 rounded-2xl border border-amber-500/30 dark:border-amber-400/20 bg-amber-50/70 dark:bg-amber-950/20 text-xs text-amber-950 dark:text-amber-200 space-y-2.5 shadow-sm relative overflow-hidden">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-amber-200/80 dark:border-amber-900/40">
+              <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 shrink-0">
+                <ShieldAlert className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block leading-none">
+                  Legal Notice
+                </span>
+                <span className="font-extrabold text-xs text-ink dark:text-white">
+                  Suggested Disclaimer
+                </span>
+              </div>
+            </div>
+            <p className="leading-relaxed text-[11px] text-amber-900/90 dark:text-amber-300 font-medium">
+              This platform only facilitates introductions and documentation between employees who voluntarily choose to lend and borrow. It does not hold, transfer, or manage funds, does not guarantee repayment, and is not a bank, NBFC, or financial institution. All loan transactions occur directly between the lender and borrower.
+            </p>
+          </div>
+
+          {/* Borrower Acknowledgement & Declaration Card */}
+          <div className="p-4 rounded-2xl border border-blue-500/30 dark:border-blue-400/20 bg-blue-50/70 dark:bg-blue-950/20 text-xs text-blue-950 dark:text-blue-200 space-y-2.5 shadow-sm relative overflow-hidden">
+            <div className="flex items-center gap-2.5 pb-2 border-b border-blue-200/80 dark:border-blue-900/40">
+              <div className="p-1.5 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-400 shrink-0">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block leading-none">
+                  Borrower Declaration
+                </span>
+                <span className="font-extrabold text-xs text-ink dark:text-white">
+                  Acknowledgement &amp; Terms Agreement
+                </span>
+              </div>
+            </div>
+            <p className="leading-relaxed text-[11px] text-blue-900/90 dark:text-blue-300 font-medium">
+              I, the Borrower, hereby acknowledge that I have read, understood, and agreed to all terms, repayment schedules, and conditions of this Emergency Credit Line. I confirm that all submitted details and uploaded ID proofs are authentic, and I voluntarily authorize payroll deduction or peer-to-peer settlement for loan clearance upon the due date.
+            </p>
+          </div>
         </div>
 
         {/* Signatures */}
