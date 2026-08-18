@@ -35,7 +35,8 @@ export function generateDigitalSignatureHash(params: {
   amount: number;
   dateStr?: string;
 }): string {
-  const seed = `${params.agreementNumber}:${params.borrowerId}:${params.lenderId}:${params.amount}:${params.dateStr || Date.now()}`;
+  const ts = params.dateStr ? new Date(params.dateStr).getTime() : Date.now();
+  const seed = `${params.agreementNumber}:${params.borrowerId}:${params.lenderId}:${params.amount}:${params.dateStr || ts}`;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i);
@@ -43,7 +44,7 @@ export function generateDigitalSignatureHash(params: {
     hash |= 0;
   }
   const hexHex = Math.abs(hash).toString(16).toUpperCase().padStart(8, "0");
-  const timestampHex = Date.now().toString(36).toUpperCase();
+  const timestampHex = ts.toString(36).toUpperCase();
   return `SHY-SEAL-${hexHex}-${timestampHex}`;
 }
 

@@ -25,7 +25,7 @@ interface SampleLoan {
   amount: number;
   tenure: string;
   purpose: string;
-  paySlipVerified: boolean;
+  bankStatementVerified: boolean;
   idProofVerified: boolean;
   status: "pending" | "approved" | "rejected";
   submittedAt: string;
@@ -40,7 +40,7 @@ const INITIAL_LOANS: SampleLoan[] = [
     amount: 25000,
     tenure: "30 Days (1 Installment)",
     purpose: "Emergency Family Medical Advance",
-    paySlipVerified: true,
+    bankStatementVerified: true,
     idProofVerified: true,
     status: "pending",
     submittedAt: "10 mins ago",
@@ -53,7 +53,7 @@ const INITIAL_LOANS: SampleLoan[] = [
     amount: 45000,
     tenure: "60 Days (2 Installments)",
     purpose: "Higher Education Certification Pool",
-    paySlipVerified: true,
+    bankStatementVerified: true,
     idProofVerified: true,
     status: "pending",
     submittedAt: "25 mins ago",
@@ -66,7 +66,7 @@ const INITIAL_LOANS: SampleLoan[] = [
     amount: 30000,
     tenure: "30 Days (1 Installment)",
     purpose: "Home Relocation Emergency Advance",
-    paySlipVerified: true,
+    bankStatementVerified: true,
     idProofVerified: true,
     status: "pending",
     submittedAt: "1 hour ago",
@@ -79,7 +79,7 @@ const INITIAL_LOANS: SampleLoan[] = [
     amount: 50000,
     tenure: "90 Days (3 Installments)",
     purpose: "Medical Advance Pool",
-    paySlipVerified: true,
+    bankStatementVerified: true,
     idProofVerified: true,
     status: "approved",
     submittedAt: "3 hours ago",
@@ -160,7 +160,7 @@ export function LenderWorkingDemo() {
           </h2>
 
           <p className="text-ink-slate dark:text-slate-300 text-base sm:text-lg leading-relaxed">
-            Test the live administrative workflow below. Approve requests, inspect Employee Pay Slips, and monitor capital pool metrics in real-time.
+            Test the live administrative workflow below. Approve requests, inspect Bank statements, and monitor capital pool metrics in real-time.
           </p>
         </div>
 
@@ -360,12 +360,12 @@ export function LenderWorkingDemo() {
                       <FileCheck2 className="h-4 w-4 text-signal" /> Submitted Identity &amp; Verification
                     </h4>
 
-                    {/* Employee Pay Slip Verification Card */}
+                    {/* Bank Statement Verification Card */}
                     <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
-                        <span className="font-bold text-ink dark:text-white block">Employee Pay Slip (Salary Slip ID Proof)</span>
+                        <span className="font-bold text-ink dark:text-white block">Bank statement (Financial Proof)</span>
                         <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Verified Employment &amp; Salary Match
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Verified Statement &amp; Balance Match
                         </span>
                       </div>
                       <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-500/30">

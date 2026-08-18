@@ -8,7 +8,7 @@ import { AuthShell } from "@/components/layout/auth-shell";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import type { Organization } from "@/types/database";
+import type { Organization, Campus } from "@/types/database";
 import { createUserProfile } from "./actions";
 import { sendEmailOtp, verifyEmailOtp } from "../actions/otp";
 
@@ -17,18 +17,21 @@ const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
 export default function SignupPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [existingOrgs, setExistingOrgs] = useState<Organization[]>([]);
+  const [existingCampuses, setExistingCampuses] = useState<Campus[]>([]);
   const [selectedRole, setSelectedRole] = useState<"borrower" | "lender">("borrower");
 
-  // Step 1 State
+  // Step 1 State: org, campus, full_name, email, password
   const [selectedOrgId, setSelectedOrgId] = useState<string>("");
   const [customOrgName, setCustomOrgName] = useState("");
+  const [selectedCampusId, setSelectedCampusId] = useState<string>("");
+  const [customCampusName, setCustomCampusName] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   // Step 2 OTP State
   const [signupOtpCode, setSignupOtpCode] = useState("");
-  const [resendTimer, setResendTimer] = useState(120); // 2 minutes (120s) countdown
+  const [resendTimer, setResendTimer] = useState(120); // 2 minutes countdown
   const [timerActive, setTimerActive] = useState(false);
 
   // Step 3 Mandatory Verification Details State
@@ -58,6 +61,35 @@ export default function SignupPage() {
     }
     loadOrgs();
   }, []);
+
+  // Load campuses when selectedOrgId changes
+  useEffect(() => {
+    async function loadCampuses() {
+      if (!selectedOrgId || selectedOrgId === "new") {
+        setExistingCampuses([]);
+        setSelectedCampusId("new");
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from("campuses")
+          .select("*")
+          .eq("org_id", selectedOrgId)
+          .order("name");
+        if (!error && data && data.length > 0) {
+          setExistingCampuses(data as Campus[]);
+          setSelectedCampusId(data[0].id);
+        } else {
+          setExistingCampuses([]);
+          setSelectedCampusId("new");
+        }
+      } catch {
+        setExistingCampuses([]);
+        setSelectedCampusId("new");
+      }
+    }
+    loadCampuses();
+  }, [selectedOrgId]);
 
   // 2-minute countdown timer effect
   useEffect(() => {
@@ -122,7 +154,6 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // Send OTP code to user's email
       const res = await sendEmailOtp(cleanEmail, "signup");
 
       if (!res.success) {
@@ -146,7 +177,7 @@ export default function SignupPage() {
     }
   }
 
-  // Handle Resend Signup OTP (after 2-minute countdown)
+  // Handle Resend Signup OTP
   async function handleResendSignupOtp() {
     if (resendTimer > 0) return;
 
@@ -191,7 +222,7 @@ export default function SignupPage() {
         return;
       }
 
-      push("success", "Email address verified successfully! Please complete your financial profile details.");
+      push("success", "Email address verified successfully! Please complete your profile details.");
       setStep(3);
     } catch {
       push("error", "An error occurred during OTP verification.");
@@ -273,6 +304,8 @@ export default function SignupPage() {
       await createUserProfile({
         userId: authData.user.id,
         orgId: targetOrgId,
+        campusId: selectedCampusId === "new" ? null : selectedCampusId,
+        campusName: customCampusName,
         fullName,
         email,
         phone: cleanPhone,
@@ -285,18 +318,19 @@ export default function SignupPage() {
       setLoading(false);
 
       if (selectedRole === "borrower") {
-        push("success", "Borrower account verified & sent to lender dashboard for review!");
-        router.push("/lender/verifications");
+        push("success", "Borrower account verified & sent for review!");
+        router.push("/borrower/dashboard");
       } else if (selectedRole === "lender") {
-        push("success", "Lender account verified! Redirecting to lender dashboard...");
+        push("success", "Lender account created! Redirecting to lender dashboard...");
         router.push("/lender/dashboard");
       } else {
-        router.push("/borrower/dashboard");
+        push("success", "Admin account created! Redirecting to admin dashboard...");
+        router.push("/admin/dashboard");
       }
     } else {
       setLoading(false);
-      push("success", "Account created & email verified! Redirecting...");
-      router.push("/lender/verifications");
+      push("success", "Account created & email verified!");
+      router.push("/login");
     }
   }
 
@@ -307,14 +341,14 @@ export default function SignupPage() {
           ? "Create your account"
           : step === 2
           ? "Verify Email OTP"
-          : "Financial & Identity Details"
+          : "Financial & Profile Details"
       }
       subtitle={
         step === 1
-          ? "Enter your details and select your organization to get started."
+          ? "Select your Organization, Campus, Role and details to get started."
           : step === 2
           ? `Enter the 6-digit OTP code sent to ${email}`
-          : "Provide required financial details to complete account creation."
+          : "Provide required details to complete registration."
       }
     >
       {/* 3-Step Header Navigation */}
@@ -378,31 +412,31 @@ export default function SignupPage() {
             <label className="block text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
               Account Role
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setSelectedRole("borrower")}
-                className={`p-3.5 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-xl border text-left transition-all ${
                   selectedRole === "borrower"
                     ? "border-signal bg-signal-soft/30 dark:bg-signal/20 text-ink dark:text-white font-bold ring-2 ring-signal/20"
                     : "border-slate-200 dark:border-surface-border-dark hover:bg-slate-50 dark:hover:bg-white/5 text-ink-slate"
                 }`}
               >
-                <p className="text-sm font-bold text-ink dark:text-white">Borrower</p>
-                <p className="text-xs text-ink-slate mt-0.5">Apply for low-interest loans</p>
+                <p className="text-xs font-bold text-ink dark:text-white">Borrower</p>
+                <p className="text-[10px] text-ink-slate mt-0.5">Apply for loans</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSelectedRole("lender")}
-                className={`p-3.5 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-xl border text-left transition-all ${
                   selectedRole === "lender"
                     ? "border-signal bg-signal-soft/30 dark:bg-signal/20 text-ink dark:text-white font-bold ring-2 ring-signal/20"
                     : "border-slate-200 dark:border-surface-border-dark hover:bg-slate-50 dark:hover:bg-white/5 text-ink-slate"
                 }`}
               >
-                <p className="text-sm font-bold text-ink dark:text-white">Lender</p>
-                <p className="text-xs text-ink-slate mt-0.5">Manage credit liquidity pools</p>
+                <p className="text-xs font-bold text-ink dark:text-white">Lender</p>
+                <p className="text-[10px] text-ink-slate mt-0.5">Provide liquidity</p>
               </button>
             </div>
           </div>
@@ -419,7 +453,7 @@ export default function SignupPage() {
                   {org.name} ({org.code})
                 </option>
               ))}
-              <option value="new">+ Create New Organization</option>
+              <option value="new">+ Create New Organization (e.g. TCS)</option>
             </select>
           </Field>
 
@@ -430,12 +464,50 @@ export default function SignupPage() {
                 required
                 value={customOrgName}
                 onChange={(e) => setCustomOrgName(e.target.value)}
-                placeholder="e.g. Acme Corporation"
+                placeholder="e.g. TCS"
               />
             </Field>
           )}
 
-          <Field label="Full name" htmlFor="full_name">
+          <Field label="Campus Location" htmlFor="campus_id">
+            {selectedOrgId !== "new" && existingCampuses.length > 0 ? (
+              <select
+                id="campus_id"
+                value={selectedCampusId}
+                onChange={(e) => setSelectedCampusId(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-bold text-ink dark:text-white focus:ring-2 focus:ring-signal focus:outline-none"
+              >
+                {existingCampuses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.code})
+                  </option>
+                ))}
+                <option value="new">+ Create New Campus (e.g. Raidurg)</option>
+              </select>
+            ) : (
+              <Input
+                id="campus_name"
+                required
+                value={customCampusName}
+                onChange={(e) => setCustomCampusName(e.target.value)}
+                placeholder="e.g. Raidurg (tcs.raidrug.db)"
+              />
+            )}
+          </Field>
+
+          {selectedOrgId !== "new" && existingCampuses.length > 0 && selectedCampusId === "new" && (
+            <Field label="New Campus Name" htmlFor="custom_campus">
+              <Input
+                id="custom_campus"
+                required
+                value={customCampusName}
+                onChange={(e) => setCustomCampusName(e.target.value)}
+                placeholder="e.g. Raidurg Campus"
+              />
+            </Field>
+          )}
+
+          <Field label="Full Name" htmlFor="full_name" required>
             <Input
               id="full_name"
               required
@@ -445,7 +517,7 @@ export default function SignupPage() {
             />
           </Field>
 
-          <Field label="Work Email" htmlFor="email">
+          <Field label="Work Email" htmlFor="email" required>
             <Input
               id="email"
               type="email"
@@ -456,7 +528,7 @@ export default function SignupPage() {
             />
           </Field>
 
-          <Field label="Password" htmlFor="password">
+          <Field label="Password" htmlFor="password" required>
             <Input
               id="password"
               type="password"

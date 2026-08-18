@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export interface CommandItem {
   id: string;
   title: string;
-  category: "Navigation" | "Actions" | "Admin" | "Superadmin" | "Lender" | "Borrower";
+  category: "Navigation" | "Actions" | "Admin" | "Lender" | "Borrower";
   href?: string;
   onSelect?: () => void;
   icon: any;
@@ -40,11 +40,6 @@ const defaultCommands: CommandItem[] = [
   { id: "loans-l", title: "Manage Active Loans", category: "Lender", href: "/lender/active", icon: FileText },
   { id: "verif-l", title: "Identity Verifications", category: "Lender", href: "/lender/verifications", icon: ShieldCheck },
   { id: "reports-l", title: "Capital Pool Reports", category: "Lender", href: "/lender/reports", icon: FileText },
-  { id: "dash-sa", title: "Admin Portal", category: "Admin", href: "/superadmin/dashboard", icon: LayoutDashboard },
-  { id: "users-sa", title: "Platform Users", category: "Admin", href: "/superadmin/users", icon: Users },
-  { id: "orgs-sa", title: "Organizations", category: "Admin", href: "/superadmin/organizations", icon: Building2 },
-  { id: "agree-sa", title: "Legal Agreements", category: "Admin", href: "/superadmin/agreements", icon: FileText },
-  { id: "audit-sa", title: "Security Audit Logs", category: "Admin", href: "/superadmin/audit", icon: Clock },
 ];
 
 export function CommandPalette() {

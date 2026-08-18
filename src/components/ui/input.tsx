@@ -1,6 +1,8 @@
+"use client";
+
 import { cn } from "@/lib/utils";
-import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef, ReactNode } from "react";
-import { AlertCircle, CheckCircle2, Loader2, LucideIcon } from "lucide-react";
+import { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, forwardRef, ReactNode, useState } from "react";
+import { AlertCircle, CheckCircle2, Loader2, Eye, EyeOff, LucideIcon } from "lucide-react";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: LucideIcon;
@@ -11,7 +13,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, icon: Icon, error, success, loading, rightElement, disabled, ...props }, ref) => {
+  ({ className, type, icon: Icon, error, success, loading, rightElement, disabled, ...props }, ref) => {
+    const [showPassword, setShowPassword] = useState(false);
+    const isPassword = type === "password";
+    const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
     return (
       <div className="relative flex items-center w-full">
         {Icon && (
@@ -21,21 +27,33 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <input
           ref={ref}
+          type={inputType}
           disabled={disabled || loading}
           className={cn(
             "w-full min-h-[46px] rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 px-4 py-3 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all shadow-xs disabled:opacity-60 disabled:bg-slate-50 dark:disabled:bg-white/5",
             Icon && "pl-11",
-            (error || success || loading || rightElement) && "pr-11",
+            (error || success || loading || rightElement || isPassword) && "pr-11",
             error && "border-rose-500 focus:ring-rose-500/20 focus:border-rose-500 dark:border-rose-500",
             success && "border-emerald-500 focus:ring-emerald-500/20 focus:border-emerald-500 dark:border-emerald-500",
             className
           )}
           {...props}
         />
-        <div className="absolute right-4 flex items-center gap-1.5 pointer-events-none">
+        <div className="absolute right-4 flex items-center gap-1.5 z-10">
           {loading && <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />}
           {error && !loading && <AlertCircle className="h-4 w-4 text-rose-500" />}
           {success && !loading && !error && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+          {isPassword && !loading && (
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              tabIndex={-1}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1 rounded-md focus:outline-none"
+              title={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          )}
           {rightElement && !loading && !error && !success && rightElement}
         </div>
       </div>
@@ -97,7 +115,7 @@ export function Field({
     <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center justify-between">
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400" htmlFor={htmlFor}>
-          {label} {required && <span className="text-rose-500">*</span>}
+          {label} {required && <span className="text-rose-500 font-bold ml-0.5" title="Required field">*</span>}
         </label>
       </div>
       {children}

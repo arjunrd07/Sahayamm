@@ -68,24 +68,26 @@ export const lenderNav: NavItem[] = [
       { href: "/lender/settings", label: "Platform Settings", icon: Settings },
     ],
   },
+  { href: "/borrower/dashboard", label: "Borrower Portal View", icon: HandCoins },
 ];
 
-export const customerNav = borrowerNav;
-export const adminNav = lenderNav;
-
-export const superadminNav: NavItem[] = [
-  { href: "/superadmin/dashboard", label: "Admin Overview", icon: LayoutDashboard },
-  { href: "/superadmin/organizations", label: "Organizations", icon: Building2 },
-  { href: "/superadmin/users", label: "Global Users", icon: User },
+export const adminNav: NavItem[] = [
+  { href: "/admin/dashboard", label: "Admin Overview", icon: LayoutDashboard },
+  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/admin/users", label: "Global Users", icon: User },
   {
-    href: "/superadmin/loans",
+    href: "/admin/loans",
     label: "Platform Operations",
     icon: Wallet,
     items: [
-      { href: "/superadmin/loans", label: "Platform Loans Oversight", icon: Wallet },
-      { href: "/superadmin/agreements", label: "Agreements Inspector", icon: FileText },
-      { href: "/superadmin/audit", label: "Audit Logs & Security", icon: ShieldCheck },
+      { href: "/admin/loans", label: "Platform Loans Oversight", icon: Wallet },
+      { href: "/admin/agreements", label: "Agreements Inspector", icon: FileText },
+      { href: "/admin/audit", label: "Audit Logs & Security", icon: ShieldCheck },
     ],
   },
-  { href: "/superadmin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/lender/dashboard", label: "Lender Portal View", icon: BarChart3 },
+  { href: "/borrower/dashboard", label: "Borrower Portal View", icon: HandCoins },
 ];
+
+export const customerNav = borrowerNav;

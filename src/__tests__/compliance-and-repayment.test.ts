@@ -14,7 +14,7 @@ function validateIndianMobile(phone: string): boolean {
   return digits.length === 10 || (digits.length === 12 && digits.startsWith("91"));
 }
 
-function validateEmployeePaySlip(urlOrFilename: string): boolean {
+function validateBankStatement(urlOrFilename: string): boolean {
   if (!urlOrFilename || typeof urlOrFilename !== "string") return false;
   const clean = urlOrFilename.trim().toLowerCase();
   return (
@@ -88,17 +88,17 @@ describe("Borrower Compliance Verification & Advanced Repayment Math", () => {
     });
   });
 
-  describe("Employee Pay Slip Document Proof Validation", () => {
-    it("accepts valid pay slip file uploads and URLs", () => {
-      expect(validateEmployeePaySlip("payslip_august_2026.pdf")).toBe(true);
-      expect(validateEmployeePaySlip("salary_statement.jpg")).toBe(true);
-      expect(validateEmployeePaySlip("https://storage.sahayam.app/payslips/doc123.png")).toBe(true);
+  describe("Bank Statement Document Proof Validation", () => {
+    it("accepts valid bank statement file uploads and URLs", () => {
+      expect(validateBankStatement("bank_statement_august_2026.pdf")).toBe(true);
+      expect(validateBankStatement("bank_statement.jpg")).toBe(true);
+      expect(validateBankStatement("https://storage.sahayam.app/bankstatements/doc123.png")).toBe(true);
     });
 
-    it("rejects empty or invalid pay slip attachments", () => {
-      expect(validateEmployeePaySlip("")).toBe(false);
-      expect(validateEmployeePaySlip("   ")).toBe(false);
-      expect(validateEmployeePaySlip("file_without_ext")).toBe(false);
+    it("rejects empty or invalid bank statement attachments", () => {
+      expect(validateBankStatement("")).toBe(false);
+      expect(validateBankStatement("   ")).toBe(false);
+      expect(validateBankStatement("file_without_ext")).toBe(false);
     });
   });
 

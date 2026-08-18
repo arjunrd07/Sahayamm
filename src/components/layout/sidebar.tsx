@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Plus,
   Minus,
-  Search,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,7 +26,6 @@ export function Sidebar({ items, collapsed, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname();
   const { profile, signOut } = useAuth();
   const { unreadCount } = useNotifications();
-  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Track expanded state for items with sub-items
   const [openItems, setOpenItems] = React.useState<Record<string, boolean>>(() => {
@@ -48,17 +46,6 @@ export function Sidebar({ items, collapsed, onToggleCollapse }: SidebarProps) {
       [label]: !prev[label],
     }));
   };
-
-  // Filter items by search query if present
-  const filteredItems = React.useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter((item) => {
-      const matchLabel = item.label.toLowerCase().includes(q);
-      const matchSub = item.items?.some((sub) => sub.label.toLowerCase().includes(q));
-      return matchLabel || matchSub;
-    });
-  }, [items, searchQuery]);
 
   return (
     <aside
@@ -95,25 +82,9 @@ export function Sidebar({ items, collapsed, onToggleCollapse }: SidebarProps) {
         </button>
       </div>
 
-      {/* Quick Search Form (Sahayam Theme) */}
-      {!collapsed && (
-        <div className="mb-3 px-1">
-          <div className="relative flex items-center">
-            <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Quick search menu..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-ink dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
-            />
-          </div>
-        </div>
-      )}
-
       {/* Main Navigation List */}
       <nav className="flex-1 space-y-1 overflow-y-auto no-scrollbar pr-0.5">
-        {filteredItems.map((item) => {
+        {items.map((item) => {
           const hasSubItems = Boolean(item.items && item.items.length > 0);
           const isOpen = Boolean(openItems[item.label]);
           const Icon = item.icon;

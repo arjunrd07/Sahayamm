@@ -1,22 +1,23 @@
 import { describe, it, expect } from "vitest";
 
 describe("Database Schema Rules & Specifications", () => {
-  const validRoles = ["customer", "admin", "superadmin"] as const;
+  const validRoles = ["borrower", "lender", "admin"] as const;
 
-  it("supports superadmin, admin, and customer roles", () => {
-    expect(validRoles).toContain("superadmin");
+  it("supports borrower, lender, and admin roles strictly", () => {
+    expect(validRoles).toContain("borrower");
+    expect(validRoles).toContain("lender");
     expect(validRoles).toContain("admin");
-    expect(validRoles).toContain("customer");
+    expect(validRoles).toHaveLength(3);
   });
 
-  it("validates first employee superadmin assignment rule", () => {
-    const assignRoleForNewEmployee = (existingEmployeeCount: number) => {
-      return existingEmployeeCount === 0 ? "superadmin" : "customer";
+  it("validates organization multi-tenant assignment rule", () => {
+    const assignRoleForNewUser = (selectedRole: "borrower" | "lender" | "admin") => {
+      return selectedRole;
     };
 
-    expect(assignRoleForNewEmployee(0)).toBe("superadmin");
-    expect(assignRoleForNewEmployee(1)).toBe("customer");
-    expect(assignRoleForNewEmployee(5)).toBe("customer");
+    expect(assignRoleForNewUser("borrower")).toBe("borrower");
+    expect(assignRoleForNewUser("lender")).toBe("lender");
+    expect(assignRoleForNewUser("admin")).toBe("admin");
   });
 
   it("enforces required storage buckets", () => {

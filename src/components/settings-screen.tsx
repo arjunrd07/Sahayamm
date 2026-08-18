@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 interface SettingsScreenProps {
-  role?: "borrower" | "lender" | "superadmin";
+  role?: "borrower" | "lender" | "admin";
 }
 
 type TabValue = "policy" | "bank" | "notifications" | "appearance" | "security";
@@ -41,7 +41,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
   const supabase = createClient();
 
   const userRole = forcedRole || profile?.role || "borrower";
-  const isLender = userRole === "lender" || userRole === "superadmin";
+  const isLender = userRole === "lender" || userRole === "admin";
   const profileHref = isLender ? "/lender/profile" : "/borrower/profile";
 
   const [activeTab, setActiveTab] = useState<TabValue>(isLender ? "policy" : "bank");
@@ -263,7 +263,7 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
       {/* Tabs */}
       <Tabs value={activeTab} onChange={(val) => setActiveTab(val as TabValue)} tabs={tabs} />
 
-      {/* Lending Policies Tab (Lender/Superadmin Only) */}
+      {/* Lending Policies Tab (Lender/Admin Only) */}
       {activeTab === "policy" && isLender && (
         <form onSubmit={handleSavePolicy} className="space-y-6 animate-fade-in">
           <Card className="space-y-5">
@@ -369,10 +369,10 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
             <div className="p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50/70 dark:bg-blue-950/30 text-xs text-blue-900 dark:text-blue-200 space-y-1">
               <span className="font-bold flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                Primary ID Proof Standard: Employee Pay Slip (Salary Slip)
+                Primary Verification Proof Standard: Bank statement
               </span>
               <p className="text-[11px] text-blue-800 dark:text-blue-300">
-                Per organizational compliance, your Employee Pay Slip serves as the primary official ID Proof for intra-company emergency credit verification.
+                Per organizational compliance, your Bank statement serves as the primary official proof for intra-company emergency credit verification.
               </p>
             </div>
           </Card>

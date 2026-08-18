@@ -139,7 +139,7 @@ export async function requestLoan(input: RequestLoanInput) {
     .from("profiles")
     .select("id, email")
     .eq("org_id", profile.org_id)
-    .in("role", ["lender", "superadmin"]);
+    .in("role", ["lender", "admin"]);
 
   for (const l of lenders || []) {
     if (l.id !== profile.id) {

@@ -31,11 +31,11 @@ export default async function RootPage() {
   }
 
   const dashboardUrl =
-    profile?.role === "superadmin"
-      ? "/superadmin/dashboard"
-      : profile?.role === "lender" || profile?.role === "admin"
-      ? "/lender/dashboard"
-      : "/borrower/dashboard";
+    profile?.role === "admin"
+      ? "/admin/dashboard"
+      : profile?.role === "lender"
+        ? "/lender/dashboard"
+        : "/borrower/dashboard";
 
   return (
     <div className="min-h-screen bg-white dark:bg-canvas-dark text-ink dark:text-white flex flex-col font-sans selection:bg-signal-soft selection:text-signal">
@@ -89,13 +89,14 @@ export default async function RootPage() {
               <span>Digital Loan Agreement Platform</span>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-tight leading-[1.08] text-ink dark:text-white">
-              Intra-org lending <br className="hidden sm:inline" />
-              <span className="text-signal">made effortless</span>
+            <h1 className="text-3xl sm:text-5xl lg:text-[52px] font-extrabold tracking-tight leading-[1.12] text-ink dark:text-white">
+              Workplace community financial assistance documentation and management platform
             </h1>
 
-            <p className="text-lg sm:text-xl text-ink-slate leading-relaxed max-w-xl">
-              Empower your team with 0% interest emergency credit pools, legally binding digital e-signatures, and automated HRMS workflow approvals.
+            <p className="text-base sm:text-lg text-ink-slate leading-relaxed max-w-xl">
+              Manage requests, verification, agreements, disbursement records, and
+              repayments in one transparent platform—while keeping financial
+              transactions between the parties involved.
             </p>
 
             {/* Direct CTA Action Group */}

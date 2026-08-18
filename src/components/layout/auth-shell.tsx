@@ -48,10 +48,10 @@ export function AuthShell({
           <div className="max-w-lg mx-auto w-full space-y-8 relative z-10">
             <div>
               <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-signal-soft text-signal-cobalt text-xs font-bold mb-4 border border-signal/20">
-                <Sparkles className="h-3.5 w-3.5 text-signal" /> Try Sahayam
+                Try Sahayam
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-ink dark:text-white tracking-tight leading-snug">
-                Transparent intra-organization lending for modern teams
+                Workplace community financial assistance documentation and management platform
               </h2>
             </div>
 

@@ -85,14 +85,11 @@ export function Topbar({ items }: TopbarProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isLender = pathname?.startsWith("/lender");
-  const isSuperadmin = pathname?.startsWith("/superadmin");
-  const portalLabel = isSuperadmin ? "Admin Portal" : isLender ? "Lender Portal" : "Borrower Portal";
+  const portalLabel = isLender ? "Lender Portal" : "Borrower Portal";
 
-  const notificationsHref = isSuperadmin
-    ? "/superadmin/notifications"
-    : isLender
-      ? "/lender/notifications"
-      : "/borrower/notifications";
+  const notificationsHref = isLender
+    ? "/lender/notifications"
+    : "/borrower/notifications";
   const active = items.find((item) => pathname?.startsWith(item.href));
   const title = active?.label ?? "Sahayam";
 

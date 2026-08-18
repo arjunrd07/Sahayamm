@@ -45,7 +45,7 @@ export async function GET(request: Request) {
           .from("profiles")
           .select("id, email")
           .eq("org_id", loan.org_id)
-          .in("role", ["lender", "superadmin"]);
+          .in("role", ["lender", "admin"]);
 
         for (const lender of lenders || []) {
           await dispatchNotification({
