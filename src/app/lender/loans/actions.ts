@@ -16,7 +16,7 @@ async function requireLender() {
   const { data: lender } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (
     !lender ||
-    (lender.role !== "lender" && lender.role !== "admin" && lender.role !== "superadmin")
+    (lender.role !== "lender" && lender.role !== "admin")
   ) {
     return { supabase, lender: null };
   }
@@ -48,7 +48,7 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     .eq("id", loanId)
     .eq("status", "pending");
 
-  if (lender.role !== "superadmin") {
+  if (lender.role !== "admin") {
     query = query.eq("org_id", lender.org_id);
   }
 
@@ -176,7 +176,7 @@ export async function rejectLoan(loanId: string, reason: string) {
     .eq("id", loanId)
     .eq("status", "pending");
 
-  if (lender.role !== "superadmin") {
+  if (lender.role !== "admin") {
     query = query.eq("org_id", lender.org_id);
   }
 

@@ -5,6 +5,8 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
+
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
@@ -46,26 +48,35 @@ export async function proxy(request: NextRequest) {
   // If user is authenticated, enforce RBAC role route permissions
   if (user && !isPublicRoute) {
     try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role, org_id")
-        .eq("id", user.id)
-        .maybeSingle();
+      let userRole = user.user_metadata?.role;
 
-      const userRole = profile?.role || "borrower";
+      if (!userRole || userRole !== "admin") {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, org_id")
+          .eq("id", user.id)
+          .maybeSingle();
 
-      // 1. /superadmin/* routes are ONLY accessible by superadmin
-      if (pathname.startsWith("/superadmin") && userRole !== "superadmin") {
+        if (profile?.role) {
+          userRole = profile.role;
+        }
+      }
+
+      if (!userRole) {
+        userRole = "borrower";
+      }
+
+      // 1. /admin/* routes are ONLY accessible by admin role
+      if (pathname.startsWith("/admin") && userRole !== "admin") {
         const redirectPath = userRole === "lender" ? "/lender/dashboard" : "/borrower/dashboard";
         return NextResponse.redirect(new URL(redirectPath, request.url));
       }
 
-      // 2. /lender/* routes are ONLY accessible by lender, admin, or superadmin
+      // 2. /lender/* routes are accessible by lender or admin
       if (
         pathname.startsWith("/lender") &&
         userRole !== "lender" &&
-        userRole !== "admin" &&
-        userRole !== "superadmin"
+        userRole !== "admin"
       ) {
         return NextResponse.redirect(new URL("/borrower/dashboard", request.url));
       }

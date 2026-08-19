@@ -1,4 +1,4 @@
-export type UserRole = "borrower" | "lender" | "admin" | "superadmin";
+export type UserRole = "borrower" | "lender" | "admin";
 export type VerificationStatus = "unverified" | "pending" | "verified" | "rejected";
 export type LoanStatus = "pending" | "approved" | "rejected" | "active" | "completed" | "overdue";
 export type AgreementStatus = "draft" | "sent" | "partially_signed" | "completed";
@@ -22,9 +22,18 @@ export interface Organization {
   created_at: string;
 }
 
+export interface Campus {
+  id: string;
+  org_id: string;
+  name: string;
+  code: string;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   org_id: string;
+  campus_id?: string | null;
   full_name: string;
   email: string;
   phone: string | null;
@@ -54,6 +63,7 @@ export interface Profile {
 export interface Borrower {
   id: string;
   organization_id: string;
+  campus_id?: string | null;
   full_name: string;
   email: string;
   phone: string | null;
@@ -65,8 +75,11 @@ export interface Borrower {
 export interface Loan {
   id: string;
   org_id: string;
+  campus_id?: string | null;
   customer_id: string;
+  borrower_id?: string;
   admin_id: string | null;
+  lender_id?: string | null;
   amount: number;
   purpose: string;
   duration_days: number;
@@ -93,6 +106,7 @@ export interface LoanPayment {
   id: string;
   loan_id: string;
   org_id: string;
+  campus_id?: string | null;
   borrower_id: string;
   amount: number;
   payment_proof_url: string;
@@ -104,6 +118,7 @@ export interface LoanPayment {
 export interface Agreement {
   id: string;
   org_id: string;
+  campus_id?: string | null;
   loan_id: string;
   agreement_number: string;
   docuseal_submission_id: string | null;
@@ -120,6 +135,7 @@ export interface Agreement {
 export interface AppNotification {
   id: string;
   org_id: string;
+  campus_id?: string | null;
   user_id: string;
   loan_id: string | null;
   title: string;
@@ -138,6 +154,12 @@ export interface Database {
         Row: Organization;
         Insert: Partial<Organization>;
         Update: Partial<Organization>;
+        Relationships: [];
+      };
+      campuses: {
+        Row: Campus;
+        Insert: Partial<Campus>;
+        Update: Partial<Campus>;
         Relationships: [];
       };
       profiles: {

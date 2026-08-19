@@ -116,7 +116,7 @@ export default function AdminVerificationsPage() {
         <div>
           <h2 className="text-xl font-semibold">Borrower Verifications</h2>
           <p className="text-xs text-muted">
-            Inspect applicant details, view PAN card and pay slip documents, and approve or reject verification requests.
+            Inspect applicant details, view PAN card and bank statement documents, and approve or reject verification requests.
           </p>
         </div>
       </div>
@@ -242,14 +242,14 @@ export default function AdminVerificationsPage() {
                 )}
               </div>
 
-              {/* Employee Pay Slip Document Card */}
+              {/* Bank Statement Document Card */}
               <div className="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3 truncate">
                   <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-300 shrink-0">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div className="truncate">
-                    <p className="text-xs font-bold text-ink dark:text-white">2. Employee Pay Slip (Salary Slip)</p>
+                    <p className="text-xs font-bold text-ink dark:text-white">2. Bank Statement (Financial Proof)</p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                       {selected.employment_proof_url ? "File Attached & Available" : "No file uploaded"}
                     </p>
@@ -261,10 +261,10 @@ export default function AdminVerificationsPage() {
                     type="button"
                     variant="secondary"
                     className="text-xs font-bold w-full sm:w-auto shrink-0 text-signal hover:bg-signal-soft/40 justify-center"
-                    onClick={() => handleViewDoc("Employee Pay Slip Document", selected.employment_proof_url)}
+                    onClick={() => handleViewDoc("Bank Statement Document", selected.employment_proof_url)}
                   >
                     <Eye className="h-3.5 w-3.5 mr-1.5" />
-                    View Pay Slip
+                    View Bank Statement
                   </Button>
                 ) : (
                   <span className="text-xs font-semibold text-slate-400">Not Uploaded</span>
@@ -277,7 +277,7 @@ export default function AdminVerificationsPage() {
               <div className="pt-2 border-t border-slate-100 dark:border-white/10 space-y-3">
                 {rejecting && (
                   <Textarea
-                    placeholder="Reason for rejection (e.g. Unclear document scan, invalid salary slip)"
+                    placeholder="Reason for rejection (e.g. Unclear document scan, invalid bank statement)"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                   />

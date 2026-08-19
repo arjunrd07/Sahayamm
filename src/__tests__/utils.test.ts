@@ -9,7 +9,7 @@ describe("Utility Functions", () => {
 
   it("extracts initials correctly", () => {
     expect(initials("John Doe")).toBe("JD");
-    expect(initials("Super Admin User")).toBe("SA");
+    expect(initials("Admin User")).toBe("AU");
     expect(initials("Sahayam")).toBe("S");
   });
 

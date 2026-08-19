@@ -1,4 +1,4 @@
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import { createMasterServiceRoleClient } from "@/lib/supabase/server";
 
 export interface AuditLogPayload {
   action: string;
@@ -10,7 +10,7 @@ export interface AuditLogPayload {
 
 export async function logAuditEntry(payload: AuditLogPayload) {
   try {
-    const service = createServiceRoleClient();
+    const service = createMasterServiceRoleClient();
     const { error } = await service.from("audit_logs").insert({
       action: payload.action,
       actor_id: payload.actor_id || null,
@@ -21,7 +21,7 @@ export async function logAuditEntry(payload: AuditLogPayload) {
     });
 
     if (error) {
-      console.warn("Could not insert to audit_logs (table may need schema sync):", error.message);
+      console.warn("Could not insert to master_db audit_logs:", error.message);
     }
   } catch (err) {
     console.warn("Audit logging error:", err);

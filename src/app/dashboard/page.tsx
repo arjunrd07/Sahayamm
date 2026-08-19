@@ -17,10 +17,6 @@ export default async function DashboardRedirectPage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role === "superadmin") {
-    redirect("/superadmin/dashboard");
-  }
-
   if (profile?.role === "lender" || profile?.role === "admin") {
     redirect("/lender/dashboard");
   }

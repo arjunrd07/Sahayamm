@@ -31,7 +31,7 @@ export async function signLendingAgreement(agreementId: string, signatureName: s
 
   const loan = (agreement as any).loan;
   const isBorrower = loan?.customer_id === user.id;
-  const isLender = loan?.admin_id === user.id || user.user_metadata?.role === "lender" || user.user_metadata?.role === "superadmin";
+  const isLender = loan?.admin_id === user.id || user.user_metadata?.role === "lender" || user.user_metadata?.role === "admin";
 
   if (!isBorrower && !isLender) {
     return { error: "You are not an authorized party for this agreement." };

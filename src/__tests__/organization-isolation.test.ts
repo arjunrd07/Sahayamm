@@ -4,7 +4,7 @@ interface ProfileRecord {
   id: string;
   org_id: string | null;
   full_name: string;
-  role: "borrower" | "lender" | "superadmin";
+  role: "borrower" | "lender" | "admin";
 }
 
 interface LoanRecord {
@@ -28,8 +28,8 @@ function filterLoansForLender(
   loans: LoanRecord[],
   lenderProfile: ProfileRecord
 ): LoanRecord[] {
-  // Superadmin sees all
-  if (lenderProfile.role === "superadmin") {
+  // Admin sees all
+  if (lenderProfile.role === "admin") {
     return loans;
   }
   // Lender sees only loans belonging to their organization
@@ -111,16 +111,16 @@ describe("Multi-Tenant Organization Isolation & Liquidity Governance", () => {
     expect(visibleForOrg2.map((l) => l.id)).toEqual(["loan-3"]);
   });
 
-  it("allows superadmin to oversee loans across all organizations", () => {
-    const superadmin: ProfileRecord = {
-      id: "superadmin-1",
+  it("allows admin to oversee loans across all organizations", () => {
+    const admin: ProfileRecord = {
+      id: "admin-1",
       org_id: null,
-      full_name: "Super Administrator",
-      role: "superadmin",
+      full_name: "Administrator",
+      role: "admin",
     };
 
-    const visibleForSuperadmin = filterLoansForLender(mockLoans, superadmin);
-    expect(visibleForSuperadmin).toHaveLength(3);
+    const visibleForAdmin = filterLoansForLender(mockLoans, admin);
+    expect(visibleForAdmin).toHaveLength(3);
   });
 
   it("enforces capital pool limit checks on loan applications", () => {

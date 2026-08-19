@@ -1,6 +1,10 @@
-# Sahayam — Intra-Organization Lending Platform
+# Sahayam — Workplace Community Financial Assistance Documentation and Management Platform
 
-**Sahayam** is an enterprise-grade multi-tenant platform designed for intra-organization micro-lending. It enables employees and members of verified organizations to request emergency loans directly from organization lenders and admins with transparent calculations, automated KYC verification, digital lending agreement execution, and real-time activity tracking — **without handling physical cash on platform**. All disbursement and repayment settlements happen securely, while Sahayam provides complete compliance, tracking, and audit trails.
+**Sahayam** is an enterprise-grade workplace community financial assistance documentation and management platform. 
+
+> **Platform Role:** Sahayam acts strictly as a technology provider enabling documentation, communication, and record management between parties who voluntarily choose to enter into a private agreement.
+
+It enables employees and members of verified organizations to formalize peer assistance requests directly with organization lenders and admins with transparent calculations, automated identity & bank statement verification, digital agreement execution, and real-time activity tracking — **without holding or transferring funds on platform**. All financial transfers happen directly between private parties, while Sahayam provides complete compliance, tracking, and audit trails.
 
 ---
 
@@ -9,18 +13,18 @@
 ### 👤 1. Borrower Experience (`/borrower`)
 - **Interactive Loan Request Calculator**: Real-time interest and total repayment math based on customizable duration.
 - **Borrower Profile & Financial Vault**: Full identity, mobile number validation, CIBIL score tracking, address, bank payout vault, and emergency references.
-- **KYC Verification & Document Upload**: Upload proof of identity and employment for automated verification.
+- **KYC Verification & Document Upload**: Upload proof of identity (PAN Card) and Bank Statement for automated verification.
 - **My Loans & Repayment Tracking**: Active, completed, and pending loan requests with disbursal proof inspection.
-- **Digital Agreement Viewer**: View and sign official intra-organization lending agreements with print and PDF export capabilities.
+- **Digital Agreement Viewer**: View and sign official workplace financial assistance agreements with print and PDF export capabilities.
 
 ### 🏦 2. Lender & Treasury Vault (`/lender`)
 - **Lender Dashboard & Analytics**: Real-time overview of active capital deployed, pending approvals, and repayment rates.
-- **Verification Management**: Review borrower identity proof, employment credentials, and CIBIL scores to approve or reject KYC verification.
+- **Verification Management**: Review borrower identity proof, bank statement credentials, and CIBIL scores to approve or reject verification.
 - **Loan Approvals & Disbursal**: Review loan requests, approve/reject with custom notes, and record disbursal transaction receipts.
 - **Lender Profile & Treasury Vault**: Manage organization treasury pool allocation, max disbursement limits per loan, and settlement bank account details.
 - **Reports & Data Export**: Filter and export loan history to CSV for financial accounting.
 
-### 🛡️ 3. Superadmin Governance (`/superadmin`)
+### 🛡️ 3. Admin Governance (`/admin`)
 - **Global Overview**: Multi-tenant workspace metrics across all registered organizations.
 - **Organization Management**: Onboard new corporate entities and assign administrator roles.
 - **User Directory & Security Audit**: Inspect global user accounts, verification statuses, and system audit logs.
@@ -51,7 +55,7 @@ sahayam/
 │   │   ├── (auth) login/, signup/, auth/callback/
 │   │   ├── borrower/      dashboard, verification, request, loans, profile, settings, notifications
 │   │   ├── lender/        dashboard, verifications, loans, active, completed, reports, profile, settings, notifications
-│   │   ├── superadmin/    dashboard, organizations, users, audit
+│   │   ├── admin/         dashboard, organizations, users, audit, loans, agreements, notifications
 │   │   └── api/           agreements/webhook, notifications/cron
 │   ├── components/
 │   │   ├── ui/            Select (Theme UI), AnimatedList, Card, Input, Button, Toast, Modal
@@ -64,10 +68,7 @@ sahayam/
 │   ├── lib/               supabase, notify, loan-math, utils, nav
 │   └── types/             database.ts
 └── supabase/
-    ├── migrations/        0001_initial_schema.sql - 0007_migrate_roles_borrower_lender.sql
-    ├── CONSOLIDATED_SETUP.sql
-    ├── schema.sql
-    └── seed.sql
+    └── migrations/        0001_extensions_and_enums.sql - 0006_rls_functions_and_policies.sql
 ```
 
 ---
@@ -76,13 +77,12 @@ sahayam/
 
 The platform enforces strict multi-tenant Row Level Security (RLS) and standardized nomenclature:
 
-- **Roles (`user_role`)**: `borrower`, `lender`, `superadmin`
+- **Roles (`user_role`)**: `borrower`, `lender`, `admin`
 - **Columns**: `borrower_id` and `lender_id` on `loans` table; `bank_name`, `account_number`, `ifsc_code`, `upi_id`, `emergency_name`, `emergency_phone`, `emergency_relation` on `profiles` table.
 
 ### Applying Database Setup:
 1. Open your **Supabase Dashboard** -> **SQL Editor**.
-2. Run `supabase/migrations/CONSOLIDATED_SETUP.sql` to initialize all tables, RLS policies, triggers, storage buckets, and reload PostgREST schema cache.
-3. If upgrading an existing database, run `supabase/migrations/0007_migrate_roles_borrower_lender.sql`.
+2. Run migrations 0001 through 0006 sequentially from `supabase/migrations/`.
 
 ---
 

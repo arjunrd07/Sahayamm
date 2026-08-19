@@ -1,42 +1,72 @@
 "use server";
 
-import { createServiceRoleClient } from "@/lib/supabase/server";
+import { createServiceRoleClient, createMasterServiceRoleClient } from "@/lib/supabase/server";
 
-export async function ensureSuperadminAccount(emailInput?: string, passwordInput?: string) {
-  const email = (emailInput || "Superadmin@gmail.com").trim();
-  const password = passwordInput || "Superadmin@Sahayamm";
+export async function getUserRoleAcrossSchemas(userId: string): Promise<string> {
+  const serviceMaster = createMasterServiceRoleClient();
+  const servicePublic = createServiceRoleClient();
+  const serviceOrg = createServiceRoleClient("org_rmse_waverock");
+
+  // 1. Check master_db.profiles
+  const { data: masterProf } = await serviceMaster.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (masterProf?.role) {
+    // Sync to public and org schemas if needed
+    try {
+      await servicePublic.from("profiles").update({ role: masterProf.role }).eq("id", userId);
+      await serviceOrg.from("profiles").update({ role: masterProf.role }).eq("id", userId);
+    } catch {
+      // Ignore background sync warning
+    }
+    return masterProf.role;
+  }
+
+  // 2. Check public.profiles
+  const { data: publicProf } = await servicePublic.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (publicProf?.role) {
+    return publicProf.role;
+  }
+
+  return "borrower";
+}
+
+export async function ensureAdminAccount(emailInput?: string, passwordInput?: string) {
+  const email = (emailInput || "admin@gmail.com").trim();
+  const password = passwordInput || "Admin@Sahayamm";
   const normalizedEmail = email.toLowerCase();
 
-  const isSuperadminEmail =
-    normalizedEmail === "superadmin@gmail.com" || normalizedEmail === "sahayamm@gmail.com";
+  const isAdminEmail =
+    normalizedEmail === "admin@gmail.com" ||
+    normalizedEmail === "sahayamm@gmail.com";
 
-  if (!isSuperadminEmail) {
-    return { success: false, reason: "Not superadmin email." };
+  if (!isAdminEmail) {
+    return { success: false, reason: "Not admin email." };
   }
 
   try {
-    const service = createServiceRoleClient();
+    const servicePublic = createServiceRoleClient();
+    const serviceMaster = createMasterServiceRoleClient();
+    const serviceOrg = createServiceRoleClient("org_rmse_waverock");
 
     // Find any existing organization ID to fulfill org_id if required by database schema
-    const { data: firstOrg } = await service.from("organizations").select("id").limit(1).maybeSingle();
+    const { data: firstOrg } = await servicePublic.from("organizations").select("id").limit(1).maybeSingle();
     const defaultOrgId = firstOrg?.id || null;
 
-    // 1. Check if profile exists for superadmin email or legacy email
-    const { data: existingProfile } = await service
+    // 1. Check if profile exists for admin email
+    const { data: existingProfile } = await servicePublic
       .from("profiles")
       .select("id, role, email")
-      .or(`email.ilike.superadmin@gmail.com,email.ilike.sahayamm@gmail.com`)
+      .or(`email.ilike.admin@gmail.com,email.ilike.sahayamm@gmail.com`)
       .maybeSingle();
 
     let userId: string | null = existingProfile?.id || null;
 
     if (!userId) {
       // 2. Query auth users via admin API
-      const { data: usersData, error: listError } = await service.auth.admin.listUsers();
+      const { data: usersData, error: listError } = await servicePublic.auth.admin.listUsers();
       if (!listError && usersData?.users) {
         const found = usersData.users.find(
           (u) =>
-            u.email?.toLowerCase() === "superadmin@gmail.com" ||
+            u.email?.toLowerCase() === "admin@gmail.com" ||
             u.email?.toLowerCase() === "sahayamm@gmail.com"
         );
         if (found) {
@@ -47,45 +77,43 @@ export async function ensureSuperadminAccount(emailInput?: string, passwordInput
 
     if (!userId) {
       // 3. Create user in auth.users via admin API
-      const { data: newUser, error: createError } = await service.auth.admin.createUser({
-        email: "Superadmin@gmail.com",
+      const { data: newUser, error: createError } = await servicePublic.auth.admin.createUser({
+        email: "admin@gmail.com",
         password: password,
         email_confirm: true,
         user_metadata: {
-          full_name: "Sahayam Superadmin",
-          role: "superadmin",
+          full_name: "Sahayam Admin",
+          role: "admin",
         },
       });
 
       if (!createError && newUser?.user) {
         userId = newUser.user.id;
       } else {
-        // Fallback static ID if admin API is restricted
         userId = "a0000000-0000-0000-0000-000000000001";
       }
     } else {
-      // Update password & confirm email to ensure credentials match
       try {
-        await service.auth.admin.updateUserById(userId, {
-          email: "Superadmin@gmail.com",
+        await servicePublic.auth.admin.updateUserById(userId, {
+          email: "admin@gmail.com",
           password: password,
           email_confirm: true,
           user_metadata: {
-            full_name: "Sahayam Superadmin",
-            role: "superadmin",
+            full_name: "Sahayam Admin",
+            role: "admin",
           },
         });
       } catch (updateErr) {
-        console.warn("Notice updating superadmin auth user:", updateErr);
+        console.warn("Notice updating admin auth user:", updateErr);
       }
     }
 
-    // 4. Ensure public.profiles has superadmin role & verified flags
+    // 4. Ensure profiles exist across all 3 schemas
     const profilePayload: any = {
       id: userId,
-      email: "Superadmin@gmail.com",
-      full_name: "Sahayam Superadmin",
-      role: "superadmin",
+      email: "admin@gmail.com",
+      full_name: "Sahayam Admin",
+      role: "admin",
       verification_status: "verified",
       is_verified: true,
       kyc_completed: true,
@@ -97,18 +125,27 @@ export async function ensureSuperadminAccount(emailInput?: string, passwordInput
       profilePayload.organization_id = defaultOrgId;
     }
 
-    const { error: profileError } = await service.from("profiles").upsert(
-      profilePayload,
-      { onConflict: "id" }
-    );
-
-    if (profileError) {
-      console.warn("Notice updating superadmin profile:", profileError.message);
+    try {
+      await servicePublic.from("profiles").upsert(profilePayload, { onConflict: "id" });
+    } catch (e) {
+      console.warn("Notice updating public admin profile:", e);
     }
 
-    return { success: true, userId, email: "Superadmin@gmail.com", password };
+    try {
+      await serviceMaster.from("profiles").upsert(profilePayload, { onConflict: "id" });
+    } catch (e) {
+      console.warn("Notice updating master admin profile:", e);
+    }
+
+    try {
+      await serviceOrg.from("profiles").upsert(profilePayload, { onConflict: "id" });
+    } catch (e) {
+      console.warn("Notice updating org admin profile:", e);
+    }
+
+    return { success: true, userId, email: "admin@gmail.com", password };
   } catch (err: any) {
-    console.error("Superadmin auto-provisioning exception:", err);
+    console.error("Admin auto-provisioning exception:", err);
     return { success: true, userId: "a0000000-0000-0000-0000-000000000001" };
   }
 }

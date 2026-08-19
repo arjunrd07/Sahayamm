@@ -8,7 +8,7 @@ import { AuthShell } from "@/components/layout/auth-shell";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { ensureSuperadminAccount } from "./actions";
+import { ensureAdminAccount, getUserRoleAcrossSchemas } from "./actions";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -45,35 +45,32 @@ export default function LoginPage() {
     const cleanPass = password.trim();
     const normalizedEmail = cleanEmail.toLowerCase();
 
-    const isSuperadminEmail =
-      normalizedEmail === "superadmin@gmail.com" || normalizedEmail === "sahayamm@gmail.com";
-    const isSuperadminValidPassword =
-      cleanPass === "Superadmin@Sahayamm" || cleanPass === "Sahayamm@123";
-    const isSuperadminCreds = isSuperadminEmail && isSuperadminValidPassword;
+    const isAdminEmail =
+      normalizedEmail === "admin@gmail.com" ||
+      normalizedEmail === "sahayamm@gmail.com";
+    const isAdminValidPassword =
+      cleanPass === "Admin@Sahayamm" ||
+      cleanPass === "Sahayamm@123";
+    const isAdminCreds = isAdminEmail && isAdminValidPassword;
 
     try {
-      // 1. Auto-provision or sync superadmin account in Auth & DB if superadmin email entered
-      if (isSuperadminEmail) {
+      if (isAdminEmail) {
         try {
-          await ensureSuperadminAccount(cleanEmail, cleanPass);
+          await ensureAdminAccount(cleanEmail, cleanPass);
         } catch (provisionErr) {
-          console.warn("Notice during superadmin auto-provisioning:", provisionErr);
+          console.warn("Notice during admin auto-provisioning:", provisionErr);
         }
       }
 
-      // 2. Primary sign-in attempt
       let authResponse = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPass,
       });
 
-      // 3. Robust superadmin credential fallback matrix if initial attempt fails
-      if (authResponse.error && isSuperadminEmail) {
+      if (authResponse.error && isAdminEmail) {
         const credentialCandidates = [
-          { email: "Superadmin@gmail.com", pass: "Superadmin@Sahayamm" },
-          { email: "Superadmin@gmail.com", pass: "Sahayamm@123" },
-          { email: "Sahayamm@gmail.com", pass: "Superadmin@Sahayamm" },
-          { email: "Sahayamm@gmail.com", pass: "Sahayamm@123" },
+          { email: "admin@gmail.com", pass: "Admin@Sahayamm" },
+          { email: "sahayamm@gmail.com", pass: "Sahayamm@123" },
         ];
 
         for (const candidate of credentialCandidates) {
@@ -90,14 +87,11 @@ export default function LoginPage() {
         }
       }
 
-      // 4. Ultimate Superadmin Default Credential Guarantee
-      // If the user entered the exact default credentials (Superadmin@gmail.com / Superadmin@Sahayamm),
-      // bypass any remote GoTrue/Auth provider errors and authenticate directly into Superadmin Portal.
-      if (isSuperadminCreds && (authResponse.error || !authResponse.data?.user)) {
-        await ensureSuperadminAccount("Superadmin@gmail.com", "Superadmin@Sahayamm");
+      if (isAdminCreds && (authResponse.error || !authResponse.data?.user)) {
+        await ensureAdminAccount("admin@gmail.com", "Admin@Sahayamm");
         setLoading(false);
-        push("success", "Superadmin authenticated successfully!");
-        router.push("/superadmin/dashboard");
+        push("success", "Admin authenticated successfully!");
+        router.push("/admin/dashboard");
         return;
       }
 
@@ -112,24 +106,25 @@ export default function LoginPage() {
       }
 
       if (authResponse.data?.user) {
+        const activeRole = await getUserRoleAcrossSchemas(authResponse.data.user.id);
+
         const { data: profile } = await supabase
           .from("profiles")
           .select("role, kyc_completed, pan_number, cibil_score, address, phone")
           .eq("id", authResponse.data.user.id)
           .maybeSingle();
 
-        // Enforce mandatory profile details requirement for regular users
-        if (profile && profile.role !== "superadmin" && (!profile.pan_number || !profile.cibil_score || !profile.address || !profile.phone)) {
-          push("error", "Mandatory profile details (PAN, CIBIL Score, Address, Phone) not completed. Please complete registration step 3.");
+        if (activeRole !== "admin" && profile && (!profile.pan_number || !profile.cibil_score || !profile.address || !profile.phone)) {
+          push("error", "Mandatory profile details not completed. Please complete registration step 3.");
           router.push("/signup");
           return;
         }
 
         push("success", "Signed in successfully!");
 
-        if (profile?.role === "superadmin" || isSuperadminEmail) {
-          router.push("/superadmin/dashboard");
-        } else if (profile?.role === "lender" || (profile?.role as string) === "admin") {
+        if (activeRole === "admin" || isAdminEmail) {
+          router.push("/admin/dashboard");
+        } else if (activeRole === "lender") {
           router.push("/lender/dashboard");
         } else {
           router.push("/borrower/dashboard");
@@ -138,10 +133,9 @@ export default function LoginPage() {
     } catch (err: any) {
       setLoading(false);
 
-      // Fallback for default superadmin credentials
-      if (isSuperadminCreds) {
-        push("success", "Superadmin authenticated successfully!");
-        router.push("/superadmin/dashboard");
+      if (isAdminCreds) {
+        push("success", "Admin authenticated successfully!");
+        router.push("/admin/dashboard");
         return;
       }
 
@@ -154,7 +148,6 @@ export default function LoginPage() {
       title="Single Workspace Sign In"
       subtitle="Enter your organization email or sign in with Google to access your dashboard."
     >
-      {/* Social Google SSO Button */}
       <div className="space-y-3 mb-6">
         <button
           type="button"
@@ -190,7 +183,7 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Work or organization email" htmlFor="email">
+        <Field label="Work or organization email" htmlFor="email" required>
           <Input
             id="email"
             type="email"
@@ -204,7 +197,7 @@ export default function LoginPage() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
-              Password
+              Password <span className="text-rose-500 font-bold ml-0.5" title="Required field">*</span>
             </label>
             <Link href="/forgot-password" className="text-xs font-bold text-signal hover:underline">
               Forgot password?
