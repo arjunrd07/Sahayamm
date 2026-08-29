@@ -51,11 +51,12 @@ export async function ensureAdminAccount(emailInput?: string, passwordInput?: st
     const { data: firstOrg } = await servicePublic.from("organizations").select("id").limit(1).maybeSingle();
     const defaultOrgId = firstOrg?.id || null;
 
-    // 1. Check if profile exists for admin email
+    // 1. Check if profile exists for target admin email
     const { data: existingProfile } = await servicePublic
       .from("profiles")
       .select("id, role, email")
-      .or(`email.ilike.admin@gmail.com,email.ilike.sahayamm@gmail.com`)
+      .eq("email", normalizedEmail)
+      .limit(1)
       .maybeSingle();
 
     let userId: string | null = existingProfile?.id || null;
