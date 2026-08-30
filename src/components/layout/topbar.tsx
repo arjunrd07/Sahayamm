@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Menu, X, ArrowRight, CheckCheck, ChevronRight, Search } from "lucide-react";
+import { Bell, Menu, X, ArrowRight, CheckCheck, ChevronRight, Search, LogOut } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useNotifications } from "@/context/notification-context";
 import { useAuth } from "@/context/auth-context";
@@ -223,6 +223,20 @@ export function Topbar({ items }: TopbarProps) {
             )}
           </button>
 
+          {/* Topbar Quick Sign Out */}
+          {profile && (
+            <button
+              type="button"
+              onClick={signOut}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-white/10 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-200/40 dark:hover:border-rose-900/40 text-xs font-bold transition-all active:scale-95"
+              title="Log out of account"
+              aria-label="Log out of account"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </button>
+          )}
+
           {/* Animated Glass Notification Dropdown Popover */}
           {notifOpen && (
             <div className="absolute right-[-8px] sm:right-0 top-12 w-[calc(100vw-32px)] max-w-sm sm:w-96 rounded-2xl bg-white/95 dark:bg-surface-dark/95 backdrop-blur-2xl border border-slate-200 dark:border-surface-border-dark shadow-elevated z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -393,10 +407,10 @@ export function Topbar({ items }: TopbarProps) {
                   </div>
                   <button
                     onClick={signOut}
-                    className="p-2 text-slate-400 hover:text-danger rounded-lg transition-colors"
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                     title="Sign out"
                   >
-                    <X className="h-4 w-4" />
+                    <LogOut className="h-4 w-4" />
                   </button>
                 </div>
               </div>

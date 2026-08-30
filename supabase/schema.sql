@@ -56,8 +56,8 @@ CREATE TABLE IF NOT EXISTS campuses (
 -- 4. PROFILES
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  org_id UUID REFERENCES organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   rejection_reason TEXT,
   id_proof_url TEXT,
   employment_proof_url TEXT,
-  verified_by UUID REFERENCES profiles(id),
+  verified_by UUID REFERENCES profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
   verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -86,8 +86,8 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- 5. BORROWERS
 CREATE TABLE IF NOT EXISTS borrowers (
   id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -99,10 +99,12 @@ CREATE TABLE IF NOT EXISTS borrowers (
 -- 6. LOANS
 CREATE TABLE IF NOT EXISTS loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
-  borrower_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
-  lender_id UUID REFERENCES profiles(id),
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  borrower_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  customer_id UUID REFERENCES profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  admin_id UUID REFERENCES profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  lender_id UUID REFERENCES profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
   purpose TEXT NOT NULL,
   duration_days INTEGER NOT NULL CHECK (duration_days IN (7, 14, 21)),
@@ -129,8 +131,8 @@ CREATE TABLE IF NOT EXISTS loans (
 CREATE TABLE IF NOT EXISTS loan_payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   loan_id UUID NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   borrower_id UUID NOT NULL REFERENCES profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
   payment_proof_url TEXT NOT NULL,
@@ -142,8 +144,8 @@ CREATE TABLE IF NOT EXISTS loan_payments (
 -- 8. AGREEMENTS
 CREATE TABLE IF NOT EXISTS agreements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   loan_id UUID NOT NULL REFERENCES loans(id) ON DELETE CASCADE UNIQUE,
   agreement_number TEXT NOT NULL UNIQUE,
   docuseal_submission_id TEXT,

@@ -54,32 +54,51 @@ export function Sidebar({ items, collapsed, onToggleCollapse }: SidebarProps) {
         collapsed ? "w-[72px]" : "w-[280px]"
       )}
     >
-      {/* Sidebar Header with Workspace Label & Collapse Toggle */}
+      {/* Sidebar Header with Workspace Label, Logout & Collapse Toggle */}
       <div
         className={cn(
           "flex items-center mb-3 pb-3 border-b border-slate-100 dark:border-white/5",
-          collapsed ? "justify-center" : "justify-between px-2"
+          collapsed ? "justify-center gap-1 flex-col" : "justify-between px-2"
         )}
       >
-        {!collapsed && (
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center text-white text-xs font-black shadow-xs">
+        {!collapsed ? (
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center text-white text-xs font-black shadow-xs shrink-0">
               S
             </div>
-            <span className="text-xs font-extrabold tracking-tight text-ink dark:text-white uppercase">
-              Sahayam Workspace
-            </span>
+            <div className="min-w-0">
+              <span className="text-[11px] font-extrabold tracking-tight text-ink dark:text-white uppercase block truncate">
+                Sahayam Workspace
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center text-white text-xs font-black shadow-xs mb-1">
+            S
           </div>
         )}
 
-        <button
-          onClick={onToggleCollapse}
-          className="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/10 text-slate-400 hover:text-ink dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-white/10 transition-all active:scale-95"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {!collapsed && (
+            <button
+              onClick={signOut}
+              className="p-1.5 rounded-lg border border-transparent text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-200/40 dark:hover:border-rose-900/40 transition-all active:scale-95"
+              title="Log out of workspace"
+              aria-label="Log out of workspace"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/10 text-slate-400 hover:text-ink dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-white/10 transition-all active:scale-95"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {/* Main Navigation List */}
