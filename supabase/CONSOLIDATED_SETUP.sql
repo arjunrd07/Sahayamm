@@ -115,8 +115,8 @@ ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code;
 -- STEP 3: PROFILES & BORROWERS
 CREATE TABLE IF NOT EXISTS master_db.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  org_id UUID REFERENCES master_db.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES master_db.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -128,8 +128,8 @@ CREATE TABLE IF NOT EXISTS master_db.profiles (
 
 CREATE TABLE IF NOT EXISTS master_db.borrowers (
   id UUID PRIMARY KEY REFERENCES master_db.profiles(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES master_db.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES master_db.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -140,8 +140,8 @@ CREATE TABLE IF NOT EXISTS master_db.borrowers (
 
 CREATE TABLE IF NOT EXISTS org_rmse_waverock.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  org_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -153,8 +153,8 @@ CREATE TABLE IF NOT EXISTS org_rmse_waverock.profiles (
 
 CREATE TABLE IF NOT EXISTS org_rmse_waverock.borrowers (
   id UUID PRIMARY KEY REFERENCES org_rmse_waverock.profiles(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES org_rmse_waverock.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -165,8 +165,8 @@ CREATE TABLE IF NOT EXISTS org_rmse_waverock.borrowers (
 
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  org_id UUID REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   rejection_reason TEXT,
   id_proof_url TEXT,
   employment_proof_url TEXT,
-  verified_by UUID REFERENCES public.profiles(id),
+  verified_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
   verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -194,8 +194,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 CREATE TABLE IF NOT EXISTS public.borrowers (
   id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
-  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL,
+  organization_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
@@ -277,8 +277,8 @@ CREATE TRIGGER trg_sync_borrower_profile
 -- STEP 4: LOANS, PAYMENTS & AGREEMENTS
 CREATE TABLE IF NOT EXISTS master_db.loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES master_db.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES master_db.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   customer_id UUID REFERENCES master_db.profiles(id) ON DELETE RESTRICT,
   borrower_id UUID REFERENCES master_db.profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
@@ -291,8 +291,8 @@ CREATE TABLE IF NOT EXISTS master_db.loans (
 CREATE TABLE IF NOT EXISTS master_db.loan_payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   loan_id UUID NOT NULL REFERENCES master_db.loans(id) ON DELETE CASCADE,
-  org_id UUID NOT NULL REFERENCES master_db.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES master_db.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   borrower_id UUID NOT NULL REFERENCES master_db.profiles(id) ON DELETE RESTRICT,
   customer_id UUID REFERENCES master_db.profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
@@ -304,8 +304,8 @@ CREATE TABLE IF NOT EXISTS master_db.loan_payments (
 
 CREATE TABLE IF NOT EXISTS master_db.agreements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES master_db.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES master_db.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES master_db.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   loan_id UUID NOT NULL REFERENCES master_db.loans(id) ON DELETE CASCADE UNIQUE,
   agreement_number TEXT NOT NULL UNIQUE,
   docuseal_submission_id TEXT,
@@ -318,8 +318,8 @@ CREATE TABLE IF NOT EXISTS master_db.agreements (
 
 CREATE TABLE IF NOT EXISTS org_rmse_waverock.loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES org_rmse_waverock.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   customer_id UUID REFERENCES org_rmse_waverock.profiles(id) ON DELETE RESTRICT,
   borrower_id UUID REFERENCES org_rmse_waverock.profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
@@ -332,8 +332,8 @@ CREATE TABLE IF NOT EXISTS org_rmse_waverock.loans (
 CREATE TABLE IF NOT EXISTS org_rmse_waverock.loan_payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   loan_id UUID NOT NULL REFERENCES org_rmse_waverock.loans(id) ON DELETE CASCADE,
-  org_id UUID NOT NULL REFERENCES org_rmse_waverock.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   borrower_id UUID REFERENCES org_rmse_waverock.profiles(id) ON DELETE RESTRICT,
   customer_id UUID REFERENCES org_rmse_waverock.profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
@@ -345,8 +345,8 @@ CREATE TABLE IF NOT EXISTS org_rmse_waverock.loan_payments (
 
 CREATE TABLE IF NOT EXISTS org_rmse_waverock.agreements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES org_rmse_waverock.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES org_rmse_waverock.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES org_rmse_waverock.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   loan_id UUID NOT NULL REFERENCES org_rmse_waverock.loans(id) ON DELETE CASCADE UNIQUE,
   agreement_number TEXT NOT NULL UNIQUE,
   docuseal_submission_id TEXT,
@@ -359,12 +359,12 @@ CREATE TABLE IF NOT EXISTS org_rmse_waverock.agreements (
 
 CREATE TABLE IF NOT EXISTS public.loans (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL,
-  customer_id UUID REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  borrower_id UUID REFERENCES public.profiles(id) ON DELETE RESTRICT,
-  admin_id UUID REFERENCES public.profiles(id),
-  lender_id UUID REFERENCES public.profiles(id),
+  org_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  customer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  borrower_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  admin_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  lender_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL ON UPDATE CASCADE,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
   purpose TEXT NOT NULL,
   duration_days INTEGER NOT NULL CHECK (duration_days IN (7, 14, 21)),
@@ -390,8 +390,8 @@ CREATE TABLE IF NOT EXISTS public.loans (
 CREATE TABLE IF NOT EXISTS public.loan_payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   loan_id UUID NOT NULL REFERENCES public.loans(id) ON DELETE CASCADE,
-  org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   borrower_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
   customer_id UUID REFERENCES public.profiles(id) ON DELETE RESTRICT,
   amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
@@ -403,8 +403,8 @@ CREATE TABLE IF NOT EXISTS public.loan_payments (
 
 CREATE TABLE IF NOT EXISTS public.agreements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
-  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL,
+  org_id UUID REFERENCES public.organizations(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  campus_id UUID REFERENCES public.campuses(id) ON DELETE SET NULL ON UPDATE CASCADE,
   loan_id UUID NOT NULL REFERENCES public.loans(id) ON DELETE CASCADE UNIQUE,
   agreement_number TEXT NOT NULL UNIQUE,
   docuseal_submission_id TEXT,
@@ -593,44 +593,80 @@ ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auth_otps ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
+-- Master DB Policies
+DROP POLICY IF EXISTS master_org_select ON master_db.organizations;
 CREATE POLICY master_org_select ON master_db.organizations FOR SELECT USING (true);
-CREATE POLICY master_campuses_select ON master_db.campuses;
+
+DROP POLICY IF EXISTS master_campuses_select ON master_db.campuses;
+CREATE POLICY master_campuses_select ON master_db.campuses FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS master_profiles_select ON master_db.profiles;
 CREATE POLICY master_profiles_select ON master_db.profiles FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR id = auth.uid());
+
+DROP POLICY IF EXISTS master_loans_select ON master_db.loans;
 CREATE POLICY master_loans_select ON master_db.loans FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR borrower_id = auth.uid() OR customer_id = auth.uid());
 
+-- Org Schema Policies
+DROP POLICY IF EXISTS org_loans_select ON org_rmse_waverock.loans;
 CREATE POLICY org_loans_select ON org_rmse_waverock.loans FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR borrower_id = auth.uid() OR customer_id = auth.uid());
 
+-- Public Schema Policies
+DROP POLICY IF EXISTS org_policy_select ON public.organizations;
+DROP POLICY IF EXISTS org_policy_all_admin ON public.organizations;
 CREATE POLICY org_policy_select ON public.organizations FOR SELECT USING (true);
 CREATE POLICY org_policy_all_admin ON public.organizations FOR ALL USING (auth_is_admin());
 
+DROP POLICY IF EXISTS campus_policy_select ON public.campuses;
+DROP POLICY IF EXISTS campus_policy_all_admin ON public.campuses;
 CREATE POLICY campus_policy_select ON public.campuses FOR SELECT USING (true);
 CREATE POLICY campus_policy_all_admin ON public.campuses FOR ALL USING (auth_is_admin());
 
+DROP POLICY IF EXISTS profiles_policy_select ON public.profiles;
+DROP POLICY IF EXISTS profiles_policy_insert ON public.profiles;
+DROP POLICY IF EXISTS profiles_policy_update ON public.profiles;
 CREATE POLICY profiles_policy_select ON public.profiles FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR id = auth.uid());
 CREATE POLICY profiles_policy_insert ON public.profiles FOR INSERT WITH CHECK (true);
 CREATE POLICY profiles_policy_update ON public.profiles FOR UPDATE USING (auth_is_admin() OR org_id = auth_org_id() OR id = auth.uid());
 
+DROP POLICY IF EXISTS borrowers_policy_select ON public.borrowers;
+DROP POLICY IF EXISTS borrowers_policy_insert ON public.borrowers;
+DROP POLICY IF EXISTS borrowers_policy_update ON public.borrowers;
 CREATE POLICY borrowers_policy_select ON public.borrowers FOR SELECT USING (auth_is_admin() OR organization_id = auth_org_id() OR id = auth.uid());
 CREATE POLICY borrowers_policy_insert ON public.borrowers FOR INSERT WITH CHECK (true);
 CREATE POLICY borrowers_policy_update ON public.borrowers FOR UPDATE USING (auth_is_admin() OR organization_id = auth_org_id() OR id = auth.uid());
 
+DROP POLICY IF EXISTS loans_policy_select ON public.loans;
+DROP POLICY IF EXISTS loans_policy_insert ON public.loans;
+DROP POLICY IF EXISTS loans_policy_update ON public.loans;
 CREATE POLICY loans_policy_select ON public.loans FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR borrower_id = auth.uid() OR customer_id = auth.uid() OR lender_id = auth.uid() OR admin_id = auth.uid());
 CREATE POLICY loans_policy_insert ON public.loans FOR INSERT WITH CHECK (auth_is_admin() OR org_id = auth_org_id());
 CREATE POLICY loans_policy_update ON public.loans FOR UPDATE USING (auth_is_admin() OR org_id = auth_org_id());
 
+DROP POLICY IF EXISTS payments_policy_select ON public.loan_payments;
+DROP POLICY IF EXISTS payments_policy_insert ON public.loan_payments;
+DROP POLICY IF EXISTS payments_policy_update ON public.loan_payments;
 CREATE POLICY payments_policy_select ON public.loan_payments FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id() OR borrower_id = auth.uid() OR customer_id = auth.uid());
 CREATE POLICY payments_policy_insert ON public.loan_payments FOR INSERT WITH CHECK (auth_is_admin() OR org_id = auth_org_id() OR borrower_id = auth.uid() OR customer_id = auth.uid());
 CREATE POLICY payments_policy_update ON public.loan_payments FOR UPDATE USING (auth_is_admin() OR org_id = auth_org_id());
 
+DROP POLICY IF EXISTS agreements_policy_select ON public.agreements;
+DROP POLICY IF EXISTS agreements_policy_insert ON public.agreements;
+DROP POLICY IF EXISTS agreements_policy_update ON public.agreements;
 CREATE POLICY agreements_policy_select ON public.agreements FOR SELECT USING (auth_is_admin() OR org_id = auth_org_id());
 CREATE POLICY agreements_policy_insert ON public.agreements FOR INSERT WITH CHECK (auth_is_admin() OR org_id = auth_org_id());
 CREATE POLICY agreements_policy_update ON public.agreements FOR UPDATE USING (auth_is_admin() OR org_id = auth_org_id());
 
+DROP POLICY IF EXISTS notifications_policy_select ON public.notifications;
+DROP POLICY IF EXISTS notifications_policy_insert ON public.notifications;
+DROP POLICY IF EXISTS notifications_policy_update ON public.notifications;
 CREATE POLICY notifications_policy_select ON public.notifications FOR SELECT USING (auth_is_admin() OR user_id = auth.uid() OR org_id = auth_org_id());
 CREATE POLICY notifications_policy_insert ON public.notifications FOR INSERT WITH CHECK (true);
 CREATE POLICY notifications_policy_update ON public.notifications FOR UPDATE USING (auth_is_admin() OR user_id = auth.uid());
 
+DROP POLICY IF EXISTS otps_policy_all ON public.auth_otps;
 CREATE POLICY otps_policy_all ON public.auth_otps FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS audit_policy_all ON public.audit_logs;
 CREATE POLICY audit_policy_all ON public.audit_logs FOR ALL USING (auth_is_admin());
 
 NOTIFY pgrst, 'reload schema';

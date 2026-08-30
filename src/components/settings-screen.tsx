@@ -249,15 +249,26 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
           </p>
         </div>
 
-        {/* Link to Profile Page */}
-        <Link
-          href={profileHref}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-signal hover:text-signal-hover bg-signal/10 hover:bg-signal/20 px-3.5 py-2 rounded-full transition-colors shrink-0"
-        >
-          <User className="h-3.5 w-3.5" />
-          Edit Profile Details
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+        {/* Actions */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            href={profileHref}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-signal hover:text-signal-hover bg-signal/10 hover:bg-signal/20 px-3.5 py-2 rounded-full transition-colors"
+          >
+            <User className="h-3.5 w-3.5" />
+            Edit Profile
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+
+          <Button
+            variant="danger"
+            onClick={signOut}
+            className="rounded-full text-xs font-bold gap-1.5 py-2 px-3.5 min-h-0 h-auto shadow-xs"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Log Out
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -677,6 +688,37 @@ export function SettingsScreen({ role: forcedRole }: SettingsScreenProps) {
           </Card>
         </div>
       )}
+
+      {/* Always Visible Workspace Session & Logout Footer */}
+      <Card className="p-5 md:p-6 bg-slate-50/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-primary/20 to-indigo-500/20 text-primary dark:text-indigo-400 flex items-center justify-center font-extrabold text-sm border border-primary/20 shrink-0">
+            {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : "U"}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-ink dark:text-white">
+                {profile?.full_name || "User Session"}
+              </p>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Active
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+              {profile?.email || "Signed in"}
+            </p>
+          </div>
+        </div>
+
+        <Button
+          variant="danger"
+          onClick={signOut}
+          className="rounded-xl text-xs font-bold gap-2 py-2 px-4 shrink-0 shadow-xs"
+        >
+          <LogOut className="h-4 w-4" />
+          Log Out of Sahayam
+        </Button>
+      </Card>
     </div>
   );
 }

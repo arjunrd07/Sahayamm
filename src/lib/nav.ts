@@ -86,6 +86,7 @@ export const adminNav: NavItem[] = [
     ],
   },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export const customerNav = borrowerNav;
