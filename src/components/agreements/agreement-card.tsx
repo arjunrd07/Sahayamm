@@ -16,12 +16,17 @@ interface AgreementCardProps {
     loan_id: string;
     amount: number;
     interest_rate: number;
+    interest_amount?: number;
     duration_days: number;
     total_repayment: number;
     due_date?: string | null;
+    created_at?: string | null;
     borrower_name: string;
+    borrower_email?: string;
     borrower_employee_id?: string;
+    borrower_pan?: string;
     lender_name: string;
+    lender_email?: string;
     org_name: string;
   };
 }
@@ -39,7 +44,7 @@ export function AgreementCard({ agreement, loanDetails }: AgreementCardProps) {
           <div>
             <p className="font-medium text-sm">Agreement not generated yet</p>
             <p className="text-xs text-muted mt-0.5">
-              An Internal Lending Agreement is created automatically once the loan is approved.
+              An Internal Lending Agreement is created automatically once the loan application is submitted and approved.
             </p>
           </div>
         </div>
@@ -49,7 +54,7 @@ export function AgreementCard({ agreement, loanDetails }: AgreementCardProps) {
 
   async function handleDownload() {
     if (!agreement!.pdf_url) {
-      push("info", "The signed PDF isn't available yet — click 'View full contract' to print or preview.");
+      push("info", "Opening interactive contract viewer for print / PDF save...");
       setShowFullTemplate(true);
       return;
     }
@@ -66,21 +71,25 @@ export function AgreementCard({ agreement, loanDetails }: AgreementCardProps) {
 
   const defaultDetails = {
     agreement_number: agreement.agreement_number,
-    agreement_date: new Date(agreement.created_at).toLocaleDateString("en-IN"),
+    agreement_date: agreement.created_at
+      ? new Date(agreement.created_at).toLocaleDateString("en-IN")
+      : new Date().toLocaleDateString("en-IN"),
     organization_name: loanDetails?.org_name || "Sahayam Organization",
-    lender_name: loanDetails?.lender_name || "Organization Admin",
+    lender_name: loanDetails?.lender_name || "Authorized Organization Lender",
+    lender_email: loanDetails?.lender_email,
     borrower_name: loanDetails?.borrower_name || "Employee Borrower",
+    borrower_email: loanDetails?.borrower_email,
     employee_id: loanDetails?.borrower_employee_id || "EMP-8842",
+    pan_number: loanDetails?.borrower_pan,
     loan_id: loanDetails?.loan_id || `LN-${agreement.loan_id.slice(0, 8)}`,
     loan_amount: loanDetails?.amount || 50000,
     interest_rate: loanDetails?.interest_rate || 0,
+    interest_amount: loanDetails?.interest_amount,
     loan_duration: `${loanDetails?.duration_days || 30} Days`,
     repayment_amount: loanDetails?.total_repayment || 50000,
-    due_date: loanDetails?.due_date ? new Date(loanDetails.due_date).toLocaleDateString("en-IN") : "30 Days from disbursal",
-    borrower_signed: agreement.borrower_signed,
-    borrower_signed_at: agreement.borrower_signed ? new Date(agreement.created_at).toLocaleDateString("en-IN") : undefined,
-    lender_signed: agreement.lender_signed,
-    lender_signed_at: agreement.lender_signed ? new Date(agreement.created_at).toLocaleDateString("en-IN") : undefined,
+    due_date: loanDetails?.due_date
+      ? new Date(loanDetails.due_date).toLocaleDateString("en-IN")
+      : `${loanDetails?.duration_days || 30} Days from disbursal`,
   };
 
   return (

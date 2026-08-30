@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs } from "@/components/ui/tabs";
 import { formatINR, formatDate } from "@/lib/utils";
 import type { Loan, Profile, LoanStatus } from "@/types/database";
+import { getLenderLoansForDashboard } from "./actions";
 import Link from "next/link";
 import {
   HandCoins,
@@ -29,41 +30,21 @@ export default function AdminLoanRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("pending");
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
     async function loadLoans() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      setLoading(true);
+      try {
+        const res = await getLenderLoansForDashboard();
+        setAllLoans((res.loans as any) || []);
+      } catch (err) {
+        console.error("Error loading lender loans:", err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { data: myProfile } = await supabase
-        .from("profiles")
-        .select("org_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!myProfile?.org_id) {
-        setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("loans")
-        .select("*, customer:profiles!loans_customer_id_fkey(full_name,email)")
-        .eq("org_id", myProfile.org_id)
-        .order("created_at", { ascending: false });
-
-      setAllLoans((data as any) || []);
-      setLoading(false);
     }
 
     loadLoans();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Calculate status counts & amounts

@@ -65,12 +65,17 @@ export async function proxy(request: NextRequest) {
       if (!userRole || userRole !== "admin") {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("role, org_id")
+          .select("role, org_id, pan_number, phone, address")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profile?.role) {
           userRole = profile.role;
+        }
+
+        // If profile details (PAN, phone, address) are missing, require Step 3 completion
+        if (!profile || !profile.pan_number || !profile.phone || !profile.address) {
+          return NextResponse.redirect(new URL("/signup?step=3", request.url));
         }
       }
 

@@ -38,6 +38,7 @@ export interface Profile {
   email: string;
   phone: string | null;
   mobile_number?: string | null;
+  employee_id?: string | null;
   pan_number?: string | null;
   cibil_score?: number | null;
   address?: string | null;

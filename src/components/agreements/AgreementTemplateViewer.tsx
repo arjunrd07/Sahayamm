@@ -1,12 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSignature, Printer, CheckCircle2, ShieldCheck, PenTool, ShieldAlert, FileCheck2 } from "lucide-react";
+import { FileSignature, Printer, ShieldCheck, ShieldAlert, FileCheck2, User, Building2, Calendar, CreditCard, Scale, CheckCircle2 } from "lucide-react";
 import { formatINR } from "@/lib/utils";
-import { signLendingAgreement } from "@/app/api/agreements/actions";
-import { useToast } from "@/components/ui/toast";
 
 export interface AgreementData {
   id?: string;
@@ -14,32 +12,33 @@ export interface AgreementData {
   agreement_date: string;
   organization_name: string;
   lender_name: string;
+  lender_email?: string;
+  lender_role?: string;
   borrower_name: string;
-  employee_id: string;
+  borrower_email?: string;
+  employee_id?: string;
+  pan_number?: string;
   loan_id: string;
   loan_amount: number;
   interest_rate: number;
+  interest_amount?: number;
   loan_duration: string;
   repayment_amount: number;
   due_date: string;
-  borrower_signed: boolean;
+  borrower_signed?: boolean;
   borrower_signed_at?: string;
-  lender_signed: boolean;
+  lender_signed?: boolean;
   lender_signed_at?: string;
   digital_signature_hash?: string;
 }
 
 export function AgreementTemplateViewer({
   agreement,
-  onSigned,
 }: {
   agreement: AgreementData;
   onSigned?: () => void;
 }) {
   const printRef = useRef<HTMLDivElement>(null);
-  const [signatureName, setSignatureName] = useState("");
-  const [signing, setSigning] = useState(false);
-  const { push } = useToast();
 
   const handlePrint = () => {
     if (!printRef.current) return;
@@ -52,23 +51,32 @@ export function AgreementTemplateViewer({
         <head>
           <title>Sahayam Internal Lending Agreement - ${agreement.agreement_number}</title>
           <style>
-            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #0f172a; line-height: 1.5; }
-            .header { border-bottom: 2px solid #006BFF; padding-bottom: 16px; margin-bottom: 24px; }
-            .title { font-size: 24px; font-weight: 800; color: #006BFF; text-transform: uppercase; margin: 0; }
-            .subtitle { font-size: 18px; font-weight: 700; margin-top: 4px; color: #0F172A; }
-            .meta { margin-top: 12px; font-size: 14px; color: #475569; }
-            .section { margin-top: 24px; }
-            .section-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #006BFF; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 12px; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 14px; }
-            .table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
-            .table th, .table td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
-            .table th { background-color: #f8fafc; font-weight: 700; }
-            .terms { font-size: 13px; color: #334155; padding-left: 20px; }
-            .terms li { margin-bottom: 8px; }
-            .signatures { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
-            .sig-box { border: 1px dashed #94a3b8; padding: 16px; border-radius: 8px; background: #f8fafc; }
-            .sig-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
-            .sig-status { font-weight: 700; color: #16a34a; }
+            @page { size: A4 portrait; margin: 15mm; }
+            * { box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; padding: 20px; color: #0f172a; line-height: 1.4; background: #fff; }
+            .header { border-bottom: 2px solid #006BFF; padding-bottom: 12px; margin-bottom: 16px; }
+            .title-row { display: flex; justify-content: space-between; align-items: baseline; }
+            .brand { font-size: 22px; font-weight: 900; color: #006BFF; letter-spacing: -0.5px; }
+            .doc-title { font-size: 14px; font-weight: 800; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; }
+            .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; font-size: 11px; color: #475569; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+            .section { margin-top: 16px; }
+            .section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #006BFF; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 8px; }
+            .parties-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .party-card { border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px; background: #fafafa; }
+            .party-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+            .party-name { font-size: 13px; font-weight: 800; color: #0f172a; }
+            .party-meta { font-size: 11px; color: #475569; margin-top: 2px; }
+            .table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+            .table th, .table td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
+            .table td.label { font-weight: 700; color: #475569; width: 35%; background-color: #f8fafc; }
+            .table td.value { font-weight: 800; color: #0f172a; }
+            .terms-list { font-size: 11px; color: #334155; padding-left: 18px; margin: 6px 0; }
+            .terms-list li { margin-bottom: 5px; line-height: 1.35; }
+            .disclaimer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+            .disclaimer-card { border: 1px solid #e2e8f0; padding: 8px 10px; border-radius: 6px; font-size: 10px; line-height: 1.35; }
+            .disclaimer-card.legal { background: #fffbeb; border-color: #fde68a; color: #78350f; }
+            .disclaimer-card.declaration { background: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; }
+            .disclaimer-title { font-weight: 800; text-transform: uppercase; font-size: 9px; margin-bottom: 3px; }
           </style>
         </head>
         <body>
@@ -83,28 +91,6 @@ export function AgreementTemplateViewer({
       win.close();
     }, 250);
   };
-
-  async function handleExecuteSignature(e: React.FormEvent) {
-    e.preventDefault();
-    if (!agreement.id) return;
-    if (!signatureName.trim()) {
-      push("error", "Please enter your full legal name to sign.");
-      return;
-    }
-    setSigning(true);
-    const res = await signLendingAgreement(agreement.id, signatureName.trim());
-    setSigning(false);
-
-    if ("error" in res && res.error) {
-      push("error", res.error);
-      return;
-    }
-
-    push("success", `Digital signature recorded for ${agreement.agreement_number}!`);
-    if (onSigned) onSigned();
-  }
-
-  const isFullySigned = agreement.borrower_signed && agreement.lender_signed;
 
   return (
     <Card className="p-6 space-y-6 bg-white dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark shadow-sm">
@@ -123,7 +109,7 @@ export function AgreementTemplateViewer({
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs font-bold border border-blue-200 dark:border-blue-800/40">
             <ShieldCheck className="h-3.5 w-3.5" />
-            Sahayam Native Seal
+            Legally Binding Agreement
           </span>
           <Button variant="secondary" onClick={handlePrint} className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5">
             <Printer className="h-4 w-4" />
@@ -133,214 +119,162 @@ export function AgreementTemplateViewer({
       </div>
 
       {/* Printable Agreement Document Canvas */}
-      <div ref={printRef} className="p-6 sm:p-8 bg-slate-50/50 dark:bg-canvas-dark rounded-2xl border border-slate-200/80 dark:border-surface-border-dark space-y-6 text-sm text-ink dark:text-white font-sans">
+      <div ref={printRef} className="p-6 sm:p-8 bg-slate-50/50 dark:bg-canvas-dark rounded-2xl border border-slate-200/80 dark:border-surface-border-dark space-y-5 text-sm text-ink dark:text-white font-sans">
         {/* Document Header */}
-        <div className="header text-center sm:text-left border-b border-signal/20 pb-4">
-          <h1 className="text-2xl font-black text-signal tracking-tight">SAHAYAM</h1>
-          <h2 className="text-lg font-extrabold text-ink dark:text-white mt-1 uppercase tracking-wide">
-            INTERNAL LENDING AGREEMENT
-          </h2>
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold text-ink-slate">
-            <div><strong>Agreement No:</strong> {agreement.agreement_number}</div>
-            <div><strong>Agreement Date:</strong> {agreement.agreement_date}</div>
-            <div><strong>Organization:</strong> {agreement.organization_name}</div>
+        <div className="header border-b-2 border-signal pb-4">
+          <div className="title-row flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h1 className="brand text-2xl font-black text-signal tracking-tight">SAHAYAM</h1>
+            <h2 className="doc-title text-sm font-extrabold text-ink dark:text-white uppercase tracking-wider">
+              INTERNAL LENDING AGREEMENT
+            </h2>
+          </div>
+
+          <div className="meta-grid mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100/70 dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
+            <div>
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Agreement Ref</span>
+              <strong className="text-ink dark:text-white font-mono">{agreement.agreement_number}</strong>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Execution Date</span>
+              <strong className="text-ink dark:text-white">{agreement.agreement_date}</strong>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Organization</span>
+              <strong className="text-ink dark:text-white">{agreement.organization_name}</strong>
+            </div>
           </div>
         </div>
 
-        {/* Cryptographic Seal Badge */}
-        {agreement.digital_signature_hash && (
-          <div className="p-3 rounded-xl bg-slate-900 text-white flex items-center justify-between text-xs font-mono">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span>Digital SHA-256 Seal: <strong>{agreement.digital_signature_hash}</strong></span>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Verified Token</span>
-          </div>
-        )}
-
         {/* Parties */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
-            Parties
+        <div className="section space-y-2">
+          <h3 className="section-title text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
+            Agreed Parties
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium pt-1">
-            <div className="p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark">
-              <span className="text-ink-slate font-bold block mb-1">Lender:</span>
-              <strong className="text-ink dark:text-white text-sm">{agreement.lender_name}</strong>
-              <span className="text-ink-slate block text-[11px] mt-0.5">(Organization Admin)</span>
+          <div className="parties-grid grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium pt-1">
+            {/* Lender Card */}
+            <div className="party-card p-3.5 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/10 space-y-1">
+              <span className="party-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Authorized Lender (Party of the First Part)
+              </span>
+              <p className="party-name text-sm font-extrabold text-ink dark:text-white">
+                {agreement.lender_name}
+              </p>
+              <p className="party-meta text-[11px] text-slate-500 font-medium">
+                {agreement.lender_email || "Organization Lending Officer"} · {agreement.organization_name}
+              </p>
             </div>
 
-            <div className="p-3 rounded-xl bg-white dark:bg-surface-dark border border-slate-200/80 dark:border-surface-border-dark">
-              <span className="text-ink-slate font-bold block mb-1">Borrower:</span>
-              <strong className="text-ink dark:text-white text-sm">{agreement.borrower_name}</strong>
-              <span className="text-ink-slate block text-[11px] mt-0.5">(Employee ID: {agreement.employee_id})</span>
+            {/* Borrower Card */}
+            <div className="party-card p-3.5 rounded-xl bg-white dark:bg-surface-dark border border-slate-200 dark:border-white/10 space-y-1">
+              <span className="party-label text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Borrower / Applicant (Party of the Second Part)
+              </span>
+              <p className="party-name text-sm font-extrabold text-ink dark:text-white">
+                {agreement.borrower_name}
+              </p>
+              <p className="party-meta text-[11px] text-slate-500 font-medium">
+                {agreement.borrower_email ? `${agreement.borrower_email} · ` : ""}
+                {agreement.employee_id ? `Employee ID: ${agreement.employee_id}` : ""}
+                {agreement.pan_number ? ` · PAN: ${agreement.pan_number}` : ""}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Loan Details Table */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
-            Loan Details
+        <div className="section space-y-2">
+          <h3 className="section-title text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
+            Agreed Loan Specifications &amp; Repayment Schedule
           </h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border-dark">
+            <table className="table w-full text-xs text-left border-collapse rounded-xl overflow-hidden border border-slate-200 dark:border-surface-border-dark">
               <tbody>
                 <tr className="border-b border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark">
-                  <td className="p-2.5 font-bold text-ink-slate w-1/3">Loan ID</td>
-                  <td className="p-2.5 font-extrabold text-ink dark:text-white">{agreement.loan_id}</td>
+                  <td className="label p-2.5 font-bold text-slate-500 w-1/3">Loan Reference ID</td>
+                  <td className="value p-2.5 font-extrabold text-ink dark:text-white font-mono">{agreement.loan_id}</td>
                 </tr>
                 <tr className="border-b border-slate-200 dark:border-surface-border-dark bg-slate-50 dark:bg-canvas-dark">
-                  <td className="p-2.5 font-bold text-ink-slate">Amount</td>
-                  <td className="p-2.5 font-extrabold text-signal">{formatINR(agreement.loan_amount)}</td>
+                  <td className="label p-2.5 font-bold text-slate-500">Agreed Principal Amount</td>
+                  <td className="value p-2.5 font-black text-signal text-sm">{formatINR(agreement.loan_amount)}</td>
                 </tr>
                 <tr className="border-b border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark">
-                  <td className="p-2.5 font-bold text-ink-slate">Interest</td>
-                  <td className="p-2.5 font-extrabold text-ink dark:text-white">{agreement.interest_rate}% (Flat)</td>
+                  <td className="label p-2.5 font-bold text-slate-500">Agreed Interest Charge</td>
+                  <td className="value p-2.5 font-extrabold text-ink dark:text-white">
+                    {agreement.interest_amount !== undefined && agreement.interest_amount > 0
+                      ? `${formatINR(agreement.interest_amount)} (${agreement.interest_rate}% flat for tenure)`
+                      : agreement.interest_rate > 0
+                      ? `${agreement.interest_rate}% (Flat)`
+                      : "₹0.00 (0% Flat)"}
+                  </td>
                 </tr>
                 <tr className="border-b border-slate-200 dark:border-surface-border-dark bg-slate-50 dark:bg-canvas-dark">
-                  <td className="p-2.5 font-bold text-ink-slate">Duration</td>
-                  <td className="p-2.5 font-extrabold text-ink dark:text-white">{agreement.loan_duration}</td>
+                  <td className="label p-2.5 font-bold text-slate-500">Agreed Loan Duration / Tenure</td>
+                  <td className="value p-2.5 font-extrabold text-ink dark:text-white">{agreement.loan_duration}</td>
                 </tr>
                 <tr className="border-b border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark">
-                  <td className="p-2.5 font-bold text-ink-slate">Repayment Amount</td>
-                  <td className="p-2.5 font-extrabold text-emerald-600">{formatINR(agreement.repayment_amount)}</td>
+                  <td className="label p-2.5 font-bold text-slate-500">Total Settlement / Repayment Amount</td>
+                  <td className="value p-2.5 font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                    {formatINR(agreement.repayment_amount)}
+                  </td>
                 </tr>
                 <tr className="bg-slate-50 dark:bg-canvas-dark">
-                  <td className="p-2.5 font-bold text-ink-slate">Due Date</td>
-                  <td className="p-2.5 font-extrabold text-ink dark:text-white">{agreement.due_date}</td>
+                  <td className="label p-2.5 font-bold text-slate-500">Settlement Due Date</td>
+                  <td className="value p-2.5 font-extrabold text-ink dark:text-white font-mono">{agreement.due_date}</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Terms */}
-        <div className="space-y-2">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
+        {/* Terms & Statutory Governance */}
+        <div className="section space-y-2">
+          <h3 className="section-title text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
             Terms &amp; Statutory Governance
           </h3>
-          <ul className="list-disc pl-5 text-xs text-ink-slate space-y-1.5 font-medium leading-relaxed">
-            <li>The Lender agrees to lend the specified principal amount to the Borrower under organization guidelines.</li>
-            <li>The Borrower agrees to repay the total repayment amount on or before the due date specified above.</li>
-            <li>Late repayment attracts an additional 2% flat interest on the outstanding balance.</li>
-            <li>Sahayam native e-signatures provide legally binding digital audit logs under Indian IT Act Section 10A.</li>
-            <li>This Agreement is governed by the laws of India.</li>
-          </ul>
+          <ol className="terms-list list-decimal pl-5 text-xs text-slate-600 dark:text-slate-300 space-y-1.5 font-medium leading-relaxed">
+            <li>
+              <strong>Disbursement:</strong> The Lender agrees to disburse the agreed principal amount of <strong>{formatINR(agreement.loan_amount)}</strong> directly to the Borrower via authorized organization settlement channels.
+            </li>
+            <li>
+              <strong>Repayment Obligation:</strong> The Borrower unconditionally undertakes to repay the total repayment amount of <strong>{formatINR(agreement.repayment_amount)}</strong> on or before the due date (<strong>{agreement.due_date}</strong>).
+            </li>
+            <li>
+              <strong>Default &amp; Delay:</strong> Delayed repayment beyond the agreed due date will attract a late penalty fee of 2% flat per billing cycle on the unpaid balance.
+            </li>
+            <li>
+              <strong>Internal Governance:</strong> This transaction is executed as an intra-organization mutual support facility in compliance with Indian Information Technology Act (Section 10A) and relevant organizational credit guidelines.
+            </li>
+            <li>
+              <strong>Jurisdiction:</strong> Both parties submit to the exclusive jurisdiction and dispute resolution mechanisms of the organization and Indian governing laws.
+            </li>
+          </ol>
         </div>
 
-        {/* Premium Redesigned Legal Disclaimer & Acknowledgement Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
-          {/* Platform Scope Suggested Disclaimer Card */}
-          <div className="p-4 rounded-2xl border border-amber-500/30 dark:border-amber-400/20 bg-amber-50/70 dark:bg-amber-950/20 text-xs text-amber-950 dark:text-amber-200 space-y-2.5 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-amber-200/80 dark:border-amber-900/40">
-              <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-400 shrink-0">
-                <ShieldAlert className="h-4 w-4" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block leading-none">
-                  Legal Notice
-                </span>
-                <span className="font-extrabold text-xs text-ink dark:text-white">
-                  Suggested Disclaimer
-                </span>
-              </div>
+        {/* Legal Disclaimer & Borrower Declaration Cards */}
+        <div className="disclaimer-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+          {/* Platform Legal Scope Card */}
+          <div className="disclaimer-card legal p-3.5 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/20 text-xs text-amber-950 dark:text-amber-200 space-y-1">
+            <div className="disclaimer-title flex items-center gap-1.5 text-amber-800 dark:text-amber-400 font-extrabold text-[10px] uppercase tracking-wider">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Platform Legal Scope &amp; Disclaimer
             </div>
-            <p className="leading-relaxed text-[11px] text-amber-900/90 dark:text-amber-300 font-medium">
-              This platform only facilitates introductions and documentation between employees who voluntarily choose to lend and borrow. It does not hold, transfer, or manage funds, does not guarantee repayment, and is not a bank, NBFC, or financial institution. All loan transactions occur directly between the lender and borrower.
+            <p className="text-[11px] leading-relaxed font-medium">
+              This platform solely facilitates internal record-keeping and workflow agreements between organization members. It does not act as a banking institution or NBFC. All lending terms are mutually agreed upon directly between the Lender and Borrower.
             </p>
           </div>
 
-          {/* Borrower Acknowledgement & Declaration Card */}
-          <div className="p-4 rounded-2xl border border-blue-500/30 dark:border-blue-400/20 bg-blue-50/70 dark:bg-blue-950/20 text-xs text-blue-950 dark:text-blue-200 space-y-2.5 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-2.5 pb-2 border-b border-blue-200/80 dark:border-blue-900/40">
-              <div className="p-1.5 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-400 shrink-0">
-                <FileCheck2 className="h-4 w-4" />
-              </div>
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block leading-none">
-                  Borrower Declaration
-                </span>
-                <span className="font-extrabold text-xs text-ink dark:text-white">
-                  Acknowledgement &amp; Terms Agreement
-                </span>
-              </div>
+          {/* Borrower Declaration Card */}
+          <div className="disclaimer-card declaration p-3.5 rounded-xl border border-blue-300 bg-blue-50 dark:bg-blue-950/20 text-xs text-blue-950 dark:text-blue-200 space-y-1">
+            <div className="disclaimer-title flex items-center gap-1.5 text-blue-800 dark:text-blue-400 font-extrabold text-[10px] uppercase tracking-wider">
+              <FileCheck2 className="h-3.5 w-3.5" />
+              Borrower Declaration &amp; Acceptance
             </div>
-            <p className="leading-relaxed text-[11px] text-blue-900/90 dark:text-blue-300 font-medium">
-              I, the Borrower, hereby acknowledge that I have read, understood, and agreed to all terms, repayment schedules, and conditions of this Emergency Credit Line. I confirm that all submitted details and uploaded ID proofs are authentic, and I voluntarily authorize payroll deduction or peer-to-peer settlement for loan clearance upon the due date.
+            <p className="text-[11px] leading-relaxed font-medium">
+              I, the Borrower, confirm that all provided details and verification records are authentic. I accept full legal liability for the timely repayment of the credit amount on or before the due date specified in this Agreement.
             </p>
-          </div>
-        </div>
-
-        {/* Signatures */}
-        <div className="space-y-3 pt-2">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-signal border-b border-slate-200 dark:border-surface-border-dark pb-1">
-            Digital Signatures &amp; Execution Stamping
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            {/* Borrower Signature */}
-            <div className="p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-surface-border-dark bg-white dark:bg-surface-dark space-y-2">
-              <span className="text-xs font-extrabold text-ink dark:text-white block">Borrower Signature</span>
-              <div className="h-12 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-canvas-dark px-3">
-                {agreement.borrower_signed ? (
-                  <span className="font-serif italic font-bold text-base text-signal flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    {agreement.borrower_name}
-                  </span>
-                ) : (
-                  <span className="text-xs text-ink-slate italic font-medium">Pending Digital Signature</span>
-                )}
-              </div>
-              <p className="text-[11px] text-ink-slate font-medium">
-                Timestamp: <strong>{agreement.borrower_signed_at || (agreement.borrower_signed ? agreement.agreement_date : "Pending")}</strong>
-              </p>
-            </div>
-
-            {/* Lender Signature */}
-            <div className="p-4 rounded-xl border-2 border-dashed border-slate-300 dark:border-surface-border-dark bg-white dark:bg-surface-dark space-y-2">
-              <span className="text-xs font-extrabold text-ink dark:text-white block">Lender (Organization Admin) Signature</span>
-              <div className="h-12 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-canvas-dark px-3">
-                {agreement.lender_signed ? (
-                  <span className="font-serif italic font-bold text-base text-signal flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    {agreement.lender_name}
-                  </span>
-                ) : (
-                  <span className="text-xs text-ink-slate italic font-medium">Pending Admin Signature</span>
-                )}
-              </div>
-              <p className="text-[11px] text-ink-slate font-medium">
-                Timestamp: <strong>{agreement.lender_signed_at || (agreement.lender_signed ? agreement.agreement_date : "Pending")}</strong>
-              </p>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Interactive In-App Native E-Sign Drawer if not fully signed */}
-      {!isFullySigned && agreement.id && (
-        <form onSubmit={handleExecuteSignature} className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 space-y-3">
-          <div className="flex items-center gap-2 text-blue-900 dark:text-blue-200 font-bold text-xs">
-            <PenTool className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span>Sahayam In-App Digital Signature Execution</span>
-          </div>
-          <p className="text-xs text-blue-800 dark:text-blue-300">
-            Type your full legal name below to sign this agreement natively inside Sahayam.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              placeholder="Enter Full Legal Name..."
-              value={signatureName}
-              onChange={(e) => setSignatureName(e.target.value)}
-              className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-surface-dark border border-slate-300 dark:border-surface-border-dark text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
-            />
-            <Button variant="primary" loading={signing} type="submit" className="text-xs font-bold py-2 px-4 bg-blue-600 hover:bg-blue-700">
-              Execute E-Signature
-            </Button>
-          </div>
-        </form>
-      )}
     </Card>
   );
 }

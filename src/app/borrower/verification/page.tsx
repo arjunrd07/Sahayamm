@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VerificationBadge } from "@/components/ui/status-badge";
+import { submitBorrowerVerificationDocuments } from "./actions";
 import {
   UploadCloud,
   FileText,
@@ -82,46 +83,23 @@ export default function CustomerVerificationPage() {
   async function handleSubmit() {
     if (!profile) return;
     if (!idProof || !employmentProof) {
-      push("error", "Please upload both PAN Card and Bank Statement as proof documents.");
+      push("error", "Please upload both PAN Card and Pay Slip as proof documents.");
       return;
     }
     setSubmitting(true);
     try {
-      let idPath = `mock/${profile.id}/id-${idProof.name}`;
-      let empPath = `mock/${profile.id}/emp-${employmentProof.name}`;
+      const formData = new FormData();
+      formData.append("idProof", idProof);
+      formData.append("employmentProof", employmentProof);
 
-      try {
-        idPath = await uploadDoc(idProof, "id");
-        empPath = await uploadDoc(employmentProof, "employment");
-      } catch (storageErr) {
-        console.warn("Storage bucket fallback:", storageErr);
+      const result = await submitBorrowerVerificationDocuments(formData);
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          id_proof_url: idPath,
-          employment_proof_url: empPath,
-          verification_status: "pending",
-          rejection_reason: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", profile.id);
-
-      if (error) throw error;
-
-      await supabase.from("notifications").insert({
-        org_id: profile.org_id,
-        user_id: profile.id,
-        title: "PAN Card & Bank Statement Submitted",
-        message: "Your PAN Card and Bank Statement verification documents are currently under review by organization lenders.",
-        type: "verification_decision",
-        read: false,
-      });
-
-      push("success", "PAN Card & Bank Statement submitted successfully! Your organization admin will review shortly.");
+      push("success", "PAN Card & Pay Slip submitted successfully! Your organization lenders will review shortly.");
       setShowResubmitForm(false);
-      refresh();
+      await refresh();
     } catch (err: any) {
       push("error", err.message || "Upload failed. Please try again.");
     } finally {
@@ -144,7 +122,7 @@ export default function CustomerVerificationPage() {
             Borrower Identity Verification
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium max-w-xl">
-            Upload your valid PAN Card and Bank Statement as official proof to verify your membership and unlock emergency loan credit lines.
+            Upload your valid PAN Card and Pay Slip as official proof to verify your membership and unlock emergency loan credit lines.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-3">
@@ -161,7 +139,7 @@ export default function CustomerVerificationPage() {
             </div>
             <div>
               <p className="text-xs font-bold text-ink dark:text-white">Submit Proofs</p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">ID &amp; Bank Statement</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">ID &amp; Pay Slip</p>
             </div>
           </div>
 
@@ -170,7 +148,7 @@ export default function CustomerVerificationPage() {
               2
             </div>
             <div>
-              <p className="text-xs font-bold text-ink dark:text-white">Admin Review</p>
+              <p className="text-xs font-bold text-ink dark:text-white">Lender Review</p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Intra-org verification</p>
             </div>
           </div>
@@ -200,7 +178,7 @@ export default function CustomerVerificationPage() {
                   Account Fully Verified
                 </p>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 font-medium">
-                  Your identity &amp; Bank Statement records are approved. You are eligible for internal emergency credit up to ₹2,50,000.
+                  Your identity &amp; Pay Slip records are approved. You are eligible for internal emergency credit up to ₹2,50,000.
                 </p>
               </div>
             </div>
@@ -236,7 +214,7 @@ export default function CustomerVerificationPage() {
                 Documents Under Review
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-300 font-medium">
-                Your uploaded PAN Card and Bank Statement documents are currently being reviewed by your organization admin. Review usually takes 2–4 hours.
+                Your uploaded PAN Card and Pay Slip documents are currently being reviewed by your organization lenders. Review usually takes 2–4 hours.
               </p>
             </div>
           </div>
@@ -257,7 +235,7 @@ export default function CustomerVerificationPage() {
                 {profile.rejection_reason || "The uploaded documents were unreadable or invalid."}
               </p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-2 font-bold">
-                Please re-upload clear copies of your PAN Card and Bank Statement below.
+                Please re-upload clear copies of your PAN Card and Pay Slip below.
               </p>
             </div>
           </div>
@@ -275,7 +253,7 @@ export default function CustomerVerificationPage() {
                   Upload Required Proofs
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Please upload clear scans or photos of your PAN Card and Bank Statement as official proof.
+                  Please upload clear scans or photos of your PAN Card and Pay Slip as official proof.
                 </CardDescription>
               </CardHeader>
 
@@ -287,8 +265,8 @@ export default function CustomerVerificationPage() {
                   onChange={setIdProof}
                 />
                 <FileDropCard
-                  label="2. Bank Statement (Financial Proof)"
-                  hint="Recent Bank Statement (PDF, PNG, JPG)"
+                  label="2. Pay Slip (Salary Proof)"
+                  hint="Recent Pay Slip (PDF, PNG, JPG)"
                   file={employmentProof}
                   onChange={setEmploymentProof}
                 />
@@ -309,7 +287,7 @@ export default function CustomerVerificationPage() {
                   onClick={handleSubmit}
                   loading={submitting}
                 >
-                  Submit PAN Card &amp; Bank Statement for Verification
+                  Submit PAN Card &amp; Pay Slip for Verification
                 </Button>
               </div>
             </Card>
@@ -348,9 +326,9 @@ export default function CustomerVerificationPage() {
                       <FileText className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-ink dark:text-white">Bank Statement (ID &amp; Financial Proof)</p>
+                      <p className="text-xs font-bold text-ink dark:text-white">Pay Slip (Salary Proof)</p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {profile.employment_proof_url ? "Bank Statement Uploaded" : "Verified Record"}
+                        {profile.employment_proof_url ? "Pay Slip Uploaded" : "Verified Record"}
                       </p>
                     </div>
                   </div>
@@ -448,12 +426,12 @@ export default function CustomerVerificationPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-ink dark:text-white">Employment Record</p>
+                  <p className="font-semibold text-ink dark:text-white">Employment &amp; Salary Proof</p>
                   <p className="text-[11px] text-slate-500">
                     {hasUploadedDocs && isVerified
-                      ? "Bank statement / ID approved"
+                      ? "Pay slip / PAN approved"
                       : isPending
-                      ? "Under admin review"
+                      ? "Under lender review"
                       : "Document required"}
                   </p>
                 </div>

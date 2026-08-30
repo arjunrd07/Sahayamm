@@ -1,13 +1,28 @@
 "use server";
 
-import { createServiceRoleClient, createMasterServiceRoleClient } from "@/lib/supabase/server";
+import { createServiceRoleClient, createMasterServiceRoleClient, createClient } from "@/lib/supabase/server";
 import { logAuditEntry } from "@/lib/audit";
-import type { UserRole } from "@/types/database";
+import type { UserRole, Profile, Organization, Campus } from "@/types/database";
+
+export async function getAdminUsersData() {
+  const service = createServiceRoleClient();
+
+  const [{ data: profiles }, { data: orgsData }, { data: campusesData }] = await Promise.all([
+    service.from("profiles").select("*").order("created_at", { ascending: false }),
+    service.from("organizations").select("*").order("name"),
+    service.from("campuses").select("*").order("name"),
+  ]);
+
+  return {
+    profiles: (profiles as Profile[]) || [],
+    organizations: (orgsData as Organization[]) || [],
+    campuses: (campusesData as Campus[]) || [],
+  };
+}
 
 export async function toggleUserAccess(userId: string, targetStatusOrCurrentStatus: string, reason?: string) {
   const serviceMaster = createMasterServiceRoleClient();
   const servicePublic = createServiceRoleClient();
-  const serviceOrg = createServiceRoleClient("org_rmse_waverock");
 
   const newStatus = (targetStatusOrCurrentStatus === "verified" || targetStatusOrCurrentStatus === "rejected")
     ? targetStatusOrCurrentStatus
@@ -15,7 +30,7 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
 
   const updatePayload = {
     verification_status: newStatus,
-    rejection_reason: newStatus === "rejected" ? reason || "Access revoked by Admin" : null,
+    rejection_reason: newStatus === "rejected" ? reason || "Access revoked/paused by Admin" : null,
     updated_at: new Date().toISOString(),
   };
 
@@ -28,15 +43,12 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
 
   if (error) return { error: error.message };
 
-  // Sync status across public and org schemas
   try {
     await servicePublic.from("profiles").update(updatePayload).eq("id", userId);
-    await serviceOrg.from("profiles").update(updatePayload).eq("id", userId);
   } catch (err) {
     console.warn("Sync profile status notice:", err);
   }
 
-  // Also sync to borrowers table if user is borrower
   try {
     const borrowerPayload = {
       verification_status: newStatus,
@@ -44,13 +56,12 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
     };
     await serviceMaster.from("borrowers").update(borrowerPayload).eq("id", userId);
     await servicePublic.from("borrowers").update(borrowerPayload).eq("id", userId);
-    await serviceOrg.from("borrowers").update(borrowerPayload).eq("id", userId);
   } catch (err) {
     console.warn("Sync to borrowers table notice:", err);
   }
 
   await logAuditEntry({
-    action: newStatus === "rejected" ? "Revoke User Access" : "Restore User Access",
+    action: newStatus === "rejected" ? "Pause / Revoke User Access" : "Restore User Access",
     actor_id: "admin",
     entity_type: "user",
     entity_id: userId,
@@ -63,27 +74,29 @@ export async function toggleUserAccess(userId: string, targetStatusOrCurrentStat
 export async function updateUserRoleAndOrg(
   userId: string,
   newRole: UserRole,
-  orgId?: string
+  orgId?: string,
+  campusId?: string
 ) {
   const serviceMaster = createMasterServiceRoleClient();
   const servicePublic = createServiceRoleClient();
-  const serviceOrg = createServiceRoleClient("org_rmse_waverock");
 
   const updatePayload: any = {
     role: newRole,
     updated_at: new Date().toISOString(),
   };
 
-  if (newRole === "admin") {
+  if (newRole === "admin" || newRole === "lender") {
     updatePayload.verification_status = "verified";
   }
 
   if (orgId !== undefined) {
     updatePayload.org_id = orgId || null;
-    updatePayload.organization_id = orgId || null;
   }
 
-  // 1. Update master_db.profiles
+  if (campusId !== undefined) {
+    updatePayload.campus_id = campusId || null;
+  }
+
   const { data, error } = await serviceMaster
     .from("profiles")
     .update(updatePayload)
@@ -93,69 +106,67 @@ export async function updateUserRoleAndOrg(
 
   if (error) return { error: error.message };
 
-  // 2. Update public.profiles
   try {
     await servicePublic.from("profiles").update(updatePayload).eq("id", userId);
   } catch (err) {
     console.warn("Public profile update notice:", err);
   }
 
-  // 3. Update org_rmse_waverock.profiles
-  try {
-    await serviceOrg.from("profiles").update(updatePayload).eq("id", userId);
-  } catch (err) {
-    console.warn("Org profile update notice:", err);
-  }
-
-  // 4. Update auth.users metadata so JWT session reflects new role
-  try {
-    await servicePublic.auth.admin.updateUserById(userId, {
-      user_metadata: { role: newRole },
-    });
-  } catch (authErr) {
-    console.warn("Notice updating auth user metadata:", authErr);
-  }
-
   await logAuditEntry({
-    action: "Update User Role & Organization",
+    action: "Update User Role & Assignment",
     actor_id: "admin",
     entity_type: "user",
     entity_id: userId,
-    details: `Updated user ${userId} role to ${newRole}, orgId to ${orgId || "N/A"}`,
+    details: `Role updated to "${newRole}", org_id: "${orgId || 'unassigned'}", campus_id: "${campusId || 'unassigned'}"`,
   });
 
-  return { data: data || { id: userId, role: newRole, org_id: orgId } };
+  return { data: data || { id: userId, role: newRole, org_id: orgId, campus_id: campusId } };
 }
 
 export async function purgeUserAccount(userId: string) {
   const serviceMaster = createMasterServiceRoleClient();
   const servicePublic = createServiceRoleClient();
-  const serviceOrg = createServiceRoleClient("org_rmse_waverock");
 
-  const { data: profile } = await serviceMaster.from("profiles").select("email").eq("id", userId).maybeSingle();
+  // 1. Delete associated records from application tables
+  try {
+    await serviceMaster.from("agreements").delete().eq("borrower_id", userId);
+    await serviceMaster.from("agreements").delete().eq("lender_id", userId);
+  } catch (err) {
+    console.warn("Agreement purge notice:", err);
+  }
 
-  // Delete profile from all schemas
+  try {
+    await serviceMaster.from("loans").delete().eq("customer_id", userId);
+  } catch (err) {
+    console.warn("Loan purge notice:", err);
+  }
+
+  try {
+    await serviceMaster.from("borrowers").delete().eq("id", userId);
+  } catch (err) {
+    console.warn("Borrower purge notice:", err);
+  }
+
   try {
     await serviceMaster.from("profiles").delete().eq("id", userId);
     await servicePublic.from("profiles").delete().eq("id", userId);
-    await serviceOrg.from("profiles").delete().eq("id", userId);
-  } catch (e) {
-    console.warn("Notice deleting profiles:", e);
+  } catch (err) {
+    console.warn("Profile purge notice:", err);
   }
 
-  // Delete from auth.users
+  // 2. Delete user from auth.users
   try {
-    await servicePublic.auth.admin.deleteUser(userId);
-  } catch (err) {
-    console.warn("Notice deleting auth user:", err);
+    await serviceMaster.auth.admin.deleteUser(userId);
+  } catch (authErr) {
+    console.warn("Auth user deletion notice:", authErr);
   }
 
   await logAuditEntry({
-    action: "Purge User Account",
+    action: "Purge / Delete User Account",
     actor_id: "admin",
     entity_type: "user",
     entity_id: userId,
-    details: `Permanently purged user account ${profile?.email || userId}`,
+    details: `User account ${userId} permanently purged and wiped by platform admin.`,
   });
 
   return { success: true };

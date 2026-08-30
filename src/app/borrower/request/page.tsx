@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 
 export default function RequestLoanPage() {
-  const { profile, loading } = useAuth();
+  const { profile, loading, refresh } = useAuth();
   const { push } = useToast();
   const router = useRouter();
 
@@ -41,6 +41,11 @@ export default function RequestLoanPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const { refresh: refreshNotifications } = useNotifications();
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

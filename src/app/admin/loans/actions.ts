@@ -3,6 +3,32 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { logAuditEntry } from "@/lib/audit";
 
+export async function getAdminLoansData() {
+  const service = createServiceRoleClient();
+
+  const [
+    { data: loansData },
+    { data: orgsData },
+    { data: campusesData },
+    { data: profilesData },
+    { data: agreementsData },
+  ] = await Promise.all([
+    service.from("loans").select("*").order("created_at", { ascending: false }),
+    service.from("organizations").select("*").order("name"),
+    service.from("campuses").select("*").order("name"),
+    service.from("profiles").select("*"),
+    service.from("agreements").select("*"),
+  ]);
+
+  return {
+    loans: loansData || [],
+    organizations: orgsData || [],
+    campuses: campusesData || [],
+    profiles: profilesData || [],
+    agreements: agreementsData || [],
+  };
+}
+
 export async function adminOverrideLoanStatus(loanId: string, newStatus: string, reason?: string) {
   const service = createServiceRoleClient();
   const updatePayload: any = {
@@ -67,11 +93,12 @@ export async function adminBulkUpdateLoanStatus(loanIds: string[], newStatus: "a
   if (error) return { error: error.message };
 
   await logAuditEntry({
-    action: "Admin Bulk Loan Override",
+    action: `Bulk Loan ${newStatus.toUpperCase()}`,
     actor_id: "admin",
     entity_type: "loan",
-    details: `Bulk updated ${loanIds.length} loans to status "${newStatus}"`,
+    entity_id: `bulk-${loanIds.length}`,
+    details: `Bulk marked ${loanIds.length} loans as "${newStatus}". IDs: ${loanIds.join(", ")}. Reason: ${reason || "Admin batch decision"}`,
   });
 
-  return { count: data?.length || loanIds.length };
+  return { data: data || [] };
 }

@@ -92,7 +92,7 @@ export function ProfileHero({
           <div className="self-stretch sm:self-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-surface-border-dark flex flex-col items-start sm:items-end">
             <span className="text-[11px] font-bold text-ink-slate uppercase tracking-wider">Status</span>
             <div className="mt-1">
-              <VerificationBadge status={profile.verification_status} />
+              <VerificationBadge status={profile.role === "lender" || profile.role === "admin" ? "verified" : (profile.verification_status || "unverified")} />
             </div>
           </div>
         </div>

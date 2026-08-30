@@ -13,16 +13,15 @@ export interface SendEmailResult {
   sent: boolean;
   mock: boolean;
   id?: string;
+  error?: string;
 }
 
 /**
- * Sends a transactional email via Resend.
- * When RESEND_API_KEY is not set or custom domain is not verified, 
- * falls back to Resend's standard test domain (onboarding@resend.dev) or mock output.
+ * Sends a transactional email via Resend with verified domain contact.sahayamm.in.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "Sahayam <onboarding@resend.dev>";
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "Sahayam <noreply@contact.sahayamm.in>";
   const html = renderEmail(input.subject, input.body);
 
   if (!apiKey) {
@@ -47,41 +46,20 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
     if (!res.ok) {
       const errText = await res.text();
-      console.warn(`Resend API notice (${res.status}): ${errText}`);
-
-      // If domain unverified (403), retry once with official Resend test domain
-      if (res.status === 403 && fromEmail !== "Sahayam <onboarding@resend.dev>") {
-        console.log("Retrying email dispatch with default Resend sender (onboarding@resend.dev)...");
-        const retryRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "Sahayam <onboarding@resend.dev>",
-            to: [input.to],
-            subject: input.subject,
-            html,
-          }),
-        });
-
-        if (retryRes.ok) {
-          const retryData = await retryRes.json();
-          return { sent: true, mock: false, id: retryData?.id };
-        }
-      }
-
-      console.log(`[mock-email fallback] to=${input.to} subject="${input.subject}"\n${input.body}`);
-      return { sent: true, mock: true };
+      let errorMessage = `Resend API error (${res.status})`;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.message) errorMessage = parsed.message;
+      } catch {}
+      console.warn(`Resend API error (${res.status}):`, errorMessage);
+      return { sent: false, mock: false, error: errorMessage };
     }
 
     const data = await res.json();
     return { sent: true, mock: false, id: data?.id };
-  } catch (err) {
+  } catch (err: any) {
     console.warn("Resend email dispatch error:", err);
-    console.log(`[mock-email fallback] to=${input.to} subject="${input.subject}"\n${input.body}`);
-    return { sent: true, mock: true };
+    return { sent: false, mock: false, error: err?.message || "Email dispatch failed." };
   }
 }
 

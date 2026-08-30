@@ -212,6 +212,41 @@ export default async function CustomerDashboardPage() {
         ))}
       </div>
 
+      {/* Quick Action Grid for Loans and Agreements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link
+          href="/borrower/request"
+          className="card p-6 border-l-4 border-l-signal hover:shadow-card transition-all duration-200 flex items-center justify-between group"
+        >
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-signal">
+              <HandCoins className="h-4 w-4" /> Emergency Cash Flow
+            </div>
+            <h4 className="text-base font-extrabold text-ink dark:text-white">Apply For Emergency Credit</h4>
+            <p className="text-xs text-slate-500">Calculate tenure and submit a new loan request to your lender.</p>
+          </div>
+          <div className="h-10 w-10 rounded-2xl bg-signal/10 text-signal flex items-center justify-center group-hover:bg-signal group-hover:text-white transition-all shrink-0">
+            <ArrowRight className="h-5 w-5" />
+          </div>
+        </Link>
+
+        <Link
+          href="/borrower/agreements"
+          className="card p-6 border-l-4 border-l-blue-500 hover:shadow-card transition-all duration-200 flex items-center justify-between group"
+        >
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400">
+              <ShieldCheck className="h-4 w-4" /> Legal &amp; Compliance
+            </div>
+            <h4 className="text-base font-extrabold text-ink dark:text-white">My Lending Agreements</h4>
+            <p className="text-xs text-slate-500">View, inspect, and print your binding peer-to-peer loan agreements.</p>
+          </div>
+          <div className="h-10 w-10 rounded-2xl bg-blue-50 dark:bg-white/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all shrink-0">
+            <ArrowRight className="h-5 w-5" />
+          </div>
+        </Link>
+      </div>
+
       {/* Main Loan List */}
       <Card className="p-7">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-white/5">

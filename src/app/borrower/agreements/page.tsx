@@ -16,16 +16,15 @@ import {
   Printer,
   Sparkles,
   Eye,
+  FileSignature,
   Building2,
   Calendar,
   CreditCard,
-  MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import { AgreementTemplateViewer, AgreementData } from "@/components/agreements/AgreementTemplateViewer";
-import { getAdminAgreementsData } from "./actions";
 
-interface AdminAgreementItem {
+interface BorrowerAgreementItem {
   id: string;
   agreement_number: string;
   pdf_url?: string;
@@ -50,7 +49,6 @@ interface AdminAgreementItem {
     email: string;
     employee_id?: string;
     pan_number?: string;
-    campus_name?: string;
   };
   lender?: {
     full_name: string;
@@ -58,59 +56,66 @@ interface AdminAgreementItem {
   };
   organization?: {
     name: string;
-    code: string;
   };
 }
 
-function AdminAgreementsContent() {
-  const [agreements, setAgreements] = useState<AdminAgreementItem[]>([]);
+function BorrowerAgreementsContent() {
+  const [agreements, setAgreements] = useState<BorrowerAgreementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [orgFilter, setOrgFilter] = useState("all");
-  const [organizations, setOrganizations] = useState<any[]>([]);
   const [selectedAgreement, setSelectedAgreement] = useState<AgreementData | null>(null);
   const supabase = createClient();
 
   async function loadAgreements() {
     setLoading(true);
     try {
-      const res = await getAdminAgreementsData();
-      const agsData = res.agreements || [];
-      const loansData = res.loans || [];
-      const orgsData = res.organizations || [];
-      const campusesData = res.campuses || [];
-      const profilesData = res.profiles || [];
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: borrowerProfile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!borrowerProfile) return;
+
+      const [{ data: agsData }, { data: loansData }, { data: orgData }, { data: lendersData }] = await Promise.all([
+        supabase
+          .from("agreements")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase.from("loans").select("*").eq("customer_id", user.id),
+        supabase.from("organizations").select("*").eq("id", borrowerProfile.org_id).maybeSingle(),
+        supabase.from("profiles").select("id, full_name, email").in("role", ["lender", "admin"]),
+      ]);
 
       const loansMap = new Map((loansData || []).map((l: any) => [l.id, l]));
-      const orgsMap = new Map((orgsData || []).map((o: any) => [o.id, o]));
-      const campusMap = new Map((campusesData || []).map((c: any) => [c.id, c.name]));
-      const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+      const lendersMap = new Map((lendersData || []).map((l: any) => [l.id, l]));
+      const defaultLender = lendersData?.[0];
 
-      const mapped: AdminAgreementItem[] = (agsData || []).map((ag: any) => {
+      // Filter agreements belonging to this borrower's loans
+      const userAgreements: BorrowerAgreementItem[] = [];
+
+      for (const ag of agsData || []) {
         const loan = loansMap.get(ag.loan_id);
-        const borrower = loan ? profilesMap.get(loan.customer_id) : undefined;
-        const lender = loan?.admin_id ? profilesMap.get(loan.admin_id) : undefined;
-        const org = loan ? orgsMap.get(loan.org_id) : undefined;
+        if (loan) {
+          const lender = loan.admin_id ? lendersMap.get(loan.admin_id) : defaultLender;
+          userAgreements.push({
+            ...ag,
+            loan,
+            borrower: borrowerProfile,
+            lender: lender || { full_name: "Authorized Organization Lender", email: "" },
+            organization: orgData || { name: "Sahayam Organization" },
+          });
+        }
+      }
 
-        return {
-          ...ag,
-          loan,
-          borrower: borrower ? {
-            full_name: borrower.full_name,
-            email: borrower.email,
-            employee_id: borrower.employee_id,
-            pan_number: borrower.pan_number,
-            campus_name: borrower.campus_id ? campusMap.get(borrower.campus_id) || "Main Campus" : "Main Campus",
-          } : undefined,
-          lender: lender ? { full_name: lender.full_name, email: lender.email } : undefined,
-          organization: org ? { name: org.name, code: org.code } : undefined,
-        };
-      });
-
-      setAgreements(mapped);
-      setOrganizations(orgsData || []);
+      setAgreements(userAgreements);
     } catch (err) {
-      console.error("Error loading agreements for admin:", err);
+      console.error("Error loading borrower agreements:", err);
     } finally {
       setLoading(false);
     }
@@ -123,23 +128,15 @@ function AdminAgreementsContent() {
 
   const filtered = agreements.filter((ag) => {
     const term = search.toLowerCase();
-    const matchesSearch =
+    return (
       !term ||
       ag.agreement_number.toLowerCase().includes(term) ||
-      ag.loan?.purpose?.toLowerCase().includes(term) ||
-      ag.borrower?.full_name?.toLowerCase().includes(term) ||
-      ag.borrower?.email?.toLowerCase().includes(term) ||
-      ag.lender?.full_name?.toLowerCase().includes(term) ||
-      ag.organization?.name?.toLowerCase().includes(term) ||
-      ag.borrower?.campus_name?.toLowerCase().includes(term) ||
-      String(ag.loan?.amount).includes(term);
-
-    const matchesOrg = orgFilter === "all" || (ag.loan && (ag.loan as any).org_id === orgFilter);
-
-    return matchesSearch && matchesOrg;
+      ag.loan?.purpose.toLowerCase().includes(term) ||
+      ag.lender?.full_name.toLowerCase().includes(term)
+    );
   });
 
-  function openInspector(item: AdminAgreementItem) {
+  function openInspector(item: BorrowerAgreementItem) {
     const l = item.loan;
     const agData: AgreementData = {
       id: item.id,
@@ -168,66 +165,49 @@ function AdminAgreementsContent() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl pb-16">
+    <div className="space-y-6 pb-12 max-w-6xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-signal/10 text-signal border border-signal/20 text-xs font-semibold mb-2">
-            <FileText className="h-3.5 w-3.5" /> Platform Legal Repository
+            <ShieldCheck className="h-3.5 w-3.5" /> Legal Records &amp; Contracts
           </div>
           <h1 className="text-2xl font-black text-ink dark:text-white tracking-tight">
-            Agreements &amp; Contract Inspector
+            My Lending Agreements
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Global repository of all executed and active peer-to-peer internal lending contracts.
+            Access, inspect, and print your binding peer-to-peer lending agreements and repayment schedules.
           </p>
         </div>
 
         <Button variant="secondary" onClick={loadAgreements} className="rounded-xl text-xs gap-1.5 font-bold self-start sm:self-auto">
-          <Sparkles className="h-3.5 w-3.5 text-signal" /> Refresh Agreements
+          <Sparkles className="h-3.5 w-3.5 text-signal" /> Refresh
         </Button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="card p-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <Search className="h-4 w-4 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search by agreement ref, borrower name, email, lender, organization, campus, or amount..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-transparent text-xs text-ink dark:text-white placeholder:text-slate-400 focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
-          <select
-            value={orgFilter}
-            onChange={(e) => setOrgFilter(e.target.value)}
-            className="text-xs py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-medium text-ink dark:text-white"
-          >
-            <option value="all">All Organizations</option>
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name} ({org.code})
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Search Bar */}
+      <div className="card p-4 flex items-center gap-3">
+        <Search className="h-4 w-4 text-slate-400 shrink-0" />
+        <input
+          type="text"
+          placeholder="Search agreements by reference number or loan purpose..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full bg-transparent text-xs text-ink dark:text-white placeholder:text-slate-400 focus:outline-none"
+        />
       </div>
 
       {/* Agreements Table */}
       <Table>
         <Thead>
           <Tr>
-            <Th>Agreement Ref</Th>
-            <Th>Borrower &amp; Campus</Th>
-            <Th>Lender &amp; Organization</Th>
-            <Th>Loan Amount &amp; Purpose</Th>
+            <Th>Agreement Reference</Th>
+            <Th>Lender</Th>
+            <Th>Loan Purpose &amp; Amount</Th>
             <Th>Total Repayment</Th>
             <Th>Due Date</Th>
-            <Th className="text-right">Actions</Th>
+            <Th>Date Executed</Th>
+            <Th className="text-right">Action</Th>
           </Tr>
         </Thead>
         <tbody>
@@ -236,7 +216,7 @@ function AdminAgreementsContent() {
               <Td colSpan={7}>
                 <EmptyState
                   title="No agreements found"
-                  description="No executed lending agreements matched your search query."
+                  description="Agreements generated for your loan requests will appear here."
                 />
               </Td>
             </Tr>
@@ -250,42 +230,27 @@ function AdminAgreementsContent() {
                     </div>
                     <div>
                       <p className="font-mono font-bold text-ink dark:text-white text-xs">{ag.agreement_number}</p>
-                      <p className="text-[11px] text-slate-400 font-mono">Date: {formatDate(ag.created_at)}</p>
+                      <p className="text-[11px] text-slate-400 font-mono">Ref: #{ag.loan_id.slice(0, 8)}</p>
                     </div>
                   </div>
                 </Td>
 
                 <Td>
-                  <div className="text-xs space-y-0.5">
-                    <p className="font-bold text-ink dark:text-white">{ag.borrower?.full_name || "Borrower"}</p>
-                    <p className="text-slate-500 text-[11px]">{ag.borrower?.email}</p>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300 font-medium">
-                      <MapPin className="h-3 w-3 text-signal" /> {ag.borrower?.campus_name || "Main Campus"}
-                    </span>
+                  <div className="text-xs">
+                    <p className="font-bold text-ink dark:text-white">{ag.lender?.full_name || "Organization Lender"}</p>
+                    <p className="text-[11px] text-slate-400">{ag.organization?.name}</p>
                   </div>
                 </Td>
 
                 <Td>
-                  <div className="text-xs space-y-0.5">
-                    <p className="font-bold text-ink dark:text-white">{ag.lender?.full_name || "Lender Officer"}</p>
-                    <div className="flex items-center gap-1 text-slate-500 text-[11px]">
-                      <Building2 className="h-3 w-3 text-slate-400" />
-                      <span>{ag.organization?.name || "Organization"}</span>
-                    </div>
+                  <div className="text-xs">
+                    <p className="font-medium text-ink dark:text-white truncate max-w-[160px]">{ag.loan?.purpose || "Emergency Loan"}</p>
+                    <p className="font-black text-signal text-xs">{formatINR(ag.loan?.amount || 0)}</p>
                   </div>
                 </Td>
 
                 <Td>
-                  <div className="text-xs space-y-0.5">
-                    <p className="font-black text-signal text-sm">{formatINR(ag.loan?.amount || 0)}</p>
-                    <p className="font-medium text-ink dark:text-white truncate max-w-[150px]">
-                      {ag.loan?.purpose || "Emergency Credit"}
-                    </p>
-                  </div>
-                </Td>
-
-                <Td>
-                  <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm font-mono">
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs font-mono">
                     {formatINR(ag.loan?.total_repayment || ag.loan?.amount || 0)}
                   </span>
                 </Td>
@@ -296,20 +261,26 @@ function AdminAgreementsContent() {
                   </span>
                 </Td>
 
+                <Td>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {formatDate(ag.created_at)}
+                  </span>
+                </Td>
+
                 <Td className="text-right">
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-2">
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => openInspector(ag)}
                       className="rounded-xl text-xs gap-1 font-bold shadow-sm"
                     >
-                      <Eye className="h-3.5 w-3.5 text-signal" /> Inspect Contract
+                      <Eye className="h-3.5 w-3.5 text-signal" /> View Agreement
                     </Button>
                     <Link
-                      href={`/admin/loans`}
+                      href={`/borrower/loans/${ag.loan_id}`}
                       className="p-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-500 hover:text-signal hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
-                      title="View loan in platform oversight"
+                      title="View loan details"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
                     </Link>
@@ -325,7 +296,7 @@ function AdminAgreementsContent() {
       <Modal
         open={!!selectedAgreement}
         onClose={() => setSelectedAgreement(null)}
-        title={selectedAgreement ? `Agreement · ${selectedAgreement.agreement_number}` : "Agreement Inspector"}
+        title={selectedAgreement ? `Internal Lending Agreement - ${selectedAgreement.agreement_number}` : "Agreement Document"}
       >
         {selectedAgreement && (
           <div className="space-y-4">
@@ -342,17 +313,17 @@ function AdminAgreementsContent() {
   );
 }
 
-export default function AdminAgreementsPage() {
+export default function BorrowerAgreementsPage() {
   return (
     <Suspense
       fallback={
-        <div className="space-y-6 max-w-7xl pb-16">
-          <div className="h-24 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
-          <div className="h-64 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        <div className="space-y-6 pb-12">
+          <div className="h-24 rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <div className="h-64 rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse" />
         </div>
       }
     >
-      <AdminAgreementsContent />
+      <BorrowerAgreementsContent />
     </Suspense>
   );
 }

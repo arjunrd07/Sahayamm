@@ -25,6 +25,8 @@ export default function AdminLoanDetailPage() {
 
   const [loan, setLoan] = useState<Loan | null>(null);
   const [customer, setCustomer] = useState<Profile | null>(null);
+  const [lenderProfile, setLenderProfile] = useState<Profile | null>(null);
+  const [organization, setOrganization] = useState<any | null>(null);
   const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -39,10 +41,11 @@ export default function AdminLoanDetailPage() {
 
     const { data: myProfile } = await supabase
       .from("profiles")
-      .select("org_id")
+      .select("*")
       .eq("id", user.id)
       .maybeSingle();
     if (!myProfile?.org_id) return;
+    setLenderProfile(myProfile as Profile);
 
     const { data: loanData } = await supabase
       .from("loans")
@@ -57,12 +60,14 @@ export default function AdminLoanDetailPage() {
     }
 
     setLoan(loanData as Loan);
-    const [{ data: cust }, { data: agr }] = await Promise.all([
+    const [{ data: cust }, { data: agr }, { data: orgData }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", loanData.customer_id).maybeSingle(),
       supabase.from("agreements").select("*").eq("loan_id", loanData.id).maybeSingle(),
+      supabase.from("organizations").select("*").eq("id", myProfile.org_id).maybeSingle(),
     ]);
     setCustomer(cust as Profile);
     setAgreement(agr as Agreement | null);
+    setOrganization(orgData);
   }
 
   useEffect(() => {
@@ -284,7 +289,28 @@ export default function AdminLoanDetailPage() {
             </Card>
           )}
 
-          {loan.status !== "pending" && loan.status !== "rejected" && <AgreementCard agreement={agreement} />}
+          {loan.status !== "pending" && loan.status !== "rejected" && (
+            <AgreementCard
+              agreement={agreement}
+              loanDetails={{
+                loan_id: `LN-${loan.id.slice(0, 8)}`,
+                amount: loan.amount,
+                interest_rate: loan.interest_rate_annual || 0,
+                interest_amount: loan.calculated_interest,
+                duration_days: loan.duration_days,
+                total_repayment: loan.total_repayment,
+                due_date: loan.due_date,
+                created_at: loan.created_at,
+                borrower_name: customer?.full_name || customer?.email || "Borrower",
+                borrower_email: customer?.email,
+                borrower_employee_id: customer?.employee_id || undefined,
+                borrower_pan: customer?.pan_number || undefined,
+                lender_name: lenderProfile?.full_name || lenderProfile?.email || "Organization Lender",
+                lender_email: lenderProfile?.email,
+                org_name: organization?.name || "Sahayam Organization",
+              }}
+            />
+          )}
 
           {loan.rejection_reason && loan.status === "rejected" && (
             <Card className="border-danger/30 bg-danger-soft">

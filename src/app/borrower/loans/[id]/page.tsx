@@ -43,11 +43,32 @@ export default async function CustomerLoanDetailPage({
   const l = loanData as Loan;
 
   // Fetch agreement details
-  const { data: agreement } = await supabase
-    .from("agreements")
-    .select("*")
-    .eq("loan_id", l.id)
-    .maybeSingle();
+  const [{ data: agreement }, { data: borrowerProf }, { data: lenderProf }, { data: orgData }] = await Promise.all([
+    supabase.from("agreements").select("*").eq("loan_id", l.id).maybeSingle(),
+    supabase.from("profiles").select("*").eq("id", l.customer_id).maybeSingle(),
+    l.admin_id
+      ? supabase.from("profiles").select("*").eq("id", l.admin_id).maybeSingle()
+      : supabase.from("profiles").select("*").eq("org_id", l.org_id).in("role", ["lender", "admin"]).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    supabase.from("organizations").select("*").eq("id", l.org_id).maybeSingle(),
+  ]);
+
+  const loanDetailsForAgreement = {
+    loan_id: `LN-${l.id.slice(0, 8)}`,
+    amount: l.amount,
+    interest_rate: l.interest_rate_annual || 0,
+    interest_amount: l.calculated_interest,
+    duration_days: l.duration_days,
+    total_repayment: l.total_repayment,
+    due_date: l.due_date,
+    created_at: l.created_at,
+    borrower_name: borrowerProf?.full_name || borrowerProf?.email || "Borrower",
+    borrower_email: borrowerProf?.email,
+    borrower_employee_id: borrowerProf?.employee_id || undefined,
+    borrower_pan: borrowerProf?.pan_number || undefined,
+    lender_name: lenderProf?.full_name || lenderProf?.email || "Organization Lender",
+    lender_email: lenderProf?.email,
+    org_name: orgData?.name || "Sahayam Organization",
+  };
 
   const facts = [
     {
@@ -164,7 +185,7 @@ export default async function CustomerLoanDetailPage({
           </Card>
 
           {/* Legal Agreement Viewer Card */}
-          <AgreementCard agreement={agreement as Agreement | null} />
+          <AgreementCard agreement={agreement as Agreement | null} loanDetails={loanDetailsForAgreement} />
 
           {/* Repayment Action Card */}
           {(l.status === "active" || l.status === "approved") && (

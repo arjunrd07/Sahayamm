@@ -13,7 +13,15 @@ async function requireLender() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { supabase, lender: null };
-  const { data: lender } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+
+  const service = createServiceRoleClient();
+  let { data: lender } = await service.from("profiles").select("*").eq("id", user.id).maybeSingle();
+
+  const userRole = user.user_metadata?.role || lender?.role || "lender";
+  if (lender && !lender.role) {
+    lender.role = userRole;
+  }
+
   if (
     !lender ||
     (lender.role !== "lender" && lender.role !== "admin")
@@ -23,9 +31,82 @@ async function requireLender() {
   return { supabase, lender };
 }
 
+export async function getLenderLoansForDashboard() {
+  const { lender } = await requireLender();
+  if (!lender) return { loans: [], error: "Not authorized." };
+
+  const service = createServiceRoleClient();
+  const orgId = lender.org_id;
+
+  let query = service
+    .from("loans")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (lender.role !== "admin") {
+    query = query.eq("org_id", orgId);
+  }
+
+  const [{ data: loansData }, { data: profilesData }, { data: campusesData }] = await Promise.all([
+    query,
+    service.from("profiles").select("id, full_name, email, campus_id, pan_number, employee_id"),
+    service.from("campuses").select("id, name, code"),
+  ]);
+
+  const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+  const campusesMap = new Map((campusesData || []).map((c: any) => [c.id, c.name]));
+
+  let enrichedLoans = (loansData || []).map((l: any) => {
+    const customer = profilesMap.get(l.customer_id);
+    return {
+      ...l,
+      customer: customer ? {
+        ...customer,
+        campus_name: customer.campus_id ? campusesMap.get(customer.campus_id) || "Main Campus" : "Main Campus",
+      } : undefined,
+    };
+  });
+
+  // If lender is assigned to a specific campus, restrict to borrowers of the same campus
+  if (lender.role !== "admin" && lender.campus_id) {
+    enrichedLoans = enrichedLoans.filter((l: any) => l.customer?.campus_id === lender.campus_id);
+  }
+
+  return { loans: enrichedLoans };
+}
+
 export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
-  const { supabase, lender } = await requireLender();
+  const { lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
+
+  const service = createServiceRoleClient();
+
+  // 1. Fetch loan and borrower profile to verify organization & campus isolation
+  const { data: targetLoan } = await service
+    .from("loans")
+    .select("*")
+    .eq("id", loanId)
+    .maybeSingle();
+
+  if (!targetLoan) return { error: "Loan record not found." };
+
+  const { data: borrower } = await service
+    .from("profiles")
+    .select("*")
+    .eq("id", targetLoan.customer_id)
+    .maybeSingle();
+
+  if (!borrower) return { error: "Borrower record not found." };
+
+  // Tenant isolation checks
+  if (lender.role !== "admin") {
+    if (targetLoan.org_id !== lender.org_id || borrower.org_id !== lender.org_id) {
+      return { error: "Forbidden: You can only approve loans within your assigned organization." };
+    }
+    if (lender.campus_id && borrower.campus_id && borrower.campus_id !== lender.campus_id) {
+      return { error: "Forbidden: You can only approve loans within your assigned campus." };
+    }
+  }
 
   const now = new Date().toISOString();
   const status = disbursalProofUrl ? "active" : "approved";
@@ -42,24 +123,20 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     updateData.active_at = now;
   }
 
-  let query = supabase
+  const { data: loan, error } = await service
     .from("loans")
     .update(updateData)
     .eq("id", loanId)
-    .eq("status", "pending");
-
-  if (lender.role !== "admin") {
-    query = query.eq("org_id", lender.org_id);
-  }
-
-  const { data: loan, error } = await query.select().maybeSingle();
+    .eq("status", "pending")
+    .select()
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not approve loan." };
 
   // Record payment in loan_payments table if proof was attached
   if (disbursalProofUrl) {
     try {
-      await supabase.from("loan_payments").insert({
+      await service.from("loan_payments").insert({
         loan_id: loan.id,
         org_id: lender.org_id,
         borrower_id: loan.customer_id,
@@ -73,11 +150,11 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     }
   }
 
-  const service = createServiceRoleClient();
-  const [{ data: org }, { data: borrower }] = await Promise.all([
-    service.from("organizations").select("*").eq("id", lender.org_id).maybeSingle(),
-    service.from("profiles").select("*").eq("id", loan.customer_id).maybeSingle(),
-  ]);
+  const { data: org } = await service
+    .from("organizations")
+    .select("*")
+    .eq("id", lender.org_id)
+    .maybeSingle();
 
   const { count } = await service
     .from("agreements")
@@ -98,23 +175,16 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
     .insert({
       org_id: lender.org_id,
       loan_id: loan.id,
+      borrower_id: loan.customer_id,
+      lender_id: lender.id,
       agreement_number: agreementNumber,
-      docuseal_submission_id: result.docusealSubmissionId,
-      status: result.status,
+      pdf_url: result?.pdfUrl || null,
+      status: "active",
     })
     .select()
     .maybeSingle();
 
   if (borrower) {
-    await dispatchNotification({
-      orgId: lender.org_id,
-      userId: loan.customer_id,
-      userEmail: (borrower as Profile).email,
-      loanId: loan.id,
-      type: "loan_approved",
-      params: { amount: formatINR(loan.total_repayment) },
-    });
-
     if (disbursalProofUrl) {
       await dispatchNotification({
         orgId: lender.org_id,
@@ -162,10 +232,38 @@ export async function approveLoan(loanId: string, disbursalProofUrl?: string) {
 }
 
 export async function rejectLoan(loanId: string, reason: string) {
-  const { supabase, lender } = await requireLender();
+  const { lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
 
-  let query = supabase
+  const service = createServiceRoleClient();
+
+  // Tenant isolation checks
+  const { data: targetLoan } = await service
+    .from("loans")
+    .select("org_id, customer_id")
+    .eq("id", loanId)
+    .maybeSingle();
+
+  if (!targetLoan) return { error: "Loan record not found." };
+
+  if (lender.role !== "admin") {
+    if (targetLoan.org_id !== lender.org_id) {
+      return { error: "Forbidden: You can only reject loans within your assigned organization." };
+    }
+    if (lender.campus_id) {
+      const { data: borrower } = await service
+        .from("profiles")
+        .select("campus_id")
+        .eq("id", targetLoan.customer_id)
+        .maybeSingle();
+
+      if (borrower?.campus_id && borrower.campus_id !== lender.campus_id) {
+        return { error: "Forbidden: You can only reject loans within your assigned campus." };
+      }
+    }
+  }
+
+  const { data: loan, error } = await service
     .from("loans")
     .update({
       status: "rejected",
@@ -174,17 +272,12 @@ export async function rejectLoan(loanId: string, reason: string) {
       approved_at: new Date().toISOString(),
     })
     .eq("id", loanId)
-    .eq("status", "pending");
-
-  if (lender.role !== "admin") {
-    query = query.eq("org_id", lender.org_id);
-  }
-
-  const { data: loan, error } = await query.select().maybeSingle();
+    .eq("status", "pending")
+    .select()
+    .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not reject loan." };
 
-  const service = createServiceRoleClient();
   const { data: borrower } = await service
     .from("profiles")
     .select("email")
@@ -198,7 +291,7 @@ export async function rejectLoan(loanId: string, reason: string) {
       userEmail: borrower.email,
       loanId: loan.id,
       type: "loan_rejected",
-      params: { amount: formatINR(loan.amount), reason },
+      params: { reason },
     });
   }
 
@@ -207,48 +300,60 @@ export async function rejectLoan(loanId: string, reason: string) {
     actor_id: lender.id,
     entity_type: "loan",
     entity_id: loan.id,
-    details: `Lender ${lender.full_name || lender.email} rejected loan request ${loan.id} of ${formatINR(loan.amount)}. Reason: ${reason || "Not specified"}.`,
+    details: `Lender ${lender.full_name || lender.email} rejected loan request ${loan.id}. Reason: ${reason}`,
   });
 
   return { data: loan };
 }
 
-export async function uploadDisbursalProof(loanId: string, proofPath: string) {
-  const { supabase, lender } = await requireLender();
+export async function uploadDisbursalProof(loanId: string, proofUrl: string) {
+  const { lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
 
-  const { data: loan, error } = await supabase
+  const service = createServiceRoleClient();
+  const now = new Date().toISOString();
+
+  // Tenant isolation check
+  const { data: targetLoan } = await service
+    .from("loans")
+    .select("org_id, customer_id")
+    .eq("id", loanId)
+    .maybeSingle();
+
+  if (!targetLoan) return { error: "Loan record not found." };
+
+  if (lender.role !== "admin" && targetLoan.org_id !== lender.org_id) {
+    return { error: "Forbidden: You can only disburse loans within your assigned organization." };
+  }
+
+  const { data: loan, error } = await service
     .from("loans")
     .update({
+      disbursal_proof_url: proofUrl,
       status: "active",
-      disbursal_proof_url: proofPath,
-      disbursed_at: new Date().toISOString(),
-      active_at: new Date().toISOString(),
+      disbursed_at: now,
+      active_at: now,
     })
     .eq("id", loanId)
-    .eq("org_id", lender.org_id)
-    .eq("status", "approved")
     .select()
     .maybeSingle();
 
-  if (error || !loan) return { error: error?.message || "Could not mark loan active." };
+  if (error || !loan) return { error: error?.message || "Could not update disbursal status." };
 
-  // Record proof in loan_payments
   try {
-    await supabase.from("loan_payments").insert({
+    await service.from("loan_payments").insert({
       loan_id: loan.id,
       org_id: lender.org_id,
       borrower_id: loan.customer_id,
       amount: loan.amount,
-      payment_proof_url: proofPath,
+      payment_proof_url: proofUrl,
       payment_type: "disbursal",
       status: "verified",
     });
   } catch (paymentErr) {
-    console.warn("Loan payment record notice:", paymentErr);
+    console.warn("Disbursal payment record notice:", paymentErr);
   }
 
-  const service = createServiceRoleClient();
   const { data: borrower } = await service
     .from("profiles")
     .select("email")
@@ -278,19 +383,22 @@ export async function uploadDisbursalProof(loanId: string, proofPath: string) {
 }
 
 export async function sendRepaymentReminder(loanId: string) {
-  const { supabase, lender } = await requireLender();
+  const { lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
 
-  const { data: loan } = await supabase
+  const service = createServiceRoleClient();
+
+  const { data: loan } = await service
     .from("loans")
     .select("*")
     .eq("id", loanId)
-    .eq("org_id", lender.org_id)
     .maybeSingle();
 
   if (!loan) return { error: "Loan not found." };
+  if (lender.role !== "admin" && loan.org_id !== lender.org_id) {
+    return { error: "Forbidden: You can only send reminders for loans within your organization." };
+  }
 
-  const service = createServiceRoleClient();
   const { data: borrower } = await service
     .from("profiles")
     .select("email")
@@ -320,21 +428,32 @@ export async function sendRepaymentReminder(loanId: string) {
 }
 
 export async function verifyRepaymentAndComplete(loanId: string) {
-  const { supabase, lender } = await requireLender();
+  const { lender } = await requireLender();
   if (!lender) return { error: "Not authorized." };
 
-  const { data: loan, error } = await supabase
+  const service = createServiceRoleClient();
+
+  const { data: targetLoan } = await service
+    .from("loans")
+    .select("org_id, customer_id")
+    .eq("id", loanId)
+    .maybeSingle();
+
+  if (!targetLoan) return { error: "Loan record not found." };
+  if (lender.role !== "admin" && targetLoan.org_id !== lender.org_id) {
+    return { error: "Forbidden: You can only complete loans within your organization." };
+  }
+
+  const { data: loan, error } = await service
     .from("loans")
     .update({ status: "completed", completed_at: new Date().toISOString() })
     .eq("id", loanId)
-    .eq("org_id", lender.org_id)
     .eq("status", "active")
     .select()
     .maybeSingle();
 
   if (error || !loan) return { error: error?.message || "Could not complete loan." };
 
-  const service = createServiceRoleClient();
   const { data: borrower } = await service
     .from("profiles")
     .select("email")

@@ -2,17 +2,29 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { Suspense, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { Send, Bell, Users, Building2, CheckCircle2, Megaphone, Inbox } from "lucide-react";
+import {
+  Send,
+  Bell,
+  Users,
+  Building2,
+  CheckCircle2,
+  Megaphone,
+  Inbox,
+  Mail,
+  User,
+  Search,
+  Sparkles,
+  Clock,
+} from "lucide-react";
 import type { Profile, Organization } from "@/types/database";
-import { sendManualNotification } from "./actions";
+import { getAdminNotificationsData, sendManualNotification } from "./actions";
 import { NotificationsScreen } from "@/components/notifications-screen";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 interface SentNotification {
   id: string;
@@ -21,53 +33,54 @@ interface SentNotification {
   type: string;
   created_at: string;
   user_id?: string;
-  profiles?: { full_name: string; email: string };
+  email_sent?: boolean;
+  recipient_name?: string;
+  recipient_email?: string;
 }
 
 type TabKey = "inbox" | "broadcast";
 
-export default function AdminNotificationsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("inbox");
+function AdminNotificationsContent() {
+  const [activeTab, setActiveTab] = useState<TabKey>("broadcast");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [history, setHistory] = useState<SentNotification[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Form State
-  const [targetType, setTargetType] = useState<"user" | "organization" | "global">("global");
+  const [targetType, setTargetType] = useState<"user" | "organization" | "global">("user");
   const [targetId, setTargetId] = useState<string>("");
+  const [userSearch, setUserSearch] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [type, setType] = useState("verification_decision");
+  const [sendEmailNotice, setSendEmailNotice] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   const { push } = useToast();
-  const supabase = createClient();
 
   async function loadBroadcastData() {
     setLoading(true);
-    const [{ data: profs }, { data: orgs }, { data: notifs }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, role, org_id").order("full_name"),
-      supabase.from("organizations").select("*").order("name"),
-      supabase
-        .from("notifications")
-        .select("*, profiles:profiles!notifications_user_id_fkey(full_name, email)")
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
+    try {
+      const res = await getAdminNotificationsData();
+      setProfiles(res.profiles as Profile[]);
+      setOrganizations(res.organizations as Organization[]);
+      setHistory(res.history as SentNotification[]);
 
-    if (profs) setProfiles(profs as Profile[]);
-    if (orgs) setOrganizations(orgs as Organization[]);
-    if (notifs) setHistory(notifs as SentNotification[]);
-    setLoading(false);
+      if (res.profiles.length > 0 && !targetId) {
+        setTargetId(res.profiles[0].id);
+      }
+    } catch (err: any) {
+      push("error", err.message || "Failed to load notification directory.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    if (activeTab === "broadcast") {
-      loadBroadcastData();
-    }
+    loadBroadcastData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,10 +96,11 @@ export default function AdminNotificationsPage() {
     setSubmitting(true);
     const result = await sendManualNotification({
       targetType,
-      targetId,
+      targetId: targetType === "global" ? undefined : targetId,
       title,
       message,
       type,
+      sendEmailNotice,
     });
     setSubmitting(false);
 
@@ -95,40 +109,63 @@ export default function AdminNotificationsPage() {
       return;
     }
 
-    push("success", `Notification sent successfully to ${result.count} users!`);
+    push("success", `Notification and email dispatched to ${result.count} recipient(s)!`);
     setTitle("");
     setMessage("");
     loadBroadcastData();
   }
 
+  const filteredUsers = profiles.filter((p) => {
+    const term = userSearch.toLowerCase();
+    return (
+      !term ||
+      p.full_name?.toLowerCase().includes(term) ||
+      p.email.toLowerCase().includes(term) ||
+      p.pan_number?.toLowerCase().includes(term) ||
+      p.role?.toLowerCase().includes(term)
+    );
+  });
+
   const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
-    { key: "inbox", label: "My Notifications", icon: Inbox },
-    { key: "broadcast", label: "Broadcast / Send", icon: Megaphone },
+    { key: "broadcast", label: "Broadcast & Dispatch", icon: Megaphone },
+    { key: "inbox", label: "My Admin Inbox", icon: Inbox },
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-ink dark:text-white">Notifications Centre</h2>
-        <p className="text-sm text-ink-slate">
-          View your incoming notifications or broadcast custom notifications to users across the platform.
-        </p>
+    <div className="space-y-6 max-w-7xl pb-16">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-signal/10 text-signal border border-signal/20 text-xs font-semibold mb-2">
+            <Bell className="h-3.5 w-3.5" /> Communications Command
+          </div>
+          <h1 className="text-2xl font-black text-ink dark:text-white tracking-tight">
+            Notifications &amp; Email Dispatcher
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Dispatch direct messages, account updates, and transactional email alerts to platform members.
+          </p>
+        </div>
+
+        <Button variant="secondary" onClick={loadBroadcastData} className="rounded-xl text-xs gap-1.5 font-bold self-start sm:self-auto">
+          <Sparkles className="h-3.5 w-3.5 text-signal" /> Refresh Directory
+        </Button>
       </div>
 
       {/* Tab Switcher */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-surface-border-dark pb-0">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-0">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
           return (
             <button
               key={tab.key}
-              type="button"
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-all border-b-2 -mb-px rounded-t-lg",
-                activeTab === tab.key
+                "flex items-center gap-2 px-4 py-2.5 text-xs font-bold transition-colors border-b-2 -mb-px rounded-t-lg",
+                isActive
                   ? "border-signal text-signal bg-signal/5"
-                  : "border-transparent text-ink-slate hover:text-ink dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/5"
+                  : "border-transparent text-slate-500 hover:text-ink dark:hover:text-white"
               )}
             >
               <Icon className="h-4 w-4" />
@@ -138,195 +175,258 @@ export default function AdminNotificationsPage() {
         })}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === "inbox" && (
+      {activeTab === "inbox" ? (
         <NotificationsScreen />
-      )}
-
-      {activeTab === "broadcast" && (
+      ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Form Card */}
-          <Card className="p-6 lg:col-span-2 border border-slate-200 dark:border-surface-border-dark">
-            <div className="flex items-center gap-2 mb-6">
-              <Megaphone className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-bold text-ink dark:text-white">Compose Notification</h3>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Target Selection Pills */}
-              <div>
-                <label className="block text-xs font-bold text-ink-slate uppercase tracking-wider mb-2">
-                  Target Audience
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetType("global");
-                      setTargetId("");
-                    }}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      targetType === "global"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                        : "bg-surface-pebble dark:bg-white/5 border-surface-border dark:border-surface-border-dark text-ink-slate hover:bg-slate-200 dark:hover:bg-white/10"
-                    }`}
-                  >
-                    <Bell className="h-4 w-4" /> Global Broadcast
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetType("organization");
-                      setTargetId("");
-                    }}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      targetType === "organization"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                        : "bg-surface-pebble dark:bg-white/5 border-surface-border dark:border-surface-border-dark text-ink-slate hover:bg-slate-200 dark:hover:bg-white/10"
-                    }`}
-                  >
-                    <Building2 className="h-4 w-4" /> Specific Org
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTargetType("user");
-                      setTargetId("");
-                    }}
-                    className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      targetType === "user"
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                        : "bg-surface-pebble dark:bg-white/5 border-surface-border dark:border-surface-border-dark text-ink-slate hover:bg-slate-200 dark:hover:bg-white/10"
-                    }`}
-                  >
-                    <Users className="h-4 w-4" /> Specific User
-                  </button>
+          {/* Dispatch Form */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <h3 className="text-base font-extrabold text-ink dark:text-white">Compose Notification</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Targeted announcements and alerts are delivered both in-app and directly to user email inboxes.
+                  </p>
                 </div>
-              </div>
 
-              {/* Target Dropdown based on type */}
-              {targetType === "organization" && (
-                <Field label="Select Organization" htmlFor="orgSelect">
-                  <select
-                    id="orgSelect"
-                    value={targetId}
-                    onChange={(e) => setTargetId(e.target.value)}
-                    className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none"
-                  >
-                    <option value="">-- Choose Target Organization --</option>
-                    {organizations.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name} ({org.code})
-                      </option>
-                    ))}
-                  </select>
+                {/* Target Scope Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-ink dark:text-white mb-2 uppercase tracking-wider">
+                    Recipient Target Audience
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetType("user");
+                        if (profiles.length > 0) setTargetId(profiles[0].id);
+                      }}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left flex flex-col gap-1 transition-all",
+                        targetType === "user"
+                          ? "border-signal bg-signal/5 text-signal ring-2 ring-signal/20"
+                          : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                      )}
+                    >
+                      <User className="h-4 w-4" />
+                      <span className="text-xs font-bold">Specific User</span>
+                      <span className="text-[10px] text-slate-400">Direct message</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetType("organization");
+                        if (organizations.length > 0) setTargetId(organizations[0].id);
+                      }}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left flex flex-col gap-1 transition-all",
+                        targetType === "organization"
+                          ? "border-signal bg-signal/5 text-signal ring-2 ring-signal/20"
+                          : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                      )}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      <span className="text-xs font-bold">Organization</span>
+                      <span className="text-[10px] text-slate-400">All campus users</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTargetType("global");
+                        setTargetId("");
+                      }}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left flex flex-col gap-1 transition-all",
+                        targetType === "global"
+                          ? "border-signal bg-signal/5 text-signal ring-2 ring-signal/20"
+                          : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                      )}
+                    >
+                      <Users className="h-4 w-4" />
+                      <span className="text-xs font-bold">Global Platform</span>
+                      <span className="text-[10px] text-slate-400">Broadcast to all</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Specific User Target Selector */}
+                {targetType === "user" && (
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                    <label className="block text-xs font-bold text-ink dark:text-white">
+                      Select Target Recipient ({profiles.length} Available Users)
+                    </label>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <input
+                        type="text"
+                        placeholder="Filter by name, email, or role..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="w-full bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-ink dark:text-white focus:outline-none focus:ring-1 focus:ring-signal"
+                      />
+                    </div>
+
+                    <select
+                      value={targetId}
+                      onChange={(e) => setTargetId(e.target.value)}
+                      required
+                      className="w-full text-xs py-2.5 px-3 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 font-bold text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-signal"
+                    >
+                      {filteredUsers.length === 0 ? (
+                        <option value="">No matching users found</option>
+                      ) : (
+                        filteredUsers.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.full_name || "Unnamed User"} ({p.email}) — [{p.role?.toUpperCase() || "BORROWER"}]
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                )}
+
+                {/* Specific Org Target Selector */}
+                {targetType === "organization" && (
+                  <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                    <label className="block text-xs font-bold text-ink dark:text-white">
+                      Select Target Organization
+                    </label>
+                    <select
+                      value={targetId}
+                      onChange={(e) => setTargetId(e.target.value)}
+                      required
+                      className="w-full text-xs py-2.5 px-3 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 font-bold text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-signal"
+                    >
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name} ({org.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <Field label="Notification Subject / Title" required>
+                  <Input
+                    placeholder="e.g. Account Verification Approved / Important Loan Policy Update"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                  />
                 </Field>
-              )}
 
-              {targetType === "user" && (
-                <Field label="Select User" htmlFor="userSelect">
-                  <select
-                    id="userSelect"
-                    value={targetId}
-                    onChange={(e) => setTargetId(e.target.value)}
-                    className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none"
-                  >
-                    <option value="">-- Choose Target User --</option>
-                    {profiles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name || p.email} ({p.role})
-                      </option>
-                    ))}
-                  </select>
+                <Field label="Message Body / Content" required>
+                  <textarea
+                    rows={4}
+                    placeholder="Provide the complete message or instructions for the user..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    required
+                    className="w-full text-xs py-2.5 px-3 rounded-xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-ink dark:text-white focus:outline-none focus:ring-2 focus:ring-signal resize-none"
+                  />
                 </Field>
-              )}
 
-              {/* Notification Title */}
-              <Field label="Notification Title" htmlFor="notifTitle">
-                <Input
-                  id="notifTitle"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Important System Maintenance Notice"
-                />
-              </Field>
+                {/* Instant Email Checkbox */}
+                <label className="flex items-center gap-2.5 cursor-pointer p-3 rounded-xl bg-signal/5 border border-signal/20">
+                  <input
+                    type="checkbox"
+                    checked={sendEmailNotice}
+                    onChange={(e) => setSendEmailNotice(e.target.checked)}
+                    className="h-4 w-4 rounded text-signal focus:ring-signal"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-ink dark:text-white flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-signal" /> Send Instant Transactional Email Notice
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Dispatches a formatted notification email directly to the recipient&apos;s registered inbox.
+                    </p>
+                  </div>
+                </label>
 
-              {/* Notification Message */}
-              <Field label="Notification Message Body" htmlFor="notifMsg">
-                <textarea
-                  id="notifMsg"
-                  required
-                  rows={4}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Enter detailed message content to deliver to recipient notifications list..."
-                  className="w-full p-3 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
-                />
-              </Field>
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    loading={submitting}
+                    className="font-bold shadow-button rounded-xl text-xs gap-1.5 px-6"
+                  >
+                    <Send className="h-4 w-4" /> Dispatch Notification &amp; Email
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
 
-              {/* Notification Category */}
-              <Field label="Notification Type / Category" htmlFor="notifType">
-                <select
-                  id="notifType"
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none"
-                >
-                  <option value="verification_decision">System Notice / Decision</option>
-                  <option value="loan_approved">Loan Update</option>
-                  <option value="agreement_ready">Agreement Notice</option>
-                  <option value="repayment_reminder">Repayment Reminder</option>
-                </select>
-              </Field>
-
-              <Button type="submit" variant="primary" className="w-full py-3.5 font-bold shadow-button" loading={submitting}>
-                <Send className="h-4 w-4 mr-2" /> Broadcast Notification
-              </Button>
-            </form>
-          </Card>
-
-          {/* History Feed */}
-          <Card className="p-6 border border-slate-200 dark:border-surface-border-dark">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-base text-ink dark:text-white">Recent System Sent Feed</h3>
-              <Bell className="h-4 w-4 text-blue-600" />
-            </div>
+          {/* Recent Broadcast Log */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-extrabold text-ink dark:text-white flex items-center gap-2">
+              <Clock className="h-4 w-4 text-signal" /> Recent Notification Dispatches
+            </h3>
 
             {loading ? (
-              <div className="space-y-3 py-4">
-                <div className="h-16 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse" />
-                <div className="h-16 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse" />
+              <div className="space-y-3">
+                <div className="h-20 rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+                <div className="h-20 rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse" />
               </div>
             ) : history.length === 0 ? (
-              <p className="text-xs text-ink-slate py-6 text-center">No system notifications sent yet.</p>
+              <Card className="p-6 text-center text-xs text-slate-400 space-y-1">
+                <Mail className="h-6 w-6 text-slate-300 mx-auto" />
+                <p className="font-bold text-slate-500">No broadcasts sent yet</p>
+                <p className="text-[11px]">Compose your first alert using the form on the left.</p>
+              </Card>
             ) : (
               <div className="space-y-3">
-                {history.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-3.5 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-xs text-ink dark:text-white truncate">{item.title}</span>
-                      <span className="text-[10px] text-ink-slate font-mono">{new Date(item.created_at).toLocaleTimeString()}</span>
-                    </div>
-                    <p className="text-xs text-ink-slate dark:text-slate-300 line-clamp-2 mb-2 font-medium">{item.message}</p>
-                    <div className="flex items-center justify-between text-[11px] text-ink-slate pt-1.5 border-t border-surface-border dark:border-surface-border-dark/50">
-                      <span>Recipient: <strong>{item.profiles?.full_name || item.profiles?.email || "User"}</strong></span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> Delivered
+                {history.map((n) => (
+                  <Card key={n.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-ink dark:text-white text-xs">{n.title}</h4>
+                        <p className="text-[11px] text-slate-500">
+                          To: <strong>{n.recipient_name || "Platform Member"}</strong> ({n.recipient_email})
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        {formatDate(n.created_at)}
                       </span>
                     </div>
-                  </div>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 bg-slate-50 dark:bg-white/5 p-2 rounded-lg border border-slate-100 dark:border-white/5">
+                      {n.message}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                      <span className="uppercase font-bold tracking-wider">{n.type}</span>
+                      {n.email_sent && (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 font-bold">
+                          <CheckCircle2 className="h-3 w-3" /> Email Dispatched
+                        </span>
+                      )}
+                    </div>
+                  </Card>
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminNotificationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6 max-w-7xl pb-16">
+          <div className="h-24 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <div className="h-64 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        </div>
+      }
+    >
+      <AdminNotificationsContent />
+    </Suspense>
   );
 }

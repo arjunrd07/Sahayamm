@@ -70,9 +70,6 @@ export default function ForgotPasswordPage() {
       }
 
       push("success", res.message || `OTP sent to ${cleanEmail}`);
-      if (res.mockCode) {
-        push("info", `[DEV MODE] OTP code is: ${res.mockCode}`);
-      }
 
       setStep(2);
       setResendTimer(res.resendCooldown || 120);
@@ -95,9 +92,6 @@ export default function ForgotPasswordPage() {
         push("error", res.error || "Failed to resend OTP code.");
       } else {
         push("success", "A new OTP code has been sent to your email!");
-        if (res.mockCode) {
-          push("info", `[DEV MODE] New OTP code: ${res.mockCode}`);
-        }
         setResendTimer(120);
         setTimerActive(true);
       }

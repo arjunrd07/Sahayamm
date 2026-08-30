@@ -85,13 +85,34 @@ export function Topbar({ items }: TopbarProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isLender = pathname?.startsWith("/lender");
-  const portalLabel = isLender ? "Lender Portal" : "Borrower Portal";
+  const isAdmin = pathname?.startsWith("/admin");
+  const portalLabel = isAdmin
+    ? "Admin Workspace"
+    : isLender
+    ? "Lender Portal"
+    : "Borrower Portal";
 
-  const notificationsHref = isLender
+  const notificationsHref = isAdmin
+    ? "/admin/notifications"
+    : isLender
     ? "/lender/notifications"
     : "/borrower/notifications";
-  const active = items.find((item) => pathname?.startsWith(item.href));
-  const title = active?.label ?? "Sahayam";
+
+  // Find active label across top-level and sub-items
+  let title = "Sahayam";
+  for (const item of items) {
+    if (pathname === item.href) {
+      title = item.label;
+      break;
+    }
+    if (item.items) {
+      const match = item.items.find((sub) => pathname === sub.href);
+      if (match) {
+        title = match.label;
+        break;
+      }
+    }
+  }
 
   // Map real database notifications to UI format (Latest on top)
   const sortedNotifs = [...notifications].sort(
@@ -294,8 +315,45 @@ export function Topbar({ items }: TopbarProps) {
 
               <nav className="space-y-1">
                 {items.map((item) => {
-                  const active = pathname?.startsWith(item.href);
+                  const hasSubItems = Boolean(item.items && item.items.length > 0);
+                  const active =
+                    pathname === item.href ||
+                    (hasSubItems && item.items?.some((sub) => pathname === sub.href));
                   const Icon = item.icon;
+
+                  if (hasSubItems) {
+                    return (
+                      <div key={item.label} className="space-y-1">
+                        <div className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </div>
+                        <div className="ml-4 pl-3 border-l border-slate-200 dark:border-white/10 space-y-1">
+                          {item.items?.map((sub) => {
+                            const isSubActive = pathname === sub.href;
+                            const SubIcon = sub.icon;
+                            return (
+                              <Link
+                                key={sub.href}
+                                href={sub.href}
+                                onClick={() => setMobileOpen(false)}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold transition-colors",
+                                  isSubActive
+                                    ? "bg-signal text-white font-bold shadow-xs"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
+                                )}
+                              >
+                                {SubIcon && <SubIcon className="h-3.5 w-3.5" />}
+                                <span>{sub.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
@@ -304,7 +362,7 @@ export function Topbar({ items }: TopbarProps) {
                       className={cn(
                         "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold transition-colors",
                         active
-                          ? "bg-signal/10 text-signal dark:bg-signal/20 dark:text-blue-300 font-extrabold"
+                          ? "bg-signal text-white shadow-button font-extrabold"
                           : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
                       )}
                     >
