@@ -21,34 +21,47 @@ export async function GET(request: NextRequest) {
 
   const { data: existingProfile } = await admin
     .from("profiles")
-    .select("id, role")
+    .select("id, role, org_id")
     .eq("id", user.id)
     .maybeSingle();
 
   if (!existingProfile) {
     const meta = user.user_metadata || {};
-
-    if (!meta.org_id) {
-      // Signed in via a plain OTP with no signup metadata attached
-      // (e.g. an admin whose row was never created). Send them back
-      // rather than creating an incomplete profile.
-      return NextResponse.redirect(`${origin}/login?error=no_org_selected`);
+    
+    // Find default organization if none attached
+    let orgId: string = meta.org_id || "";
+    if (!orgId || orgId.length !== 36) {
+      const { data: firstOrg } = await admin.from("organizations").select("id").limit(1).maybeSingle();
+      orgId = firstOrg?.id || "00000000-0000-0000-0000-000000000001";
     }
 
-    await admin.from("profiles").insert({
+    const newProfile = {
       id: user.id,
-      org_id: meta.org_id,
-      full_name: meta.full_name || user.email,
-      email: user.email,
+      org_id: orgId,
+      full_name: meta.full_name || meta.name || user.email?.split("@")[0] || "User",
+      email: user.email || "",
       phone: meta.phone || null,
       role: "borrower",
       verification_status: "unverified",
-    });
+      updated_at: new Date().toISOString(),
+    };
 
-    return NextResponse.redirect(`${origin}/borrower/verification`);
+    try {
+      await admin.from("profiles").upsert(newProfile, { onConflict: "id" });
+    } catch (e) {
+      console.warn("OAuth profile creation notice:", e);
+    }
+
+    return NextResponse.redirect(`${origin}/borrower/dashboard`);
   }
 
-  return NextResponse.redirect(
-    `${origin}${existingProfile.role === "lender" || existingProfile.role === "admin" ? "/lender/dashboard" : "/borrower/dashboard"}`
-  );
+  const role = existingProfile.role;
+  const targetPath =
+    role === "admin"
+      ? "/admin/dashboard"
+      : role === "lender"
+      ? "/lender/dashboard"
+      : "/borrower/dashboard";
+
+  return NextResponse.redirect(`${origin}${targetPath}`);
 }

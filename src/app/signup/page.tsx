@@ -150,6 +150,17 @@ export default function SignupPage() {
       push("error", "Password must be at least 6 characters.");
       return;
     }
+    if (selectedOrgId === "new" && !customOrgName.trim()) {
+      push("error", "Please enter a name for the new organization.");
+      return;
+    }
+    if (
+      (selectedOrgId === "new" || selectedCampusId === "new" || existingCampuses.length === 0) &&
+      !customCampusName.trim()
+    ) {
+      push("error", "Please enter a campus location name.");
+      return;
+    }
 
     setLoading(true);
 
@@ -259,55 +270,56 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    let targetOrgId: string = selectedOrgId || DEFAULT_ORG_ID;
+    try {
+      // 1. Attempt Supabase Auth Sign Up
+      let userId: string | null = null;
 
-    // Handle new organization creation if specified
-    if (selectedOrgId === "new" && customOrgName.trim()) {
-      try {
-        const generatedCode =
-          customOrgName.trim().toLowerCase().replace(/[^a-z0-9]/g, "-") +
-          "-" +
-          Math.random().toString(36).substring(2, 6);
-        const { data: newOrg } = await supabase
-          .from("organizations")
-          .insert({
-            name: customOrgName.trim(),
-            code: generatedCode,
-          })
-          .select("id")
-          .maybeSingle();
-
-        if (newOrg?.id) {
-          targetOrgId = newOrg.id;
-        }
-      } catch (dbErr) {
-        console.warn("Using default org due to creation warning:", dbErr);
-      }
-    }
-
-    // Register user with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName, org_id: targetOrgId, role: selectedRole },
-      },
-    });
-
-    if (authError) {
-      push("error", authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (authData.user) {
-      await createUserProfile({
-        userId: authData.user.id,
-        orgId: targetOrgId,
-        campusId: selectedCampusId === "new" ? null : selectedCampusId,
-        campusName: customCampusName,
-        fullName,
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
+        password,
+        options: {
+          data: { full_name: fullName, role: selectedRole },
+        },
+      });
+
+      if (authError) {
+        // If user already exists in auth system, attempt signInWithPassword
+        if (authError.message.toLowerCase().includes("already registered") || authError.message.toLowerCase().includes("already exists")) {
+          const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (loginErr) {
+            push("error", "An account with this email already exists. Please sign in with your password.");
+            setLoading(false);
+            return;
+          }
+          userId = loginData.user?.id || null;
+        } else {
+          push("error", authError.message);
+          setLoading(false);
+          return;
+        }
+      } else if (authData.user) {
+        userId = authData.user.id;
+      }
+
+      if (!userId) {
+        push("error", "Failed to retrieve user identifier. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Create User Profile & Org/Campus on Server via Server Action
+      await createUserProfile({
+        userId,
+        orgId: selectedOrgId || DEFAULT_ORG_ID,
+        customOrgName: customOrgName.trim(),
+        campusId: selectedCampusId === "new" ? null : selectedCampusId,
+        campusName: customCampusName.trim(),
+        fullName: fullName.trim(),
+        email: email.trim().toLowerCase(),
         phone: cleanPhone,
         panNumber: cleanPan,
         cibilScore: parsedCibil,
@@ -315,10 +327,16 @@ export default function SignupPage() {
         role: selectedRole,
       });
 
+      // 3. Ensure active session for browser cookies via signInWithPassword if needed
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        await supabase.auth.signInWithPassword({ email, password });
+      }
+
       setLoading(false);
 
       if (selectedRole === "borrower") {
-        push("success", "Borrower account verified & sent for review!");
+        push("success", "Borrower account verified & profile created!");
         router.push("/borrower/dashboard");
       } else if (selectedRole === "lender") {
         push("success", "Lender account created! Redirecting to lender dashboard...");
@@ -327,10 +345,10 @@ export default function SignupPage() {
         push("success", "Admin account created! Redirecting to admin dashboard...");
         router.push("/admin/dashboard");
       }
-    } else {
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      push("error", err?.message || "An unexpected error occurred during signup.");
       setLoading(false);
-      push("success", "Account created & email verified!");
-      router.push("/login");
     }
   }
 

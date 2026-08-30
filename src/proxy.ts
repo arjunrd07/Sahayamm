@@ -45,6 +45,18 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // If user is already authenticated and visiting /login, redirect to their role dashboard
+  if (user && pathname.startsWith("/login")) {
+    const userRole = user.user_metadata?.role || "borrower";
+    const dest =
+      userRole === "admin"
+        ? "/admin/dashboard"
+        : userRole === "lender"
+        ? "/lender/dashboard"
+        : "/borrower/dashboard";
+    return NextResponse.redirect(new URL(dest, request.url));
+  }
+
   // If user is authenticated, enforce RBAC role route permissions
   if (user && !isPublicRoute) {
     try {
