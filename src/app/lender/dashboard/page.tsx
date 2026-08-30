@@ -1,13 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { LoanStatusBadge, VerificationBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/table";
 import { formatINR, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import type { Loan, Profile } from "@/types/database";
-import { Users, HandCoins, AlertTriangle, Wallet, Sparkles, Building2, ShieldCheck, CheckCircle2, ArrowRight, Layers } from "lucide-react";
+import { Users, HandCoins, AlertTriangle, Wallet, Sparkles, Building2, ShieldCheck, CheckCircle2, ArrowRight, Layers, FileCheck2, FileText, Bell } from "lucide-react";
 
-export default async function AdminDashboardPage() {
+export default async function LenderDashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,17 +17,28 @@ export default async function AdminDashboardPage() {
   let pendingVerifications: Profile[] = [];
 
   if (user) {
-    const { data: me } = await supabase.from("profiles").select("org_id").eq("id", user.id).maybeSingle();
+    const service = createServiceRoleClient();
+    const { data: me } = await service.from("profiles").select("org_id, role").eq("id", user.id).maybeSingle();
     const orgId = me?.org_id;
 
     if (orgId) {
+      // Auto-heal any lenders/admins mistakenly marked as pending
+      await service
+        .from("profiles")
+        .update({ verification_status: "verified" })
+        .in("role", ["lender", "admin"])
+        .eq("org_id", orgId)
+        .eq("verification_status", "pending");
+
       const [{ data: loans }, { data: verifications }] = await Promise.all([
-        supabase.from("loans").select("*").eq("org_id", orgId).order("created_at", { ascending: false }),
-        supabase
+        service.from("loans").select("*").eq("org_id", orgId).order("created_at", { ascending: false }),
+        service
           .from("profiles")
           .select("*")
           .eq("org_id", orgId)
           .eq("verification_status", "pending")
+          .neq("role", "lender")
+          .neq("role", "admin")
           .order("created_at", { ascending: false }),
       ]);
       list = (loans as Loan[]) || [];
@@ -154,7 +165,7 @@ export default async function AdminDashboardPage() {
               {pendingVerifications.slice(0, 5).map((p) => (
                 <Link
                   key={p.id}
-                  href={`/lender/verifications`}
+                  href={`/lender/verifications?applicant=${p.id}`}
                   className="flex flex-col sm:flex-row sm:items-center justify-between py-4 hover:bg-slate-50/80 dark:hover:bg-white/5 -mx-3 px-4 rounded-2xl transition-all duration-200 gap-3"
                 >
                   <div className="min-w-0">

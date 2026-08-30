@@ -21,38 +21,13 @@ export async function GET(request: NextRequest) {
 
   const { data: existingProfile } = await admin
     .from("profiles")
-    .select("id, role, org_id")
+    .select("id, role, org_id, pan_number, phone, address")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!existingProfile) {
-    const meta = user.user_metadata || {};
-    
-    // Find default organization if none attached
-    let orgId: string = meta.org_id || "";
-    if (!orgId || orgId.length !== 36) {
-      const { data: firstOrg } = await admin.from("organizations").select("id").limit(1).maybeSingle();
-      orgId = firstOrg?.id || "00000000-0000-0000-0000-000000000001";
-    }
-
-    const newProfile = {
-      id: user.id,
-      org_id: orgId,
-      full_name: meta.full_name || meta.name || user.email?.split("@")[0] || "User",
-      email: user.email || "",
-      phone: meta.phone || null,
-      role: "borrower",
-      verification_status: "unverified",
-      updated_at: new Date().toISOString(),
-    };
-
-    try {
-      await admin.from("profiles").upsert(newProfile, { onConflict: "id" });
-    } catch (e) {
-      console.warn("OAuth profile creation notice:", e);
-    }
-
-    return NextResponse.redirect(`${origin}/borrower/dashboard`);
+  // If profile is missing or incomplete (no PAN, phone, or address), redirect to Step 3 profile setup
+  if (!existingProfile || !existingProfile.pan_number || !existingProfile.phone || !existingProfile.address) {
+    return NextResponse.redirect(`${origin}/signup?step=3&oauth=google`);
   }
 
   const role = existingProfile.role;

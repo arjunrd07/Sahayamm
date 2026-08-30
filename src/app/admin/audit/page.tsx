@@ -18,6 +18,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { getAdminAuditLogsData } from "./actions";
 
 interface AuditLog {
   id: string;
@@ -38,18 +39,12 @@ export default function AdminAuditPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const { push } = useToast();
-  const supabase = createClient();
 
   async function fetchAuditLogs() {
     setLoading(true);
     try {
-      let query = supabase.from("audit_logs").select("*").order("created_at", { ascending: false });
-
-      const { data, error } = await query;
-
-      if (!error && data) {
-        setLogs(data);
-      }
+      const res = await getAdminAuditLogsData();
+      setLogs(res.logs || []);
     } catch (err) {
       console.error("Error fetching audit logs:", err);
     } finally {

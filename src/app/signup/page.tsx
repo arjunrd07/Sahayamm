@@ -1,21 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/layout/auth-shell";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import type { Organization, Campus } from "@/types/database";
-import { createUserProfile } from "./actions";
+import { createUserProfile, registerUserAccount } from "./actions";
 import { sendEmailOtp, verifyEmailOtp } from "../actions/otp";
 
 const DEFAULT_ORG_ID = "00000000-0000-0000-0000-000000000001";
 
-export default function SignupPage() {
+function SignupForm() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [isOAuthUser, setIsOAuthUser] = useState(false);
+  const [oauthUserId, setOauthUserId] = useState<string | null>(null);
   const [existingOrgs, setExistingOrgs] = useState<Organization[]>([]);
   const [existingCampuses, setExistingCampuses] = useState<Campus[]>([]);
   const [selectedRole, setSelectedRole] = useState<"borrower" | "lender">("borrower");
@@ -44,6 +47,40 @@ export default function SignupPage() {
   const { push } = useToast();
   const router = useRouter();
   const supabase = createClient();
+
+  // Detect OAuth / URL step param on load - ONLY when explicitly coming from Google OAuth flow
+  useEffect(() => {
+    async function checkAuthSession() {
+      const stepParam = searchParams?.get("step");
+      const isOauth = searchParams?.get("oauth") === "google";
+
+      // Only enter OAuth Step 3 flow if explicitly coming from Google OAuth callback
+      if (isOauth || stepParam === "3") {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            setIsOAuthUser(true);
+            setOauthUserId(user.id);
+            if (user.email) setEmail(user.email);
+            const metaName = user.user_metadata?.full_name || user.user_metadata?.name;
+            if (metaName) setFullName(metaName);
+            if (user.user_metadata?.role === "lender") setSelectedRole("lender");
+            setStep(3);
+            return;
+          }
+        } catch (err) {
+          console.warn("Session check notice:", err);
+        }
+        setStep(3);
+      } else {
+        // Normal signup starts on Step 1
+        setIsOAuthUser(false);
+        setOauthUserId(null);
+        setStep(1);
+      }
+    }
+    checkAuthSession();
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadOrgs() {
@@ -174,9 +211,6 @@ export default function SignupPage() {
       }
 
       push("success", res.message || `Verification OTP code sent to ${cleanEmail}!`);
-      if (res.mockCode) {
-        push("info", `[DEV MODE] Signup OTP code is: ${res.mockCode}`);
-      }
 
       setStep(2);
       setResendTimer(res.resendCooldown || 120);
@@ -199,9 +233,6 @@ export default function SignupPage() {
         push("error", res.error || "Failed to resend OTP code.");
       } else {
         push("success", "A new OTP verification code has been sent to your email!");
-        if (res.mockCode) {
-          push("info", `[DEV MODE] New Signup OTP code: ${res.mockCode}`);
-        }
         setResendTimer(120);
         setTimerActive(true);
       }
@@ -270,85 +301,51 @@ export default function SignupPage() {
 
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Register user account & create database profile atomically via server action
+    const regResult = await registerUserAccount({
+      email: cleanEmail,
+      password: password,
+      fullName: fullName.trim(),
+      role: selectedRole,
+      orgId: selectedOrgId === "new" ? undefined : selectedOrgId,
+      customOrgName: selectedOrgId === "new" ? customOrgName.trim() : undefined,
+      campusId: selectedCampusId === "new" ? null : selectedCampusId,
+      campusName: customCampusName.trim(),
+      phone: cleanPhone,
+      panNumber: cleanPan,
+      cibilScore: parsedCibil,
+      address: cleanAddress,
+    });
+
+    if (!regResult.success) {
+      push("error", regResult.error || "Failed to create user account. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Sign in user session with credentials
     try {
-      // 1. Attempt Supabase Auth Sign Up
-      let userId: string | null = null;
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName, role: selectedRole },
-        },
+      await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password,
       });
+    } catch (signInErr) {
+      console.warn("Notice signing in after registration:", signInErr);
+    }
 
-      if (authError) {
-        // If user already exists in auth system, attempt signInWithPassword
-        if (authError.message.toLowerCase().includes("already registered") || authError.message.toLowerCase().includes("already exists")) {
-          const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+    setLoading(false);
 
-          if (loginErr) {
-            push("error", "An account with this email already exists. Please sign in with your password.");
-            setLoading(false);
-            return;
-          }
-          userId = loginData.user?.id || null;
-        } else {
-          push("error", authError.message);
-          setLoading(false);
-          return;
-        }
-      } else if (authData.user) {
-        userId = authData.user.id;
-      }
-
-      if (!userId) {
-        push("error", "Failed to retrieve user identifier. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Create User Profile & Org/Campus on Server via Server Action
-      await createUserProfile({
-        userId,
-        orgId: selectedOrgId || DEFAULT_ORG_ID,
-        customOrgName: customOrgName.trim(),
-        campusId: selectedCampusId === "new" ? null : selectedCampusId,
-        campusName: customCampusName.trim(),
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: cleanPhone,
-        panNumber: cleanPan,
-        cibilScore: parsedCibil,
-        address: cleanAddress,
-        role: selectedRole,
-      });
-
-      // 3. Ensure active session for browser cookies via signInWithPassword if needed
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        await supabase.auth.signInWithPassword({ email, password });
-      }
-
-      setLoading(false);
-
-      if (selectedRole === "borrower") {
-        push("success", "Borrower account verified & profile created!");
-        router.push("/borrower/dashboard");
-      } else if (selectedRole === "lender") {
-        push("success", "Lender account created! Redirecting to lender dashboard...");
-        router.push("/lender/dashboard");
-      } else {
-        push("success", "Admin account created! Redirecting to admin dashboard...");
-        router.push("/admin/dashboard");
-      }
-    } catch (err: any) {
-      console.error("Signup error:", err);
-      push("error", err?.message || "An unexpected error occurred during signup.");
-      setLoading(false);
+    if (selectedRole === "borrower") {
+      push("success", "Borrower account created & verified successfully!");
+      router.push("/borrower/dashboard");
+    } else if (selectedRole === "lender") {
+      push("success", "Lender account created! Redirecting to lender dashboard...");
+      router.push("/lender/dashboard");
+    } else {
+      push("success", "Admin account created! Redirecting to admin dashboard...");
+      router.push("/admin/dashboard");
     }
   }
 
@@ -423,55 +420,52 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* STEP 1: Account Info */}
+      {/* STEP 1: Registration Credentials */}
       {step === 1 && (
         <form onSubmit={handleProceedToStep2} className="space-y-4">
-          <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink-slate dark:text-slate-400">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-ink dark:text-white uppercase tracking-wider">
               Account Role
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5 p-1 rounded-2xl bg-slate-100 dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark">
               <button
                 type="button"
                 onClick={() => setSelectedRole("borrower")}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
                   selectedRole === "borrower"
-                    ? "border-signal bg-signal-soft/30 dark:bg-signal/20 text-ink dark:text-white font-bold ring-2 ring-signal/20"
-                    : "border-slate-200 dark:border-surface-border-dark hover:bg-slate-50 dark:hover:bg-white/5 text-ink-slate"
+                    ? "bg-white dark:bg-canvas-dark text-signal shadow-xs"
+                    : "text-ink-slate hover:text-ink dark:hover:text-white"
                 }`}
               >
-                <p className="text-xs font-bold text-ink dark:text-white">Borrower</p>
-                <p className="text-[10px] text-ink-slate mt-0.5">Apply for loans</p>
+                Borrower (Employee)
               </button>
-
               <button
                 type="button"
                 onClick={() => setSelectedRole("lender")}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
                   selectedRole === "lender"
-                    ? "border-signal bg-signal-soft/30 dark:bg-signal/20 text-ink dark:text-white font-bold ring-2 ring-signal/20"
-                    : "border-slate-200 dark:border-surface-border-dark hover:bg-slate-50 dark:hover:bg-white/5 text-ink-slate"
+                    ? "bg-white dark:bg-canvas-dark text-signal shadow-xs"
+                    : "text-ink-slate hover:text-ink dark:hover:text-white"
                 }`}
               >
-                <p className="text-xs font-bold text-ink dark:text-white">Lender</p>
-                <p className="text-[10px] text-ink-slate mt-0.5">Provide liquidity</p>
+                Lender (Capital Pool)
               </button>
             </div>
           </div>
 
-          <Field label="Organization" htmlFor="org_id">
+          <Field label="Organization" htmlFor="org">
             <select
-              id="org_id"
+              id="org"
               value={selectedOrgId}
               onChange={(e) => setSelectedOrgId(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-bold text-ink dark:text-white focus:ring-2 focus:ring-signal focus:outline-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-ink dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-signal"
             >
               {existingOrgs.map((org) => (
                 <option key={org.id} value={org.id}>
-                  {org.name} ({org.code})
+                  {org.name}
                 </option>
               ))}
-              <option value="new">+ Create New Organization (e.g. TCS)</option>
+              <option value="new">+ Register New Organization</option>
             </select>
           </Field>
 
@@ -482,36 +476,38 @@ export default function SignupPage() {
                 required
                 value={customOrgName}
                 onChange={(e) => setCustomOrgName(e.target.value)}
-                placeholder="e.g. TCS"
+                placeholder="e.g. Acme Innovations Corp"
               />
             </Field>
           )}
 
-          <Field label="Campus Location" htmlFor="campus_id">
-            {selectedOrgId !== "new" && existingCampuses.length > 0 ? (
-              <select
-                id="campus_id"
-                value={selectedCampusId}
-                onChange={(e) => setSelectedCampusId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-sm font-bold text-ink dark:text-white focus:ring-2 focus:ring-signal focus:outline-none"
-              >
-                {existingCampuses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-                <option value="new">+ Create New Campus (e.g. Raidurg)</option>
-              </select>
-            ) : (
+          <Field label="Campus / Location" htmlFor="campus">
+            <select
+              id="campus"
+              value={selectedCampusId}
+              onChange={(e) => setSelectedCampusId(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-ink dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+            >
+              {existingCampuses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+              <option value="new">+ Add New Campus Location</option>
+            </select>
+          </Field>
+
+          {selectedOrgId === "new" && (
+            <Field label="Initial Campus Name" htmlFor="custom_campus">
               <Input
-                id="campus_name"
+                id="custom_campus"
                 required
                 value={customCampusName}
                 onChange={(e) => setCustomCampusName(e.target.value)}
                 placeholder="e.g. Raidurg (tcs.raidrug.db)"
               />
-            )}
-          </Field>
+            </Field>
+          )}
 
           {selectedOrgId !== "new" && existingCampuses.length > 0 && selectedCampusId === "new" && (
             <Field label="New Campus Name" htmlFor="custom_campus">
@@ -677,12 +673,101 @@ export default function SignupPage() {
         <form onSubmit={handleFinalSubmit} className="space-y-4">
           <div className="p-3.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-surface-border-dark rounded-xl text-xs text-ink-slate dark:text-slate-300">
             <p className="font-semibold text-ink dark:text-white mb-0.5">
-              Email Verified ✓ — Financial & Profile Details
+              {isOAuthUser ? "Google Authentication Verified ✓" : "Email Verified ✓"} — Step 3: Profile & KYC Details
             </p>
-            <p>Please complete valid PAN, CIBIL score, address, and mobile number to issue workspace access.</p>
+            <p>Please enter your mandatory PAN Card number, mobile phone, and address to proceed to your dashboard.</p>
           </div>
 
-          <Field label="PAN Card Number" htmlFor="pan">
+          {/* Role & Org selection for OAuth users */}
+          {isOAuthUser && (
+            <>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-ink dark:text-white uppercase tracking-wider">
+                  Select Your Account Role
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 p-1 rounded-2xl bg-slate-100 dark:bg-surface-dark border border-slate-200 dark:border-surface-border-dark">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("borrower")}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
+                      selectedRole === "borrower"
+                        ? "bg-white dark:bg-canvas-dark text-signal shadow-xs"
+                        : "text-ink-slate hover:text-ink dark:hover:text-white"
+                    }`}
+                  >
+                    Borrower (Employee)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole("lender")}
+                    className={`py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all ${
+                      selectedRole === "lender"
+                        ? "bg-white dark:bg-canvas-dark text-signal shadow-xs"
+                        : "text-ink-slate hover:text-ink dark:hover:text-white"
+                    }`}
+                  >
+                    Lender (Capital Pool)
+                  </button>
+                </div>
+              </div>
+
+              <Field label="Organization" htmlFor="step3_org">
+                <select
+                  id="step3_org"
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-ink dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+                >
+                  {existingOrgs.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                  <option value="new">+ Register New Organization</option>
+                </select>
+              </Field>
+
+              {selectedOrgId === "new" && (
+                <Field label="New Organization Name" htmlFor="step3_custom_org">
+                  <Input
+                    id="step3_custom_org"
+                    required
+                    value={customOrgName}
+                    onChange={(e) => setCustomOrgName(e.target.value)}
+                    placeholder="e.g. Acme Innovations Corp"
+                  />
+                </Field>
+              )}
+
+              <Field label="Campus / Location" htmlFor="step3_campus">
+                <select
+                  id="step3_campus"
+                  value={selectedCampusId}
+                  onChange={(e) => setSelectedCampusId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-surface-border-dark bg-white dark:bg-surface-dark text-ink dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+                >
+                  {existingCampuses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                  <option value="new">+ Add New Campus Location</option>
+                </select>
+              </Field>
+
+              <Field label="Full Legal Name" htmlFor="step3_fullname" required>
+                <Input
+                  id="step3_fullname"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="John Doe"
+                />
+              </Field>
+            </>
+          )}
+
+          <Field label="PAN Card Number" htmlFor="pan" required>
             <Input
               id="pan"
               required
@@ -690,6 +775,17 @@ export default function SignupPage() {
               value={panNumber}
               onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
               placeholder="ABCDE1234F"
+            />
+          </Field>
+
+          <Field label="Mobile Phone Number" htmlFor="phone" required>
+            <Input
+              id="phone"
+              type="tel"
+              required
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="9876543210"
             />
           </Field>
 
@@ -706,7 +802,7 @@ export default function SignupPage() {
             />
           </Field>
 
-          <Field label="Full Residential Address" htmlFor="address">
+          <Field label="Full Residential Address" htmlFor="address" required>
             <Input
               id="address"
               required
@@ -716,33 +812,24 @@ export default function SignupPage() {
             />
           </Field>
 
-          <Field label="Mobile Phone Number" htmlFor="phone">
-            <Input
-              id="phone"
-              type="tel"
-              required
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+91 98765 43210"
-            />
-          </Field>
-
           <div className="flex gap-3 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setStep(2)}
-              className="w-1/3 py-3 font-semibold rounded-full"
-            >
-              Back
-            </Button>
+            {!isOAuthUser && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setStep(2)}
+                className="w-1/3 py-3 font-semibold rounded-full"
+              >
+                Back
+              </Button>
+            )}
             <Button
               type="submit"
               variant="primary"
-              className="w-2/3 py-3.5 text-base font-bold rounded-full shadow-button"
+              className={`${isOAuthUser ? "w-full" : "w-2/3"} py-3.5 text-base font-bold rounded-full shadow-button`}
               loading={loading}
             >
-              Submit & Issue Login
+              Complete Profile & Enter Dashboard
             </Button>
           </div>
         </form>
@@ -755,5 +842,19 @@ export default function SignupPage() {
         </Link>
       </p>
     </AuthShell>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full border-4 border-signal border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

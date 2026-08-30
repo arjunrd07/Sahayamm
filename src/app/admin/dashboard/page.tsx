@@ -17,6 +17,7 @@ import {
   Clock,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getAdminDashboardStats } from "./actions";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState({
@@ -28,42 +29,28 @@ export default function AdminDashboardPage() {
     pendingVerifications: 0,
   });
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
     async function loadAdminStats() {
       setLoading(true);
-      const [
-        { count: orgCount },
-        { count: campusCount },
-        { count: userCount },
-        { data: loansData },
-        { count: pendingVerifCount },
-      ] = await Promise.all([
-        supabase.from("organizations").select("*", { count: "exact", head: true }),
-        supabase.from("campuses").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("loans").select("amount, status"),
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("verification_status", "pending"),
-      ]);
-
-      const activeVol = (loansData || [])
-        .filter((l) => l.status === "active" || l.status === "approved")
-        .reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
-
-      setStats({
-        totalOrgs: orgCount || 0,
-        totalCampuses: campusCount || 0,
-        totalUsers: userCount || 0,
-        totalLoans: loansData?.length || 0,
-        activeVolume: activeVol,
-        pendingVerifications: pendingVerifCount || 0,
-      });
-      setLoading(false);
+      try {
+        const res = await getAdminDashboardStats();
+        setStats({
+          totalOrgs: res.totalOrgs,
+          totalCampuses: res.totalCampuses,
+          totalUsers: res.totalUsers,
+          totalLoans: res.totalLoans,
+          activeVolume: res.activeVolume,
+          pendingVerifications: res.pendingVerifications,
+        });
+      } catch (err) {
+        console.error("Error loading admin stats:", err);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadAdminStats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

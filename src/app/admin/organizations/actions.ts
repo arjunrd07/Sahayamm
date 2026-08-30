@@ -2,8 +2,25 @@
 
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { logAuditEntry } from "@/lib/audit";
+import type { Organization, Campus, Profile } from "@/types/database";
 
-export async function createOrganization(name: string, code: string, capitalLimit: number = 2500000) {
+export async function getAdminOrganizationsData() {
+  const service = createServiceRoleClient();
+
+  const [{ data: orgsData }, { data: campusesData }, { data: profilesData }] = await Promise.all([
+    service.from("organizations").select("*").order("created_at", { ascending: false }),
+    service.from("campuses").select("*").order("name"),
+    service.from("profiles").select("id, org_id, role"),
+  ]);
+
+  return {
+    organizations: (orgsData as Organization[]) || [],
+    campuses: (campusesData as Campus[]) || [],
+    profiles: (profilesData as Profile[]) || [],
+  };
+}
+
+export async function createOrganization(name: string, code: string) {
   const service = createServiceRoleClient();
   const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
 
@@ -12,8 +29,6 @@ export async function createOrganization(name: string, code: string, capitalLimi
     .insert({
       name: name.trim(),
       code: cleanCode,
-      max_loan_amount: capitalLimit,
-      status: "active",
     })
     .select()
     .maybeSingle();
@@ -25,102 +40,80 @@ export async function createOrganization(name: string, code: string, capitalLimi
     actor_id: "admin",
     entity_type: "organization",
     entity_id: data?.id || cleanCode,
-    details: `Organization "${name}" (${cleanCode}) registered with pool limit ₹${capitalLimit.toLocaleString()}`,
+    details: `Organization "${name.trim()}" (${cleanCode}) created by platform admin.`,
   });
 
-  return { data: data || { id: cleanCode, name: name.trim(), code: cleanCode, max_loan_amount: capitalLimit, status: "active" } };
+  return { data: data || { id: cleanCode, name: name.trim(), code: cleanCode } };
 }
 
-export async function toggleOrganizationStatus(orgId: string, currentStatus: string) {
-  const newStatus = currentStatus === "active" ? "inactive" : "active";
+export async function createCampus(orgId: string, name: string, code: string) {
   const service = createServiceRoleClient();
+  const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
 
   const { data, error } = await service
-    .from("organizations")
-    .update({
-      status: newStatus,
-    })
-    .eq("id", orgId)
-    .select()
-    .maybeSingle();
-
-  if (error) return { error: error.message };
-
-  try {
-    if (newStatus === "inactive") {
-      await service
-        .from("profiles")
-        .update({ verification_status: "rejected", rejection_reason: "Parent organization deactivated" })
-        .eq("org_id", orgId)
-        .eq("role", "borrower");
-    } else {
-      await service
-        .from("profiles")
-        .update({ verification_status: "verified", rejection_reason: null })
-        .eq("org_id", orgId)
-        .eq("role", "borrower");
-    }
-  } catch (err) {
-    console.warn("Cascade status update notice:", err);
-  }
-
-  await logAuditEntry({
-    action: `Soft Delete / Update Org Status`,
-    actor_id: "admin",
-    entity_type: "organization",
-    entity_id: orgId,
-    details: `Organization status updated to "${newStatus}"`,
-  });
-
-  return { data: data || { id: orgId, status: newStatus } };
-}
-
-export async function updateOrganizationLiquidity(orgId: string, newLimit: number) {
-  const service = createServiceRoleClient();
-  const { data, error } = await service
-    .from("organizations")
-    .update({
-      max_loan_amount: newLimit,
-    })
-    .eq("id", orgId)
-    .select()
-    .maybeSingle();
-
-  if (error) return { error: error.message };
-
-  await logAuditEntry({
-    action: "Update Org Liquidity Pool Limit",
-    actor_id: "admin",
-    entity_type: "organization",
-    entity_id: orgId,
-    details: `Capital pool limit updated to ₹${newLimit.toLocaleString()}`,
-  });
-
-  return { data: data || { id: orgId, max_loan_amount: newLimit } };
-}
-
-export async function assignUserToOrganization(userId: string, orgId: string) {
-  const service = createServiceRoleClient();
-  const { data, error } = await service
-    .from("profiles")
-    .update({
+    .from("campuses")
+    .insert({
       org_id: orgId,
-      organization_id: orgId,
-      updated_at: new Date().toISOString(),
+      name: name.trim(),
+      code: cleanCode,
     })
-    .eq("id", userId)
     .select()
     .maybeSingle();
 
   if (error) return { error: error.message };
 
   await logAuditEntry({
-    action: "Assign User to Organization",
+    action: "Create Campus",
     actor_id: "admin",
-    entity_type: "user",
-    entity_id: userId,
-    details: `Assigned user ${userId} to org ${orgId}`,
+    entity_type: "organization",
+    entity_id: orgId,
+    details: `Campus "${name.trim()}" (${cleanCode}) added to organization.`,
   });
 
-  return { data: data || { id: userId, org_id: orgId } };
+  return { data };
+}
+
+export async function deleteCampus(campusId: string) {
+  const service = createServiceRoleClient();
+
+  const { error } = await service
+    .from("campuses")
+    .delete()
+    .eq("id", campusId);
+
+  if (error) return { error: error.message };
+
+  await logAuditEntry({
+    action: "Delete Campus",
+    actor_id: "admin",
+    entity_type: "organization",
+    entity_id: campusId,
+    details: `Campus ${campusId} removed by admin.`,
+  });
+
+  return { success: true };
+}
+
+export async function deleteOrganization(orgId: string) {
+  const service = createServiceRoleClient();
+
+  // Delete associated campuses first
+  await service.from("campuses").delete().eq("org_id", orgId);
+
+  const { error } = await service
+    .from("organizations")
+    .delete()
+    .eq("id", orgId);
+
+  if (error) return { error: error.message };
+
+  await logAuditEntry({
+    action: "Delete Organization",
+    actor_id: "admin",
+    entity_type: "organization",
+    entity_id: orgId,
+    details: `Organization ${orgId} and associated campuses deleted by admin.`,
+  });
+
+  return { success: true };
 }

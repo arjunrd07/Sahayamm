@@ -360,12 +360,12 @@ export function LenderWorkingDemo() {
                       <FileCheck2 className="h-4 w-4 text-signal" /> Submitted Identity &amp; Verification
                     </h4>
 
-                    {/* Bank Statement Verification Card */}
+                    {/* Pay Slip Verification Card */}
                     <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-between text-xs">
                       <div className="space-y-0.5">
-                        <span className="font-bold text-ink dark:text-white block">Bank statement (Financial Proof)</span>
+                        <span className="font-bold text-ink dark:text-white block">Pay Slip (Salary Proof)</span>
                         <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Verified Statement &amp; Balance Match
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> Verified Salary &amp; Employment Match
                         </span>
                       </div>
                       <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-500/30">

@@ -21,10 +21,11 @@ export async function requestLoan(input: RequestLoanInput) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  const admin = createServiceRoleClient();
+  const { data: profile } = await admin.from("profiles").select("*").eq("id", user.id).maybeSingle();
   if (!profile) return { error: "Profile not found." };
   if (profile.verification_status !== "verified") {
-    return { error: "You must be verified before requesting a loan." };
+    return { error: "You must be verified by an organization lender before requesting a loan." };
   }
   if (input.amount <= 0) {
     return { error: "Enter a valid loan amount." };
@@ -55,7 +56,7 @@ export async function requestLoan(input: RequestLoanInput) {
     dueDate = calc.dueDate;
   }
 
-  const { data: loan, error } = await supabase
+  const { data: loan, error } = await admin
     .from("loans")
     .insert({
       org_id: profile.org_id,
@@ -77,7 +78,6 @@ export async function requestLoan(input: RequestLoanInput) {
   const customerName = profile.full_name || profile.email || "Borrower";
 
   // 1. Generate & Insert Digital Agreement for this loan submission
-  const admin = createServiceRoleClient();
   let agreementNumber = "";
   try {
     const { count } = await admin

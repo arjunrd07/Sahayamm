@@ -29,7 +29,7 @@ export interface NavItem {
 
 export const borrowerNav: NavItem[] = [
   { href: "/borrower/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/borrower/verification", label: "Verification", icon: FileCheck2 },
+  { href: "/borrower/verification", label: "Verification Status", icon: FileCheck2 },
   {
     href: "/borrower/loans",
     label: "Credit & Loans",
@@ -39,45 +39,45 @@ export const borrowerNav: NavItem[] = [
       { href: "/borrower/loans", label: "My Loans History", icon: Wallet },
     ],
   },
+  { href: "/borrower/agreements", label: "My Agreements", icon: FileText },
   { href: "/borrower/profile", label: "Profile", icon: User },
   { href: "/borrower/notifications", label: "Notifications", icon: Bell },
   { href: "/borrower/settings", label: "Settings", icon: Settings },
 ];
 
 export const lenderNav: NavItem[] = [
-  { href: "/lender/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/lender/dashboard", label: "Lender Overview", icon: LayoutDashboard },
   { href: "/lender/verifications", label: "Verifications", icon: FileCheck2 },
   {
     href: "/lender/loans",
-    label: "Loan Portfolio",
-    icon: Wallet,
+    label: "Loan Requests",
+    icon: HandCoins,
     items: [
-      { href: "/lender/loans", label: "Pending Requests", icon: HandCoins },
+      { href: "/lender/loans", label: "Incoming Requests", icon: HandCoins },
       { href: "/lender/active", label: "Active Loans", icon: Wallet },
-      { href: "/lender/completed", label: "Completed Loans", icon: CheckCircle2 },
+      { href: "/lender/completed", label: "Settled Loans", icon: CheckCircle2 },
     ],
   },
-  { href: "/lender/reports", label: "Reports", icon: BarChart3 },
+  { href: "/lender/agreements", label: "Agreement Inspection", icon: FileText },
   { href: "/lender/notifications", label: "Notifications", icon: Bell },
   {
     href: "/lender/settings",
-    label: "Account & System",
+    label: "Settings",
     icon: Settings,
     items: [
       { href: "/lender/profile", label: "Lender Profile", icon: User },
-      { href: "/lender/settings", label: "Platform Settings", icon: Settings },
+      { href: "/lender/settings", label: "Lending Preferences", icon: Settings },
     ],
   },
-  { href: "/borrower/dashboard", label: "Borrower Portal View", icon: HandCoins },
 ];
 
 export const adminNav: NavItem[] = [
   { href: "/admin/dashboard", label: "Admin Overview", icon: LayoutDashboard },
-  { href: "/admin/organizations", label: "Organizations", icon: Building2 },
-  { href: "/admin/users", label: "Global Users", icon: User },
+  { href: "/admin/organizations", label: "Organizations & Campuses", icon: Building2 },
+  { href: "/admin/users", label: "User Management", icon: User },
   {
     href: "/admin/loans",
-    label: "Platform Operations",
+    label: "Platform Oversight",
     icon: Wallet,
     items: [
       { href: "/admin/loans", label: "Platform Loans Oversight", icon: Wallet },
@@ -86,8 +86,6 @@ export const adminNav: NavItem[] = [
     ],
   },
   { href: "/admin/notifications", label: "Notifications", icon: Bell },
-  { href: "/lender/dashboard", label: "Lender Portal View", icon: BarChart3 },
-  { href: "/borrower/dashboard", label: "Borrower Portal View", icon: HandCoins },
 ];
 
 export const customerNav = borrowerNav;

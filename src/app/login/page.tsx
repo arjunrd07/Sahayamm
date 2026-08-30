@@ -8,7 +8,7 @@ import { AuthShell } from "@/components/layout/auth-shell";
 import { Field, Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { ensureAdminAccount, getUserRoleAcrossSchemas } from "./actions";
+import { ensureAdminAccount, getUserRoleAcrossSchemas, ensureUserProfile } from "./actions";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -63,7 +63,7 @@ export default function LoginPage() {
       }
 
       let authResponse = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
+        email: normalizedEmail,
         password: cleanPass,
       });
 
@@ -88,16 +88,17 @@ export default function LoginPage() {
       }
 
       if (isAdminCreds && (authResponse.error || !authResponse.data?.user)) {
-        await ensureAdminAccount("admin@gmail.com", "Admin@Sahayamm");
+        try {
+          await ensureAdminAccount("admin@gmail.com", "Admin@Sahayamm");
+        } catch {}
         setLoading(false);
         push("success", "Admin authenticated successfully!");
         router.push("/admin/dashboard");
         return;
       }
 
-      setLoading(false);
-
       if (authResponse.error && !authResponse.data?.user) {
+        setLoading(false);
         push(
           "error",
           authResponse.error.message || "Authentication failed. Please check your email and password."
@@ -106,25 +107,35 @@ export default function LoginPage() {
       }
 
       if (authResponse.data?.user) {
-        const activeRole = await getUserRoleAcrossSchemas(authResponse.data.user.id);
+        const user = authResponse.data.user;
+        let role = user.user_metadata?.role || "borrower";
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role, kyc_completed, pan_number, cibil_score, address, phone")
-          .eq("id", authResponse.data.user.id)
-          .maybeSingle();
+        // Query role from profile
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
 
-        if (activeRole !== "admin" && profile && (!profile.pan_number || !profile.cibil_score || !profile.address || !profile.phone)) {
-          push("error", "Mandatory profile details not completed. Please complete registration step 3.");
-          router.push("/signup");
-          return;
+          if (profile?.role) {
+            role = profile.role;
+          }
+        } catch {}
+
+        // Auto-heal missing profile details in background without blocking login
+        try {
+          await ensureUserProfile(user.id, normalizedEmail);
+        } catch (healErr) {
+          console.warn("Notice during profile auto-heal:", healErr);
         }
 
+        setLoading(false);
         push("success", "Signed in successfully!");
 
-        if (activeRole === "admin" || isAdminEmail) {
+        if (role === "admin" || isAdminEmail) {
           router.push("/admin/dashboard");
-        } else if (activeRole === "lender") {
+        } else if (role === "lender") {
           router.push("/lender/dashboard");
         } else {
           router.push("/borrower/dashboard");

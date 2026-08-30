@@ -2,12 +2,14 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/input";
+import { Field, Select, Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
+import { Table, Thead, Th, Tr, Td, EmptyState } from "@/components/ui/table";
+import { VerificationBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
 import {
   Search,
@@ -17,43 +19,53 @@ import {
   Eye,
   Edit,
   Trash2,
-  ChevronLeft,
-  ChevronRight,
   Building2,
+  MapPin,
+  Mail,
+  Phone,
+  CreditCard,
+  User,
+  Users,
+  Sparkles,
+  PauseCircle,
+  PlayCircle,
+  Award,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import type { Profile, Organization, UserRole } from "@/types/database";
-import { toggleUserAccess, updateUserRoleAndOrg, purgeUserAccount } from "./actions";
+import type { Profile, Organization, Campus, UserRole } from "@/types/database";
+import { getAdminUsersData, toggleUserAccess, updateUserRoleAndOrg, purgeUserAccount } from "./actions";
 
 interface UserProfileWithOrg extends Profile {
   organization_name?: string;
-  organizations?: { name: string; code: string };
+  campus_name?: string;
 }
 
-export default function AdminUsersPage() {
+function AdminUsersContent() {
   const [users, setUsers] = useState<UserProfileWithOrg[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [campuses, setCampuses] = useState<Campus[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [orgFilter, setOrgFilter] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [campusFilter, setCampusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Detail Modal
   const [selectedUserDetail, setSelectedUserDetail] = useState<UserProfileWithOrg | null>(null);
 
-  // Access Confirmation Modal
+  // Access Confirmation Modal (Pause / Revoke)
   const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [userForAccessToggle, setUserForAccessToggle] = useState<UserProfileWithOrg | null>(null);
   const [revocationReason, setRevocationReason] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Edit Role/Org Modal
+  // Edit Role/Org/Campus Modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfileWithOrg | null>(null);
   const [newRole, setNewRole] = useState<UserRole>("borrower");
   const [newOrgId, setNewOrgId] = useState<string>("");
+  const [newCampusId, setNewCampusId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
   // Delete User Confirmation Modal
@@ -66,22 +78,30 @@ export default function AdminUsersPage() {
 
   async function loadUsersData() {
     setLoading(true);
-    const [{ data: profiles }, { data: orgsData }] = await Promise.all([
-      supabase.from("profiles").select("*, organizations!org_id(name, code)").order("created_at", { ascending: false }),
-      supabase.from("organizations").select("*").order("name"),
-    ]);
+    try {
+      const res = await getAdminUsersData();
+      const profiles = res.profiles || [];
+      const orgsData = res.organizations || [];
+      const campusesData = res.campuses || [];
 
-    if (profiles) {
-      const formatted = profiles.map((p: any) => ({
-        ...p,
-        organization_name: p.organizations?.name || "Global / Unassigned",
-      }));
-      setUsers(formatted);
+      const orgsMap = new Map((orgsData || []).map((o: any) => [o.id, o.name]));
+      const campusMap = new Map((campusesData || []).map((c: any) => [c.id, c.name]));
+
+      if (profiles) {
+        const formatted = profiles.map((p: any) => ({
+          ...p,
+          organization_name: p.org_id ? orgsMap.get(p.org_id) || "Unassigned" : "Global / Unassigned",
+          campus_name: p.campus_id ? campusMap.get(p.campus_id) || "Main Campus" : "Main Campus",
+        }));
+        setUsers(formatted);
+      }
+      setOrganizations(orgsData || []);
+      setCampuses(campusesData || []);
+    } catch (err: any) {
+      push("error", err.message || "Failed to load user directory.");
+    } finally {
+      setLoading(false);
     }
-    if (orgsData) {
-      setOrganizations(orgsData as Organization[]);
-    }
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -95,84 +115,51 @@ export default function AdminUsersPage() {
     setAccessModalOpen(true);
   }
 
-  async function executeDirectStatusChange(user: UserProfileWithOrg, targetStatus: "verified" | "rejected", reason?: string) {
-    setUpdatingId(user.id);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, verification_status: targetStatus } : u))
-    );
-    const result = await toggleUserAccess(user.id, targetStatus, reason);
+  async function handleConfirmAccessToggle() {
+    if (!userForAccessToggle) return;
+    setUpdatingId(userForAccessToggle.id);
+    const targetStatus = userForAccessToggle.verification_status === "rejected" ? "verified" : "rejected";
+    const res = await toggleUserAccess(userForAccessToggle.id, targetStatus, revocationReason);
     setUpdatingId(null);
 
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadUsersData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    const actionText = targetStatus === "verified" ? "Access approved/restored" : "Access revoked";
-    push("success", `${actionText} for ${user.full_name || user.email}`);
-  }
-
-  async function executeAccessToggle() {
-    if (!userForAccessToggle) return;
-    const user = userForAccessToggle;
-    const targetStatus = user.verification_status === "rejected" ? "verified" : "rejected";
-    setUpdatingId(user.id);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, verification_status: targetStatus } : u))
+    push(
+      "success",
+      targetStatus === "rejected"
+        ? `Access paused/revoked for ${userForAccessToggle.full_name || userForAccessToggle.email}.`
+        : `Access restored & verified for ${userForAccessToggle.full_name || userForAccessToggle.email}.`
     );
     setAccessModalOpen(false);
-
-    const result = await toggleUserAccess(user.id, targetStatus, revocationReason);
-    setUpdatingId(null);
-
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadUsersData();
-      return;
-    }
-
-    const actionText = targetStatus === "verified" ? "Access restored" : "Access revoked";
-    push("success", `${actionText} for ${user.full_name || user.email}`);
+    loadUsersData();
   }
 
   function openEditModal(user: UserProfileWithOrg) {
     setEditingUser(user);
-    setNewRole((user.role as UserRole) || "borrower");
+    setNewRole(user.role || "borrower");
     setNewOrgId(user.org_id || "");
+    setNewCampusId(user.campus_id || "");
     setEditModalOpen(true);
   }
 
-  async function handleSaveUserEdit(e: React.FormEvent) {
+  async function handleSaveUserAssignment(e: React.FormEvent) {
     e.preventDefault();
     if (!editingUser) return;
     setSubmitting(true);
-    const targetOrg = organizations.find((o) => o.id === newOrgId);
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === editingUser.id
-          ? {
-              ...u,
-              role: newRole,
-              verification_status: newRole === "admin" ? "verified" : u.verification_status,
-              org_id: newOrgId || "",
-              organization_name: targetOrg?.name || "Global / Unassigned",
-            }
-          : u
-      )
-    );
-    setEditModalOpen(false);
-
-    const result = await updateUserRoleAndOrg(editingUser.id, newRole, newOrgId);
+    const res = await updateUserRoleAndOrg(editingUser.id, newRole, newOrgId || undefined, newCampusId || undefined);
     setSubmitting(false);
 
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadUsersData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    push("success", `Updated role (${newRole}) & organization for ${editingUser.full_name || editingUser.email}`);
+    push("success", `Updated role & organization assignment for ${editingUser.full_name || editingUser.email}.`);
+    setEditModalOpen(false);
+    loadUsersData();
   }
 
   function openDeleteModal(user: UserProfileWithOrg) {
@@ -180,436 +167,460 @@ export default function AdminUsersPage() {
     setDeleteModalOpen(true);
   }
 
-  async function executeDeleteUser() {
+  async function handleConfirmPurge() {
     if (!userToDelete) return;
     setDeletingId(userToDelete.id);
-    setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
-    setDeleteModalOpen(false);
-
-    const result = await purgeUserAccount(userToDelete.id);
+    const res = await purgeUserAccount(userToDelete.id);
     setDeletingId(null);
 
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadUsersData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    push("success", `Permanently deleted account ${userToDelete.email}`);
+    push("success", `Permanently purged user account ${userToDelete.full_name || userToDelete.email}.`);
+    setDeleteModalOpen(false);
+    loadUsersData();
   }
 
   const filtered = users.filter((u) => {
-    const searchLower = search.toLowerCase();
+    const term = search.toLowerCase();
     const matchesSearch =
-      (u.full_name || "").toLowerCase().includes(searchLower) ||
-      u.email.toLowerCase().includes(searchLower) ||
-      (u.pan_number || "").toLowerCase().includes(searchLower) ||
-      (u.mobile_number || u.phone || "").toLowerCase().includes(searchLower) ||
-      (u.organization_name || "").toLowerCase().includes(searchLower);
+      !term ||
+      u.full_name?.toLowerCase().includes(term) ||
+      u.email.toLowerCase().includes(term) ||
+      u.pan_number?.toLowerCase().includes(term) ||
+      u.organization_name?.toLowerCase().includes(term) ||
+      u.campus_name?.toLowerCase().includes(term);
 
-    const matchesRole = roleFilter === "all" ? true : u.role === roleFilter;
-    const matchesOrg = orgFilter === "all" ? true : u.org_id === orgFilter;
+    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    const matchesOrg = orgFilter === "all" || u.org_id === orgFilter;
+    const matchesCampus = campusFilter === "all" || u.campus_id === campusFilter;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "verified" && u.verification_status === "verified") ||
+      (statusFilter === "pending" && u.verification_status === "pending") ||
+      (statusFilter === "rejected" && u.verification_status === "rejected") ||
+      (statusFilter === "unverified" && (!u.verification_status || u.verification_status === "unverified"));
 
-    return matchesSearch && matchesRole && matchesOrg;
+    return matchesSearch && matchesRole && matchesOrg && matchesCampus && matchesStatus;
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-  const paginatedUsers = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl pb-16">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-ink dark:text-white">Global User Directory</h2>
-          <p className="text-sm text-ink-slate">Cross-organization user profiles, roles, and access revocation controls.</p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-signal/10 text-signal border border-signal/20 text-xs font-semibold mb-2">
+            <Users className="h-3.5 w-3.5" /> Platform User Authority
+          </div>
+          <h1 className="text-2xl font-black text-ink dark:text-white tracking-tight">
+            User Directory &amp; Governance
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Global identity oversight across all organizations, roles (Borrowers, Lenders, Admins), and campuses.
+          </p>
+        </div>
+
+        <Button variant="secondary" onClick={loadUsersData} className="rounded-xl text-xs gap-1.5 font-bold self-start sm:self-auto">
+          <Sparkles className="h-3.5 w-3.5 text-signal" /> Refresh Directory
+        </Button>
+      </div>
+
+      {/* Search & Filters */}
+      <div className="card p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <Search className="h-4 w-4 text-slate-400 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search users by name, email, PAN, organization, or campus..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-transparent text-xs text-ink dark:text-white placeholder:text-slate-400 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100 dark:border-white/5">
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="text-xs py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-medium text-ink dark:text-white"
+          >
+            <option value="all">All Roles</option>
+            <option value="borrower">Borrowers Only</option>
+            <option value="lender">Lenders Only</option>
+            <option value="admin">Administrators</option>
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-xs py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-medium text-ink dark:text-white"
+          >
+            <option value="all">All Access Statuses</option>
+            <option value="verified">Active &amp; Verified</option>
+            <option value="pending">Pending KYC Review</option>
+            <option value="rejected">Paused / Revoked</option>
+            <option value="unverified">Incomplete KYC</option>
+          </select>
+
+          <select
+            value={orgFilter}
+            onChange={(e) => setOrgFilter(e.target.value)}
+            className="text-xs py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-medium text-ink dark:text-white"
+          >
+            <option value="all">All Organizations</option>
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name} ({org.code})
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={campusFilter}
+            onChange={(e) => setCampusFilter(e.target.value)}
+            className="text-xs py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 font-medium text-ink dark:text-white"
+          >
+            <option value="all">All Campuses</option>
+            {campuses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <Card className="p-6 border border-slate-200 dark:border-surface-border-dark">
-        {/* Filters and Search Bar */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mb-6">
-          <div className="relative w-full lg:w-80">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-slate" />
-            <input
-              type="text"
-              placeholder="Search name, email, PAN, phone..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
-            />
-          </div>
+      {/* Users Table */}
+      <Table>
+        <Thead>
+          <Tr>
+            <Th>User Profile</Th>
+            <Th>Role</Th>
+            <Th>Organization &amp; Campus</Th>
+            <Th>PAN Number</Th>
+            <Th>Access Status</Th>
+            <Th>Joined</Th>
+            <Th className="text-right">Governance Actions</Th>
+          </Tr>
+        </Thead>
+        <tbody>
+          {filtered.length === 0 ? (
+            <Tr>
+              <Td colSpan={7}>
+                <EmptyState
+                  title="No users match your criteria"
+                  description="Try adjusting your search terms or filters."
+                />
+              </Td>
+            </Tr>
+          ) : (
+            filtered.map((u) => (
+              <Tr key={u.id}>
+                <Td>
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-signal/10 text-signal font-black text-sm flex items-center justify-center border border-signal/20 shrink-0">
+                      {u.full_name?.[0]?.toUpperCase() || u.email[0].toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-ink dark:text-white text-xs">{u.full_name || "Unnamed User"}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">{u.email}</p>
+                    </div>
+                  </div>
+                </Td>
 
-          <div className="flex items-center gap-3 w-full lg:w-auto flex-wrap">
-            {/* Role Filter */}
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-slate">
-              <Filter className="h-3.5 w-3.5" /> Role:
-              {["all", "lender", "borrower", "admin"].map((r) => (
-                <button
-                  key={r}
-                  onClick={() => {
-                    setRoleFilter(r);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
-                    roleFilter === r
-                      ? "bg-blue-600 text-white font-bold"
-                      : "bg-surface-pebble dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
+                <Td>
+                  <span
+                    className={`capitalize px-2.5 py-1 rounded-lg text-xs font-bold ${
+                      u.role === "admin"
+                        ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+                        : u.role === "lender"
+                        ? "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                        : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
+                    }`}
+                  >
+                    {u.role || "borrower"}
+                  </span>
+                </Td>
+
+                <Td>
+                  <div className="text-xs">
+                    <div className="flex items-center gap-1 text-ink dark:text-white font-semibold">
+                      <Building2 className="h-3 w-3 text-slate-400" />
+                      <span>{u.organization_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500 text-[11px] mt-0.5">
+                      <MapPin className="h-3 w-3 text-slate-400" />
+                      <span>{u.campus_name}</span>
+                    </div>
+                  </div>
+                </Td>
+
+                <Td>
+                  {u.pan_number ? (
+                    <span className="font-mono text-xs font-bold text-ink dark:text-white bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded border border-slate-200 dark:border-white/10">
+                      {u.pan_number}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-400 italic">Not set</span>
+                  )}
+                </Td>
+
+                <Td>
+                  <VerificationBadge status={u.verification_status || "unverified"} />
+                  {u.verification_status === "rejected" && u.rejection_reason && (
+                    <p className="text-[10px] text-red-500 mt-1 truncate max-w-[130px]" title={u.rejection_reason}>
+                      Reason: {u.rejection_reason}
+                    </p>
+                  )}
+                </Td>
+
+                <Td>
+                  <span className="text-xs text-slate-500">{formatDate(u.created_at)}</span>
+                </Td>
+
+                <Td className="text-right">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setSelectedUserDetail(u)}
+                      className="rounded-xl text-xs gap-1 font-bold p-2 h-auto"
+                      title="Inspect User Details"
+                    >
+                      <Eye className="h-3.5 w-3.5 text-signal" />
+                    </Button>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openEditModal(u)}
+                      className="rounded-xl text-xs gap-1 font-bold p-2 h-auto"
+                      title="Edit Role & Organization"
+                    >
+                      <Edit className="h-3.5 w-3.5 text-slate-600" />
+                    </Button>
+
+                    <Button
+                      variant={u.verification_status === "rejected" ? "secondary" : "danger"}
+                      size="sm"
+                      onClick={() => openAccessModal(u)}
+                      className="rounded-xl text-xs gap-1 font-bold p-2 h-auto"
+                      title={u.verification_status === "rejected" ? "Restore Access" : "Pause / Revoke Access"}
+                    >
+                      {u.verification_status === "rejected" ? (
+                        <PlayCircle className="h-3.5 w-3.5 text-emerald-600" />
+                      ) : (
+                        <PauseCircle className="h-3.5 w-3.5 text-red-500" />
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => openDeleteModal(u)}
+                      className="rounded-xl text-xs gap-1 font-bold p-2 h-auto hover:bg-red-600"
+                      title="Permanently Delete User"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-red-500 hover:text-white" />
+                    </Button>
+                  </div>
+                </Td>
+              </Tr>
+            ))
+          )}
+        </tbody>
+      </Table>
+
+      {/* User Dossier Modal */}
+      <Modal open={!!selectedUserDetail} onClose={() => setSelectedUserDetail(null)} title="User Profile Dossier">
+        {selectedUserDetail && (
+          <div className="space-y-4 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-signal text-white font-black text-xl flex items-center justify-center shadow-md shrink-0">
+                {selectedUserDetail.full_name?.[0]?.toUpperCase() || selectedUserDetail.email[0].toUpperCase()}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold text-ink dark:text-white">{selectedUserDetail.full_name || "User"}</h3>
+                  <VerificationBadge status={selectedUserDetail.verification_status || "unverified"} />
+                </div>
+                <p className="text-xs text-slate-500 flex items-center gap-2">
+                  <span>Role: <strong className="capitalize">{selectedUserDetail.role}</strong></span>
+                  <span>·</span>
+                  <span>{selectedUserDetail.organization_name} ({selectedUserDetail.campus_name})</span>
+                </p>
+              </div>
             </div>
 
-            {/* Org Filter */}
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-slate">
-              <Building2 className="h-3.5 w-3.5" /> Org:
-              <select
-                value={orgFilter}
-                onChange={(e) => {
-                  setOrgFilter(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="py-1 px-2 rounded-md bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-xs focus:outline-none"
-              >
-                <option value="all">All Organizations</option>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-0.5">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Email Address</span>
+                <p className="font-bold text-ink dark:text-white break-all">{selectedUserDetail.email}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-0.5">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Phone Number</span>
+                <p className="font-mono font-bold text-ink dark:text-white">
+                  {selectedUserDetail.phone || selectedUserDetail.mobile_number || "Not provided"}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-0.5">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">PAN Number</span>
+                <p className="font-mono font-bold text-ink dark:text-white">{selectedUserDetail.pan_number || "Not set"}</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-0.5">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">CIBIL Rating</span>
+                <p className="font-black text-emerald-600 text-sm">{selectedUserDetail.cibil_score || 750} / 900</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-0.5 col-span-2">
+                <span className="text-slate-400 text-[10px] uppercase font-bold">Residential Address</span>
+                <p className="font-medium text-ink dark:text-white">{selectedUserDetail.address || "Not provided"}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <Button variant="secondary" className="rounded-xl font-bold" onClick={() => setSelectedUserDetail(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Role & Org Modal */}
+      <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title="Update Role &amp; Assignment">
+        {editingUser && (
+          <form onSubmit={handleSaveUserAssignment} className="space-y-4">
+            <Field label="System Authority Role">
+              <Select value={newRole} onChange={(e) => setNewRole(e.target.value as UserRole)}>
+                <option value="borrower">Borrower (Employee/Student)</option>
+                <option value="lender">Lender (Organization Lending Officer)</option>
+                <option value="admin">Administrator (Global Platform Authority)</option>
+              </Select>
+            </Field>
+
+            <Field label="Assigned Organization">
+              <Select value={newOrgId} onChange={(e) => setNewOrgId(e.target.value)}>
+                <option value="">Unassigned / Global</option>
                 {organizations.map((org) => (
                   <option key={org.id} value={org.id}>
-                    {org.name}
+                    {org.name} ({org.code})
                   </option>
                 ))}
-              </select>
-            </div>
-          </div>
-        </div>
+              </Select>
+            </Field>
 
-        {/* Directory Table */}
-        {loading ? (
-          <div className="space-y-3 py-6">
-            <div className="h-12 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse" />
-            <div className="h-12 bg-slate-100 dark:bg-white/5 rounded-xl animate-pulse" />
-          </div>
-        ) : paginatedUsers.length === 0 ? (
-          <p className="text-center py-10 text-sm text-ink-slate">No users found matching your search and filter criteria.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-surface-border dark:border-surface-border-dark text-xs uppercase tracking-wider text-ink-slate">
-                  <th className="pb-3 font-bold">User Profile</th>
-                  <th className="pb-3 font-bold">Organization</th>
-                  <th className="pb-3 font-bold">Role</th>
-                  <th className="pb-3 font-bold">Verification</th>
-                  <th className="pb-3 font-bold">Joined</th>
-                  <th className="pb-3 font-bold text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-border dark:divide-surface-border-dark">
-                {paginatedUsers.map((u) => {
-                  const effectiveStatus = u.role === "admin" ? "verified" : u.verification_status;
-                  const isRevoked = effectiveStatus === "rejected";
-                  const displayRole = u.role || "borrower";
+            <Field label="Assigned Campus">
+              <Select value={newCampusId} onChange={(e) => setNewCampusId(e.target.value)}>
+                <option value="">Main Campus / Unspecified</option>
+                {campuses
+                  .filter((c) => !newOrgId || c.org_id === newOrgId)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+              </Select>
+            </Field>
 
-                  return (
-                    <tr key={u.id} className="hover:bg-surface-pebble dark:hover:bg-white/5 transition-colors">
-                      <td className="py-3.5 font-semibold text-ink dark:text-white">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div>{u.full_name || "—"}</div>
-                            <div className="text-xs font-normal text-ink-slate">{u.email}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 text-ink-slate font-medium">{u.organization_name}</td>
-                      <td className="py-3.5">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold capitalize ${
-                            displayRole === "admin"
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-300"
-                              : displayRole === "lender"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300"
-                              : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
-                          }`}
-                        >
-                          {displayRole}
-                        </span>
-                      </td>
-                      <td className="py-3.5">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            isRevoked
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
-                              : effectiveStatus === "verified"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 font-bold"
-                              : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-                          }`}
-                        >
-                          {isRevoked ? "Revoked Access" : effectiveStatus}
-                        </span>
-                      </td>
-                      <td className="py-3.5 text-xs text-ink-slate">{formatDate(u.created_at)}</td>
-                      <td className="py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {/* View Details */}
-                          <button
-                            onClick={() => setSelectedUserDetail(u)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40 rounded-lg transition-colors"
-                            title="View Full Profile Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-
-                          {/* Edit Role or Org */}
-                          <button
-                            onClick={() => openEditModal(u)}
-                            className="p-1.5 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40 rounded-lg transition-colors"
-                            title="Edit Role or Organization"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-
-                          {/* Approve / Restore / Reject / Revoke Access */}
-                          {u.verification_status === "pending" || u.verification_status === "unverified" ? (
-                            <>
-                              <button
-                                disabled={updatingId === u.id}
-                                onClick={() => executeDirectStatusChange(u, "verified")}
-                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors disabled:opacity-50"
-                                title="Approve User Access"
-                              >
-                                <ShieldCheck className="w-4 h-4" />
-                              </button>
-                              <button
-                                disabled={updatingId === u.id}
-                                onClick={() => openAccessModal(u)}
-                                className="p-1.5 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg transition-colors disabled:opacity-50"
-                                title="Reject User Access"
-                              >
-                                <ShieldAlert className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : isRevoked ? (
-                            <button
-                              disabled={updatingId === u.id}
-                              onClick={() => executeDirectStatusChange(u, "verified")}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40 rounded-lg transition-colors disabled:opacity-50"
-                              title="Restore User Access"
-                            >
-                              <ShieldCheck className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <button
-                              disabled={updatingId === u.id}
-                              onClick={() => openAccessModal(u)}
-                              className="p-1.5 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg transition-colors disabled:opacity-50"
-                              title="Revoke User Access"
-                            >
-                              <ShieldAlert className="w-4 h-4" />
-                            </button>
-                          )}
-
-                          {/* Delete User */}
-                          <button
-                            onClick={() => openDeleteModal(u)}
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                            title="Delete Account"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination Bar */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-6 border-t border-slate-100 dark:border-surface-border-dark mt-6">
-            <span className="text-xs font-semibold text-ink-slate">
-              Page {currentPage} of {totalPages} ({filtered.length} total users)
-            </span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                className="text-xs py-1.5 px-3"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+              <Button variant="secondary" type="button" onClick={() => setEditModalOpen(false)}>
+                Cancel
               </Button>
-              <Button
-                variant="secondary"
-                className="text-xs py-1.5 px-3"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
+              <Button variant="primary" type="submit" loading={submitting} className="font-bold shadow-button">
+                Save Changes
               </Button>
             </div>
-          </div>
+          </form>
         )}
-      </Card>
+      </Modal>
 
-      {/* Modal 1: User Full Profile Details */}
-      {selectedUserDetail && (
-        <Modal open={Boolean(selectedUserDetail)} onClose={() => setSelectedUserDetail(null)} title="Global User Details">
-          <div className="space-y-4 text-sm">
-            <div className="p-4 rounded-xl bg-slate-900 text-white flex items-center justify-between">
-              <div>
-                <h3 className="font-extrabold text-base">{selectedUserDetail.full_name || "N/A"}</h3>
-                <p className="text-xs text-slate-300 font-mono">{selectedUserDetail.email}</p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white uppercase">
-                {selectedUserDetail.role}
-              </span>
-            </div>
+      {/* Pause / Revoke Access Modal */}
+      <Modal
+        open={accessModalOpen}
+        onClose={() => setAccessModalOpen(false)}
+        title={userForAccessToggle?.verification_status === "rejected" ? "Restore User Access" : "Pause / Revoke Access"}
+      >
+        {userForAccessToggle && (
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              {userForAccessToggle.verification_status === "rejected"
+                ? `Restoring access for ${userForAccessToggle.full_name || userForAccessToggle.email} will enable them to access the platform.`
+                : `Pausing access for ${userForAccessToggle.full_name || userForAccessToggle.email} will immediately suspend their lending and borrowing privileges.`}
+            </p>
 
-            <div className="grid grid-cols-2 gap-3 p-4 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark">
-              <div>
-                <p className="text-xs text-ink-slate font-medium">Organization</p>
-                <p className="font-bold text-ink dark:text-white mt-0.5">{selectedUserDetail.organization_name}</p>
-              </div>
-              <div>
-                <p className="text-xs text-ink-slate font-medium">Mobile / Phone</p>
-                <p className="font-bold text-ink dark:text-white mt-0.5">{selectedUserDetail.mobile_number || selectedUserDetail.phone || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-ink-slate font-medium">PAN Number</p>
-                <p className="font-mono font-bold text-ink dark:text-white mt-0.5">{selectedUserDetail.pan_number || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-ink-slate font-medium">CIBIL Score</p>
-                <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{selectedUserDetail.cibil_score || "—"}</p>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark space-y-2">
-              <h4 className="font-bold text-xs uppercase tracking-wider text-ink-slate">Address Information</h4>
-              <p className="text-xs text-ink-slate">
-                Residential Address: <strong className="text-ink dark:text-white">{selectedUserDetail.address || "—"}</strong>
-              </p>
-            </div>
-
-            {selectedUserDetail.emergency_name && (
-              <div className="p-3 rounded-xl bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 border border-amber-200 text-xs">
-                <p className="font-bold">Emergency Contact:</p>
-                <p>{selectedUserDetail.emergency_name} ({selectedUserDetail.emergency_relation}) &bull; {selectedUserDetail.emergency_phone}</p>
-              </div>
+            {userForAccessToggle.verification_status !== "rejected" && (
+              <Field label="Reason for Access Revocation / Pause">
+                <Input
+                  placeholder="e.g. Audit inquiry, KYC discrepancy, or policy suspension"
+                  value={revocationReason}
+                  onChange={(e) => setRevocationReason(e.target.value)}
+                  required
+                />
+              </Field>
             )}
 
-            <div className="pt-2">
-              <Button variant="secondary" className="w-full" onClick={() => setSelectedUserDetail(null)}>
-                Close Details
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+              <Button variant="secondary" onClick={() => setAccessModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant={userForAccessToggle.verification_status === "rejected" ? "primary" : "danger"}
+                onClick={handleConfirmAccessToggle}
+                loading={!!updatingId}
+                className="font-bold shadow-button"
+              >
+                {userForAccessToggle.verification_status === "rejected" ? "Restore Access" : "Confirm Pause Access"}
               </Button>
             </div>
           </div>
-        </Modal>
-      )}
-
-      {/* Modal 2: Access Revocation / Restoration Confirmation */}
-      <Modal open={accessModalOpen} onClose={() => setAccessModalOpen(false)} title="Confirm Access Status Change">
-        <div className="space-y-4">
-          <p className="text-sm text-ink-slate">
-            Are you sure you want to{" "}
-            <strong>{userForAccessToggle?.verification_status === "rejected" ? "restore access" : "revoke access"}</strong> for user{" "}
-            <strong>&quot;{userForAccessToggle?.full_name || userForAccessToggle?.email}&quot;</strong>?
-          </p>
-
-          {userForAccessToggle?.verification_status !== "rejected" && (
-            <Field label="Revocation Reason / Note" htmlFor="reason">
-              <textarea
-                id="reason"
-                rows={2}
-                value={revocationReason}
-                onChange={(e) => setRevocationReason(e.target.value)}
-                placeholder="State reason for access revocation (logged to audit)..."
-                className="w-full p-2.5 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-xs focus:outline-none"
-              />
-            </Field>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setAccessModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant={userForAccessToggle?.verification_status === "rejected" ? "primary" : "danger"}
-              className="flex-1"
-              loading={updatingId === userForAccessToggle?.id}
-              onClick={executeAccessToggle}
-            >
-              Confirm
-            </Button>
-          </div>
-        </div>
+        )}
       </Modal>
 
-      {/* Modal 3: Edit Role / Org */}
-      <Modal open={editModalOpen} onClose={() => setEditModalOpen(false)} title={`Edit Role & Org: ${editingUser?.full_name || editingUser?.email}`}>
-        <form onSubmit={handleSaveUserEdit} className="space-y-4">
-          <Field label="Role" htmlFor="roleSelect">
-            <select
-              id="roleSelect"
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as any)}
-              className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none"
-            >
-              <option value="borrower">Borrower</option>
-              <option value="lender">Lender</option>
-              <option value="admin">Admin</option>
-            </select>
-          </Field>
+      {/* Delete User Modal */}
+      <Modal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Permanently Delete User">
+        {userToDelete && (
+          <div className="space-y-4">
+            <p className="text-xs text-red-600 dark:text-red-400 font-semibold">
+              Warning: Deleting user &quot;{userToDelete.full_name || userToDelete.email}&quot; will permanently purge their profile, authentication record, agreements, and loan history from the database.
+            </p>
 
-          <Field label="Assigned Organization" htmlFor="orgSelect">
-            <select
-              id="orgSelect"
-              value={newOrgId}
-              onChange={(e) => setNewOrgId(e.target.value)}
-              className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none"
-            >
-              <option value="">Unassigned / Global</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name} ({org.code})
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" type="button" onClick={() => setEditModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" className="flex-1" loading={submitting} type="submit">
-              Save Changes
-            </Button>
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+              <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmPurge}
+                loading={!!deletingId}
+                className="font-bold shadow-button"
+              >
+                Permanently Purge User
+              </Button>
+            </div>
           </div>
-        </form>
-      </Modal>
-
-      {/* Modal 4: Delete User Confirmation */}
-      <Modal open={deleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Permanently Delete Account">
-        <div className="space-y-4">
-          <p className="text-sm text-rose-600 bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 font-semibold">
-            Warning: This action will permanently delete user profile and auth account for &quot;{userToDelete?.email}&quot;.
-          </p>
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" onClick={() => setDeleteModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="danger" className="flex-1" loading={deletingId === userToDelete?.id} onClick={executeDeleteUser}>
-              Delete Account
-            </Button>
-          </div>
-        </div>
+        )}
       </Modal>
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6 max-w-7xl pb-16">
+          <div className="h-24 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <div className="h-64 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        </div>
+      }
+    >
+      <AdminUsersContent />
+    </Suspense>
   );
 }

@@ -2,456 +2,424 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { formatINR } from "@/lib/utils";
-import { Building2, Plus, CheckCircle2, ShieldCheck, Power, Wallet, Users, Search } from "lucide-react";
-import type { Organization, Profile } from "@/types/database";
 import {
-  createOrganization,
-  toggleOrganizationStatus,
-  updateOrganizationLiquidity,
-  assignUserToOrganization,
-} from "./actions";
+  Building2,
+  Plus,
+  ShieldCheck,
+  Search,
+  MapPin,
+  Trash2,
+  Users,
+  Sparkles,
+  School,
+} from "lucide-react";
+import type { Organization, Campus, Profile } from "@/types/database";
+import { getAdminOrganizationsData, createOrganization, createCampus, deleteCampus, deleteOrganization } from "./actions";
 
-interface OrgWithCounts extends Organization {
+interface OrgWithCampuses extends Organization {
+  campuses: Campus[];
   borrowerCount: number;
   lenderCount: number;
-  status: "active" | "inactive" | string;
 }
 
-export default function AdminOrganizationsPage() {
-  const [organizations, setOrganizations] = useState<OrgWithCounts[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+function AdminOrganizationsContent() {
+  const [organizations, setOrganizations] = useState<OrgWithCampuses[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  // Modals
-  const [modalOpen, setModalOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [capitalLimit, setCapitalLimit] = useState(2500000);
-  const [submitting, setSubmitting] = useState(false);
+  // Create Org Modal
+  const [orgModalOpen, setOrgModalOpen] = useState(false);
+  const [orgName, setOrgName] = useState("");
+  const [orgCode, setOrgCode] = useState("");
+  const [submittingOrg, setSubmittingOrg] = useState(false);
 
-  // Liquidity Modal
-  const [liquidityModalOpen, setLiquidityModalOpen] = useState(false);
-  const [selectedOrgForLiquidity, setSelectedOrgForLiquidity] = useState<OrgWithCounts | null>(null);
-  const [newLimitInput, setNewLimitInput] = useState(2500000);
+  // Add Campus Modal
+  const [campusModalOpen, setCampusModalOpen] = useState(false);
+  const [selectedOrgForCampus, setSelectedOrgForCampus] = useState<OrgWithCampuses | null>(null);
+  const [campusName, setCampusName] = useState("");
+  const [campusCode, setCampusCode] = useState("");
+  const [submittingCampus, setSubmittingCampus] = useState(false);
 
-  // Member Assignment Modal
-  const [assignModalOpen, setAssignModalOpen] = useState(false);
-  const [selectedOrgForAssign, setSelectedOrgForAssign] = useState<OrgWithCounts | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState("");
-
-  // Confirmation Modal for Deactivation
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [orgToToggle, setOrgToToggle] = useState<OrgWithCounts | null>(null);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  // Delete Confirmations
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { push } = useToast();
   const supabase = createClient();
 
-  async function loadOrgsData() {
+  async function loadData() {
     setLoading(true);
-    const [{ data: orgsData }, { data: profilesData }] = await Promise.all([
-      supabase.from("organizations").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id, org_id, full_name, email, role"),
-    ]);
+    try {
+      const res = await getAdminOrganizationsData();
+      const rawOrgs: Organization[] = res.organizations || [];
+      const rawCampuses: Campus[] = res.campuses || [];
+      const rawProfiles: Profile[] = res.profiles || [];
 
-    const rawOrgs: Organization[] = (orgsData as Organization[]) || [];
-    const rawProfiles: Profile[] = (profilesData as Profile[]) || [];
-    setProfiles(rawProfiles);
+      const formatted: OrgWithCampuses[] = rawOrgs.map((org) => {
+        const orgCampuses = rawCampuses.filter((c) => c.org_id === org.id);
+        const orgProfiles = rawProfiles.filter((p) => p.org_id === org.id);
+        const borrowerCount = orgProfiles.filter((p) => p.role === "borrower").length;
+        const lenderCount = orgProfiles.filter((p) => p.role === "lender" || (p.role as string) === "admin").length;
 
-    const formatted: OrgWithCounts[] = rawOrgs.map((org) => {
-      const orgUsers = rawProfiles.filter((p) => p.org_id === org.id);
-      const borrowerCount = orgUsers.filter((p) => p.role === "borrower").length;
-      const lenderCount = orgUsers.filter((p) => p.role === "lender" || (p.role as string) === "admin").length;
+        return {
+          ...org,
+          campuses: orgCampuses,
+          borrowerCount,
+          lenderCount,
+        };
+      });
 
-      return {
-        ...org,
-        status: (org as any).status || "active",
-        capital_pool_limit: (org as any).max_loan_amount || org.capital_pool_limit || 2500000,
-        borrowerCount,
-        lenderCount,
-      };
-    });
-
-    setOrganizations(formatted);
-    setLoading(false);
+      setOrganizations(formatted);
+    } catch (err: any) {
+      push("error", err.message || "Failed to load organizations.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    loadOrgsData();
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreateOrg(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) {
+    if (!orgName.trim() || !orgCode.trim()) {
       push("error", "Organization name and code are required.");
       return;
     }
-    setSubmitting(true);
-    const tempId = `org-temp-${Date.now()}`;
-    const newOrg: OrgWithCounts = {
-      id: tempId,
-      name: name.trim(),
-      code: code.trim().toUpperCase(),
-      status: "active",
-      capital_pool_limit: capitalLimit,
-      borrowerCount: 0,
-      lenderCount: 0,
-      created_at: new Date().toISOString(),
-    };
-    setOrganizations((prev) => [newOrg, ...prev]);
-    setModalOpen(false);
+    setSubmittingOrg(true);
+    const res = await createOrganization(orgName, orgCode);
+    setSubmittingOrg(false);
 
-    const result = await createOrganization(name, code, capitalLimit);
-    setSubmitting(false);
-
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadOrgsData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    push("success", `Organization "${name}" registered successfully.`);
-    setName("");
-    setCode("");
-    setCapitalLimit(2500000);
-    loadOrgsData();
+    push("success", `Organization "${orgName.trim()}" created successfully!`);
+    setOrgModalOpen(false);
+    setOrgName("");
+    setOrgCode("");
+    loadData();
   }
 
-  function promptToggleStatus(org: OrgWithCounts) {
-    setOrgToToggle(org);
-    setConfirmModalOpen(true);
-  }
-
-  async function executeToggleStatus() {
-    if (!orgToToggle) return;
-    const org = orgToToggle;
-    const nextStatus = org.status === "active" ? "inactive" : "active";
-    setTogglingId(org.id);
-    setOrganizations((prev) =>
-      prev.map((o) => (o.id === org.id ? { ...o, status: nextStatus } : o))
-    );
-    setConfirmModalOpen(false);
-
-    const result = await toggleOrganizationStatus(org.id, org.status);
-    setTogglingId(null);
-
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadOrgsData();
-      return;
-    }
-
-    const actionText = org.status === "active" ? "Deactivated (Soft deleted)" : "Reactivated";
-    push("success", `Organization "${org.name}" ${actionText}.`);
-  }
-
-  function openLiquidityModal(org: OrgWithCounts) {
-    setSelectedOrgForLiquidity(org);
-    setNewLimitInput(org.capital_pool_limit || 2500000);
-    setLiquidityModalOpen(true);
-  }
-
-  async function handleSaveLiquidity(e: React.FormEvent) {
+  async function handleCreateCampus(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedOrgForLiquidity) return;
-    setSubmitting(true);
-    const limitNum = Number(newLimitInput);
-    setOrganizations((prev) =>
-      prev.map((o) => (o.id === selectedOrgForLiquidity.id ? { ...o, capital_pool_limit: limitNum } : o))
-    );
-    setLiquidityModalOpen(false);
+    if (!selectedOrgForCampus) return;
+    if (!campusName.trim() || !campusCode.trim()) {
+      push("error", "Campus name and code are required.");
+      return;
+    }
+    setSubmittingCampus(true);
+    const res = await createCampus(selectedOrgForCampus.id, campusName, campusCode);
+    setSubmittingCampus(false);
 
-    const result = await updateOrganizationLiquidity(selectedOrgForLiquidity.id, limitNum);
-    setSubmitting(false);
-
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadOrgsData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    push("success", `Capital pool limit updated to ${formatINR(limitNum)}.`);
+    push("success", `Campus "${campusName.trim()}" added to ${selectedOrgForCampus.name}!`);
+    setCampusModalOpen(false);
+    setCampusName("");
+    setCampusCode("");
+    loadData();
   }
 
-  function openAssignModal(org: OrgWithCounts) {
-    setSelectedOrgForAssign(org);
-    setSelectedUserId("");
-    setAssignModalOpen(true);
-  }
+  async function handleDeleteCampus(campusId: string, campusName: string) {
+    if (!confirm(`Are you sure you want to remove campus "${campusName}"?`)) return;
+    setDeletingId(campusId);
+    const res = await deleteCampus(campusId);
+    setDeletingId(null);
 
-  async function handleAssignUser(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedOrgForAssign || !selectedUserId) {
-      push("error", "Please select a user to assign.");
-      return;
-    }
-    setSubmitting(true);
-    setOrganizations((prev) =>
-      prev.map((o) =>
-        o.id === selectedOrgForAssign.id ? { ...o, borrowerCount: o.borrowerCount + 1 } : o
-      )
-    );
-    setAssignModalOpen(false);
-
-    const result = await assignUserToOrganization(selectedUserId, selectedOrgForAssign.id);
-    setSubmitting(false);
-
-    if ("error" in result && result.error) {
-      push("error", result.error);
-      loadOrgsData();
+    if ("error" in res && res.error) {
+      push("error", res.error);
       return;
     }
 
-    push("success", "Member assigned to organization successfully.");
-    loadOrgsData();
+    push("success", `Campus "${campusName}" removed.`);
+    loadData();
   }
 
-  const filteredOrgs = organizations.filter(
-    (o) => o.name.toLowerCase().includes(search.toLowerCase()) || o.code.toLowerCase().includes(search.toLowerCase())
-  );
+  async function handleDeleteOrg(orgId: string, orgName: string) {
+    if (!confirm(`Are you sure you want to delete organization "${orgName}" and all its campuses? This action cannot be undone.`)) return;
+    setDeletingId(orgId);
+    const res = await deleteOrganization(orgId);
+    setDeletingId(null);
+
+    if ("error" in res && res.error) {
+      push("error", res.error);
+      return;
+    }
+
+    push("success", `Organization "${orgName}" deleted.`);
+    loadData();
+  }
+
+  const filtered = organizations.filter((org) => {
+    const term = search.toLowerCase();
+    const matchesOrg = org.name.toLowerCase().includes(term) || org.code.toLowerCase().includes(term);
+    const matchesCampus = org.campuses.some((c) => c.name.toLowerCase().includes(term) || c.code.toLowerCase().includes(term));
+    return matchesOrg || matchesCampus;
+  });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-7xl pb-16">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-ink dark:text-white">Organization Management Center</h2>
-          <p className="text-sm text-ink-slate">Manage registered entities, soft deactivations, liquidity limits, and members.</p>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-signal/10 text-signal border border-signal/20 text-xs font-semibold mb-2">
+            <Building2 className="h-3.5 w-3.5" /> Multi-Tenant Ecosystem
+          </div>
+          <h1 className="text-2xl font-black text-ink dark:text-white tracking-tight">
+            Organizations &amp; Campuses
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Manage institutions, universities, enterprise workplaces, and their respective campus hubs.
+          </p>
         </div>
 
-        <button onClick={() => setModalOpen(true)} className="btn-primary text-sm flex items-center gap-2 shadow-button">
-          <Plus className="h-4 w-4" /> Register New Org
-        </button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={loadData} className="rounded-xl text-xs gap-1.5 font-bold">
+            <Sparkles className="h-3.5 w-3.5 text-signal" /> Refresh
+          </Button>
+          <Button
+            variant="primary"
+            className="rounded-xl text-xs font-bold gap-1.5 shadow-button"
+            onClick={() => {
+              setOrgName("");
+              setOrgCode("");
+              setOrgModalOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Add Organization
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-slate" />
+      <div className="card p-4 flex items-center gap-3">
+        <Search className="h-4 w-4 text-slate-400 shrink-0" />
         <input
           type="text"
-          placeholder="Search organization name or code..."
+          placeholder="Search by organization name, code, or campus location..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
+          className="w-full bg-transparent text-xs text-ink dark:text-white placeholder:text-slate-400 focus:outline-none"
         />
       </div>
 
+      {/* Organizations Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="h-48 bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />
-          <div className="h-48 bg-slate-100 dark:bg-white/5 rounded-2xl animate-pulse" />
+          <div className="h-56 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <div className="h-56 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
         </div>
-      ) : filteredOrgs.length === 0 ? (
-        <Card className="p-8 text-center text-ink-slate">
-          No matching organizations found. Click &quot;Register New Org&quot; to add one.
-        </Card>
+      ) : filtered.length === 0 ? (
+        <div className="card p-12 text-center space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-signal/10 text-signal flex items-center justify-center mx-auto">
+            <Building2 className="h-6 w-6" />
+          </div>
+          <h3 className="text-base font-extrabold text-ink dark:text-white">No Organizations Found</h3>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            Create your first organization or university workspace to start onboarding campus members and lenders.
+          </p>
+          <Button
+            variant="primary"
+            className="rounded-xl text-xs font-bold gap-1.5 mx-auto shadow-button"
+            onClick={() => setOrgModalOpen(true)}
+          >
+            <Plus className="h-4 w-4" /> Add Organization
+          </Button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredOrgs.map((org) => {
-            const isActive = org.status === "active";
-
-            return (
-              <Card key={org.id} className="p-6 border border-slate-200 dark:border-surface-border-dark">
-                <div className="flex items-start justify-between mb-4">
+          {filtered.map((org) => (
+            <Card key={org.id} className="p-6 space-y-5 flex flex-col justify-between">
+              <div className="space-y-4">
+                {/* Org Header */}
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-signal-soft text-signal flex items-center justify-center font-bold">
-                      <Building2 className="h-5 w-5" />
+                    <div className="h-11 w-11 rounded-2xl bg-signal/10 text-signal font-black text-base flex items-center justify-center border border-signal/20 shrink-0">
+                      {org.code.slice(0, 3)}
                     </div>
                     <div>
-                      <h3 className="font-bold text-base text-ink dark:text-white">{org.name}</h3>
-                      <p className="text-xs font-mono text-ink-slate">CODE: {org.code}</p>
+                      <h3 className="text-base font-extrabold text-ink dark:text-white leading-tight">
+                        {org.name}
+                      </h3>
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-slate-500 mt-0.5">
+                        CODE: <strong className="text-signal">{org.code}</strong>
+                      </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`badge font-semibold text-xs flex items-center gap-1 ${
-                        isActive
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200"
-                      }`}
-                    >
-                      {isActive ? <CheckCircle2 className="h-3 w-3" /> : <Power className="h-3 w-3" />}
-                      {isActive ? "Active" : "Inactive (Soft-Deleted)"}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteOrg(org.id, org.name)}
+                    className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    title="Delete Organization"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* Member Summary Stats */}
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] font-bold uppercase block">Borrowers</span>
+                    <strong className="text-sm text-ink dark:text-white font-extrabold">{org.borrowerCount} Active</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] font-bold uppercase block">Lenders &amp; Officers</span>
+                    <strong className="text-sm text-signal font-extrabold">{org.lenderCount} Assigned</strong>
+                  </div>
+                </div>
+
+                {/* Campuses Section */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
+                      <School className="h-3.5 w-3.5 text-signal" /> Campuses &amp; Locations ({org.campuses.length})
                     </span>
-
-                    <button
-                      onClick={() => promptToggleStatus(org)}
-                      disabled={togglingId === org.id}
-                      className={`p-1.5 rounded-lg transition-colors text-xs font-bold ${
-                        isActive
-                          ? "hover:bg-rose-50 dark:hover:bg-rose-900/40 text-rose-600"
-                          : "hover:bg-emerald-50 dark:hover:bg-emerald-900/40 text-emerald-600"
-                      }`}
-                      title={isActive ? "Deactivate (Soft Delete)" : "Reactivate Organization"}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="text-[11px] font-bold rounded-xl gap-1 py-1 px-2.5 h-auto"
+                      onClick={() => {
+                        setSelectedOrgForCampus(org);
+                        setCampusName("");
+                        setCampusCode("");
+                        setCampusModalOpen(true);
+                      }}
                     >
-                      <Power className="h-4 w-4" />
-                    </button>
+                      <Plus className="h-3 w-3" /> Add Campus
+                    </Button>
                   </div>
-                </div>
 
-                {/* Metrics Bar */}
-                <div className="grid grid-cols-3 gap-2 p-3.5 rounded-xl bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-center my-4">
-                  <div>
-                    <p className="text-[11px] text-ink-slate font-medium">Borrowers</p>
-                    <p className="text-sm font-bold text-ink dark:text-white mt-0.5">{org.borrowerCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-ink-slate font-medium">Lenders</p>
-                    <p className="text-sm font-bold text-ink dark:text-white mt-0.5">{org.lenderCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-ink-slate font-medium">Capital Pool</p>
-                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                      {formatINR(org.capital_pool_limit || 2500000)}
-                    </p>
-                  </div>
+                  {org.campuses.length === 0 ? (
+                    <div className="p-3 rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-center text-xs text-slate-400">
+                      No campuses added yet. Click &quot;Add Campus&quot; to set up regional locations.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {org.campuses.map((c) => (
+                        <div
+                          key={c.id}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-medium text-ink dark:text-white shadow-xs group"
+                        >
+                          <MapPin className="h-3 w-3 text-signal shrink-0" />
+                          <span>{c.name}</span>
+                          <span className="text-[10px] font-mono text-slate-400">({c.code})</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCampus(c.id, c.name)}
+                            className="text-slate-300 hover:text-red-500 transition-colors ml-1"
+                            title="Remove campus"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Action Footer */}
-                <div className="flex items-center justify-between text-xs text-ink-slate pt-3 border-t border-surface-border dark:border-surface-border-dark gap-2">
-                  <button
-                    onClick={() => openLiquidityModal(org)}
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold flex items-center gap-1"
-                  >
-                    <Wallet className="h-3.5 w-3.5" /> Adjust Liquidity
-                  </button>
-
-                  <button
-                    onClick={() => openAssignModal(org)}
-                    className="text-signal hover:underline font-bold flex items-center gap-1"
-                  >
-                    <Users className="h-3.5 w-3.5" /> Add Member
-                  </button>
-                </div>
-              </Card>
-            );
-          })}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* Modal 1: Register New Org */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Register New Organization">
-        <form onSubmit={handleCreate} className="space-y-4">
-          <Field label="Organization Name" htmlFor="orgName">
-            <Input id="orgName" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Acme FinTech Corp" />
-          </Field>
-          <Field label="Organization Code" htmlFor="orgCode">
-            <Input id="orgCode" required value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="e.g. ACME" />
-          </Field>
-          <Field label="Capital Pool Limit (₹)" htmlFor="capitalLimit">
+      {/* Add Organization Modal */}
+      <Modal open={orgModalOpen} onClose={() => setOrgModalOpen(false)} title="Create New Organization">
+        <form onSubmit={handleCreateOrg} className="space-y-4">
+          <Field label="Organization / Institution Name">
             <Input
-              id="capitalLimit"
-              type="number"
+              placeholder="e.g. Indian Institute of Technology Madras"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
               required
-              value={capitalLimit}
-              onChange={(e) => setCapitalLimit(Number(e.target.value))}
-              placeholder="2500000"
             />
           </Field>
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" type="button" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" className="flex-1" loading={submitting} type="submit">
-              Register Org
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
-      {/* Modal 2: Adjust Liquidity Pool Limit */}
-      <Modal open={liquidityModalOpen} onClose={() => setLiquidityModalOpen(false)} title={`Adjust Liquidity: ${selectedOrgForLiquidity?.name}`}>
-        <form onSubmit={handleSaveLiquidity} className="space-y-4">
-          <p className="text-xs text-ink-slate">
-            Update the maximum capital liquidity pool limit for this organization.
-          </p>
-          <Field label="New Liquidity Limit (₹)" htmlFor="newLimit">
+          <Field label="Organization Code">
             <Input
-              id="newLimit"
-              type="number"
+              placeholder="e.g. IITM"
+              value={orgCode}
+              onChange={(e) => setOrgCode(e.target.value)}
               required
-              value={newLimitInput}
-              onChange={(e) => setNewLimitInput(Number(e.target.value))}
+              className="uppercase font-mono"
             />
           </Field>
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" type="button" onClick={() => setLiquidityModalOpen(false)}>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <Button variant="secondary" type="button" onClick={() => setOrgModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" className="flex-1" loading={submitting} type="submit">
-              Save Limit
+            <Button variant="primary" type="submit" loading={submittingOrg} className="font-bold shadow-button">
+              Create Organization
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal 3: Assign Member to Org */}
-      <Modal open={assignModalOpen} onClose={() => setAssignModalOpen(false)} title={`Add Member to ${selectedOrgForAssign?.name}`}>
-        <form onSubmit={handleAssignUser} className="space-y-4">
-          <p className="text-xs text-ink-slate">Select a registered global user to assign to this organization.</p>
-          <Field label="Select User" htmlFor="userSelect">
-            <select
-              id="userSelect"
-              value={selectedUserId}
-              onChange={(e) => setSelectedUserId(e.target.value)}
-              className="w-full py-2.5 px-3 rounded-lg bg-surface-pebble dark:bg-white/5 border border-surface-border dark:border-surface-border-dark text-sm focus:outline-none focus:ring-2 focus:ring-signal"
-            >
-              <option value="">-- Choose User --</option>
-              {profiles.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name || p.email} ({p.role}) - Current Org: {p.org_id ? "Assigned" : "Unassigned"}
-                </option>
-              ))}
-            </select>
+      {/* Add Campus Modal */}
+      <Modal
+        open={campusModalOpen}
+        onClose={() => setCampusModalOpen(false)}
+        title={`Add Campus Location · ${selectedOrgForCampus?.name || ""}`}
+      >
+        <form onSubmit={handleCreateCampus} className="space-y-4">
+          <Field label="Campus Location Name">
+            <Input
+              placeholder="e.g. Main Campus / South Hub / Innovation Block"
+              value={campusName}
+              onChange={(e) => setCampusName(e.target.value)}
+              required
+            />
           </Field>
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" type="button" onClick={() => setAssignModalOpen(false)}>
+
+          <Field label="Campus Identifier Code">
+            <Input
+              placeholder="e.g. CAMPUS-01 / MAIN"
+              value={campusCode}
+              onChange={(e) => setCampusCode(e.target.value)}
+              required
+              className="uppercase font-mono"
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+            <Button variant="secondary" type="button" onClick={() => setCampusModalOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" className="flex-1" loading={submitting} type="submit">
-              Assign User
+            <Button variant="primary" type="submit" loading={submittingCampus} className="font-bold shadow-button">
+              Add Campus
             </Button>
           </div>
         </form>
-      </Modal>
-
-      {/* Modal 4: Confirmation Modal for Deactivation */}
-      <Modal open={confirmModalOpen} onClose={() => setConfirmModalOpen(false)} title="Confirm Status Change">
-        <div className="space-y-4">
-          <p className="text-sm text-ink-slate">
-            Are you sure you want to {orgToToggle?.status === "active" ? "deactivate (soft-delete)" : "reactivate"} organization{" "}
-            <strong>&quot;{orgToToggle?.name}&quot;</strong>?
-          </p>
-          {orgToToggle?.status === "active" && (
-            <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 font-semibold">
-              Deactivating will preserve historical records while temporarily setting member verification status to inactive.
-            </p>
-          )}
-          <div className="flex gap-2 pt-2">
-            <Button variant="secondary" className="flex-1" type="button" onClick={() => setConfirmModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant={orgToToggle?.status === "active" ? "danger" : "primary"}
-              className="flex-1"
-              loading={togglingId === orgToToggle?.id}
-              onClick={executeToggleStatus}
-            >
-              Confirm
-            </Button>
-          </div>
-        </div>
       </Modal>
     </div>
+  );
+}
+
+export default function AdminOrganizationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6 max-w-7xl pb-16">
+          <div className="h-24 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+          <div className="h-64 rounded-3xl bg-slate-100 dark:bg-white/5 animate-pulse" />
+        </div>
+      }
+    >
+      <AdminOrganizationsContent />
+    </Suspense>
   );
 }

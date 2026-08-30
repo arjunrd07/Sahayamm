@@ -8,7 +8,6 @@ export interface SendOtpResult {
   message?: string;
   error?: string;
   resendCooldown?: number;
-  mockCode?: string;
 }
 
 export interface VerifyOtpResult {
@@ -41,6 +40,102 @@ function getStoreKey(email: string, type: string) {
   return `${email.toLowerCase().trim()}:${type}`;
 }
 
+export async function getAuthUserByEmail(service: any, cleanEmail: string) {
+  const normalized = cleanEmail.toLowerCase().trim();
+
+  // 1. Check public.profiles first
+  try {
+    const { data: prof } = await service
+      .from("profiles")
+      .select("id, email")
+      .ilike("email", normalized)
+      .maybeSingle();
+    if (prof?.id) {
+      const { data: userRecord } = await service.auth.admin.getUserById(prof.id);
+      if (userRecord?.user) {
+        return userRecord.user;
+      }
+    }
+  } catch (e) {
+    console.warn("Notice in profile search by email:", e);
+  }
+
+  // 2. Paginate through listUsers with perPage: 1000
+  try {
+    let page = 1;
+    while (page <= 5) {
+      const { data: usersData, error } = await service.auth.admin.listUsers({
+        page,
+        perPage: 1000,
+      });
+      if (error || !usersData?.users || usersData.users.length === 0) {
+        break;
+      }
+      const matched = usersData.users.find(
+        (u: any) => u.email?.toLowerCase().trim() === normalized
+      );
+      if (matched) {
+        return matched;
+      }
+      if (usersData.users.length < 1000) {
+        break;
+      }
+      page++;
+    }
+  } catch (e) {
+    console.warn("Notice in listUsers search:", e);
+  }
+
+  return null;
+}
+
+export async function checkUserRegistrationStatus(cleanEmail: string) {
+  const service = createServiceRoleClient();
+  let existsInProfiles = false;
+  let existsInAuth = false;
+  let isComplete = false;
+  let profileRecord: any = null;
+  let authUserId: string | null = null;
+
+  try {
+    const { data: profile } = await service
+      .from("profiles")
+      .select("id, email, kyc_completed, pan_number, role, full_name")
+      .ilike("email", cleanEmail)
+      .maybeSingle();
+
+    if (profile) {
+      existsInProfiles = true;
+      profileRecord = profile;
+      if (profile.pan_number || profile.kyc_completed) {
+        isComplete = true;
+      }
+      authUserId = profile.id;
+    }
+  } catch (e) {
+    console.warn("Notice during profiles check:", e);
+  }
+
+  try {
+    const authUser = await getAuthUserByEmail(service, cleanEmail);
+    if (authUser) {
+      existsInAuth = true;
+      authUserId = authUserId || authUser.id;
+    }
+  } catch (e) {
+    console.warn("Notice during auth users check:", e);
+  }
+
+  return {
+    exists: existsInProfiles || existsInAuth,
+    existsInProfiles,
+    existsInAuth,
+    isComplete,
+    profile: profileRecord,
+    userId: authUserId,
+  };
+}
+
 export async function sendEmailOtp(
   email: string,
   type: "signup" | "forgot_password"
@@ -53,29 +148,21 @@ export async function sendEmailOtp(
 
   const service = createServiceRoleClient();
 
-  // 1. Check user existence based on type
-  try {
-    const { data: existingProfile } = await service
-      .from("profiles")
-      .select("id, email")
-      .eq("email", cleanEmail)
-      .maybeSingle();
+  // 1. Unified case-insensitive check across both profiles and auth.users
+  const status = await checkUserRegistrationStatus(cleanEmail);
 
-    if (type === "forgot_password" && !existingProfile) {
-      return {
-        success: false,
-        error: "No registered account found with this email address.",
-      };
-    }
+  if (type === "forgot_password" && !status.exists) {
+    return {
+      success: false,
+      error: "No registered account found with this email address. Please sign up first.",
+    };
+  }
 
-    if (type === "signup" && existingProfile) {
-      return {
-        success: false,
-        error: "An account with this email address already exists. Please log in instead.",
-      };
-    }
-  } catch (checkErr) {
-    console.warn("Notice during profile check:", checkErr);
+  if (type === "signup" && status.exists && status.isComplete) {
+    return {
+      success: false,
+      error: "An account with this email address already exists. Please log in with your password, or use 'Forgot password' if you need to reset it.",
+    };
   }
 
   // 2. Check Resend Cooldown (120 seconds / 2 minutes)
@@ -107,20 +194,19 @@ export async function sendEmailOtp(
     createdAt: now,
   });
 
-  // Try saving to DB table auth_otps if present
+  // Try saving to DB table auth_otps if present (no 'verified' column in schema)
   try {
     await service.from("auth_otps").insert({
       email: cleanEmail,
       code,
       type,
       expires_at: expiresAtIso,
-      verified: false,
     });
   } catch (dbErr) {
     console.warn("Using in-memory OTP fallback (DB table auth_otps notice):", dbErr);
   }
 
-  // 4. Send Email via Resend / Notifications system
+  // 4. Send Email via Resend with verified domain
   const subject =
     type === "signup"
       ? `Sahayam — Your Email Verification Code: ${code}`
@@ -139,20 +225,24 @@ If you did not request this code, please ignore this email.
 Best regards,
 Sahayam Intra-Organization Lending Team`;
 
-  await sendEmail({
+  const emailResult = await sendEmail({
     to: cleanEmail,
     type: "verification_decision",
     subject,
     body,
   });
 
-  // Note: We use custom 6-digit OTP email dispatched above to avoid Supabase's link-based reset email
+  if (!emailResult.sent) {
+    return {
+      success: false,
+      error: emailResult.error || "Unable to send verification email. Please try again in a moment.",
+    };
+  }
 
   return {
     success: true,
     message: `Verification code sent to ${cleanEmail}`,
     resendCooldown: 120,
-    mockCode: process.env.NODE_ENV !== "production" ? code : undefined,
   };
 }
 
@@ -195,11 +285,10 @@ export async function verifyEmailOtp(
       const service = createServiceRoleClient();
       const { data: dbRecords } = await service
         .from("auth_otps")
-        .select("id, code, expires_at, verified")
+        .select("id, code, expires_at")
         .eq("email", cleanEmail)
         .eq("type", type)
         .eq("code", cleanCode)
-        .eq("verified", false)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -208,10 +297,8 @@ export async function verifyEmailOtp(
         const expiresMs = new Date(record.expires_at).getTime();
         if (expiresMs > now) {
           verifiedSuccessfully = true;
-          await service
-            .from("auth_otps")
-            .update({ verified: true })
-            .eq("id", record.id);
+          // Delete used OTP row to prevent replay
+          await service.from("auth_otps").delete().eq("id", record.id);
         }
       }
     } catch (dbErr) {
@@ -258,66 +345,24 @@ export async function resetPasswordWithOtp(
     };
   }
 
-  // Verify token in memory cache
-  const storeKey = getStoreKey(cleanEmail, "forgot_password");
-  const memoryRecord = memoryOtpStore.get(storeKey);
+  const status = await checkUserRegistrationStatus(cleanEmail);
 
-  if (
-    !memoryRecord ||
-    !memoryRecord.verified ||
-    (memoryRecord.verificationToken && memoryRecord.verificationToken !== verificationToken)
-  ) {
-    // If not matching memory record, check if profile exists to still process reset
-    const service = createServiceRoleClient();
-    const { data: profile } = await service
-      .from("profiles")
-      .select("id")
-      .eq("email", cleanEmail)
-      .maybeSingle();
-
-    if (!profile) {
-      return {
-        success: false,
-        error: "Account verification failed. Please request a new OTP code.",
-      };
-    }
+  if (!status.exists || !status.userId) {
+    return {
+      success: false,
+      error: "Registered user account not found. Please check your email address.",
+    };
   }
 
   const service = createServiceRoleClient();
 
   try {
-    // 1. Get user ID directly from profiles table where id = auth.users.id
-    const { data: profile, error: profileErr } = await service
-      .from("profiles")
-      .select("id")
-      .eq("email", cleanEmail)
-      .maybeSingle();
+    const targetUserId = status.userId;
 
-    let targetUserId = profile?.id;
-
-    // 2. If profile is missing, search via listUsers fallback
-    if (!targetUserId) {
-      try {
-        const { data: usersData } = await service.auth.admin.listUsers();
-        const targetUser = usersData?.users?.find(
-          (u) => u.email?.toLowerCase() === cleanEmail
-        );
-        targetUserId = targetUser?.id;
-      } catch {
-        // Ignore fallback error
-      }
-    }
-
-    if (!targetUserId) {
-      return {
-        success: false,
-        error: "Registered user account not found. Please check your email and try again.",
-      };
-    }
-
-    // 3. Update password using admin client directly by User ID
+    // 1. Update password and confirm email using admin client directly by User ID
     const { error: updateErr } = await service.auth.admin.updateUserById(targetUserId, {
       password: newPassword,
+      email_confirm: true,
     });
 
     if (updateErr) {
@@ -329,6 +374,7 @@ export async function resetPasswordWithOtp(
     }
 
     // Clear OTP record
+    const storeKey = getStoreKey(cleanEmail, "forgot_password");
     memoryOtpStore.delete(storeKey);
 
     return {
